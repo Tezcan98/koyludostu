@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#4E6B3A">
+<link rel="apple-touch-icon" href="/assets/logo-icon.jpg">
+<title>Köylü Dostu Haber — Tarım, Gündem ve Yerel Haberler</title>
+<meta name="description" content="Tarım, gündem ve teknoloji haberlerini tek yerden takip et.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div id="cerezBanner" class="cerez-banner" hidden>
+  <p>Bu site, size en yakın namaz vaktini gösterebilmek için IP adresinizden yaklaşık şehrinizi tespit eder ve deneyiminizi iyileştirmek için çerez kullanır. <a href="cerez-politikasi.html">Çerez Politikası</a></p>
+  <div class="cb-actions">
+    <button id="cerezRed" class="cb-reject" type="button">Reddet</button>
+    <button id="cerezKabul" class="cb-accept" type="button">Kabul Et</button>
+  </div>
+</div>
+<div class="topbar">
+  <button class="hamburger-btn" onclick="document.getElementById('kdDrawer').classList.add('open');document.getElementById('kdOverlay').classList.add('open');" aria-label="Menü">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+  </button>
+  <a href="/index.html" class="avatar-ring">
+    <div class="avatar">
+      <img src="/assets/logo-icon.jpg" alt="Köylü Dostu" style="width:92%;height:92%;object-fit:contain;">
+    </div>
+  </a>
+  <a href="/index.html" class="brand-info" style="text-decoration:none;">
+    <h1>köylüdostu</h1>
+    <p>Tarladan şehre güvenli alışveriş</p>
+  </a>
+  <a class="cta-btn" href="https://wa.me/905425174860?text=Merhaba%2C%20%C3%BCr%C3%BCnleriniz%20hakk%C4%B1nda%20bilgi%20almak%20istiyorum." target="_blank">
+    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12c0 1.85.5 3.58 1.35 5.07L2 22l5.06-1.33A9.94 9.94 0 0 0 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2zm0 18c-1.6 0-3.1-.44-4.38-1.2l-.31-.19-3 .79.8-2.92-.2-.3A7.94 7.94 0 0 1 4 12c0-4.41 3.59-8 8-8s8 3.59 8 8-3.59 8-8 8z"/></svg>
+    Yaz
+  </a>
+</div>
+<div class="drawer-overlay" id="kdOverlay" onclick="document.getElementById('kdDrawer').classList.remove('open');this.classList.remove('open');"></div>
+<div class="drawer" id="kdDrawer">
+  <div class="drawer-head">
+    <div class="avatar-ring" style="width:40px;height:40px;">
+      <div class="avatar">
+        <img src="/assets/logo-icon.jpg" alt="Köylü Dostu" style="width:92%;height:92%;object-fit:contain;">
+      </div>
+    </div>
+    <div class="brand-info"><h1>köylüdostu</h1></div>
+    <button class="drawer-close" onclick="document.getElementById('kdDrawer').classList.remove('open');document.getElementById('kdOverlay').classList.remove('open');" aria-label="Kapat">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+  </div>
+  <nav class="drawer-nav">
+    <a href="/index.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>Anasayfa</a>
+    <a href="/index.html#urunler"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="7" width="18" height="14" rx="2"/><path d="M8 7V5a4 4 0 0 1 8 0v2"/></svg>Ürünler</a>
+    <a href="/vitrin.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 3l14 9-14 9V3z"/></svg>Vitrin</a>
+    <div class="drawer-section-label">Kanallar</div>
+    <a href="/haber/index.html" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h13v16H4z"/><path d="M17 8h3v10a2 2 0 0 1-2 2H8"/><path d="M8 8h6M8 12h6M8 16h3"/></svg>Haberler</a>
+  </nav>
+  <div class="drawer-foot">
+    <a class="cta-btn outline" href="https://wa.me/905425174860?text=Merhaba%2C%20K%C3%B6yl%C3%BC%20Dostu%27nda%20sat%C4%B1c%C4%B1%20olmak%20istiyorum." target="_blank"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Sen de Satıcı Ol</a>
+    <a class="cta-btn" href="https://wa.me/905425174860?text=Merhaba%2C%20%C3%BCr%C3%BCnleriniz%20hakk%C4%B1nda%20bilgi%20almak%20istiyorum." target="_blank">WhatsApp'tan Yaz</a>
+  </div>
+</div>
+<div class="news-masthead">
+  <div class="nm-logo">KÖYLÜ DOSTU <span>HABER</span></div>
+  <div class="nm-date">1 Eylül 2026, Salı</div>
+</div>
+
+<div class="story-row">
+  <a class="story-item" href="/vitrin.html#taze-asma-yapragi"><span class="story-ring"><img src="https://images.pexels.com/photos/19702480/pexels-photo-19702480.jpeg?auto=compress&cs=tinysrgb&w=150" alt="Taze Asma Yaprağı"></span><span>Asma Yaprağı</span></a>
+  <a class="story-item" href="/vitrin.html#salamura-asma-yapragi"><span class="story-ring"><img src="https://images.pexels.com/photos/5626933/pexels-photo-5626933.jpeg?auto=compress&cs=tinysrgb&w=150" alt="Salamura Asma Yaprağı"></span><span>Salamura Yaprak</span></a>
+  <a class="story-item" href="/vitrin.html#kara-uzum"><span class="story-ring"><img src="https://images.pexels.com/photos/5455081/pexels-photo-5455081.jpeg?auto=compress&cs=tinysrgb&w=150" alt="Kara Üzüm"></span><span>Kara Üzüm</span></a>
+  <a class="story-item" href="/vitrin.html#sultani-cekirdeksiz"><span class="story-ring"><img src="https://images.pexels.com/photos/6844554/pexels-photo-6844554.jpeg?auto=compress&cs=tinysrgb&w=150" alt="Sultani Çekirdeksiz"></span><span>Sultani Üzüm</span></a>
+  <a class="story-item" href="/vitrin.html#geleneksel-uzum-pekmezi"><span class="story-ring"><img src="https://images.pexels.com/photos/4480158/pexels-photo-4480158.jpeg?auto=compress&cs=tinysrgb&w=150" alt="Geleneksel Üzüm Pekmezi"></span><span>Üzüm Pekmezi</span></a>
+  <a class="story-item" href="/vitrin.html#pekmez-kucuk-kavanoz"><span class="story-ring"><img src="https://images.pexels.com/photos/302163/pexels-photo-302163.jpeg?auto=compress&cs=tinysrgb&w=150" alt="Pekmez Küçük Kavanoz"></span><span>Pekmez Mini</span></a>
+  <a class="story-item" href="/vitrin.html#kuru-incir"><span class="story-ring"><img src="https://images.pexels.com/photos/4499221/pexels-photo-4499221.jpeg?auto=compress&cs=tinysrgb&w=150" alt="Kuru İncir"></span><span>Kuru İncir</span></a>
+  <a class="story-item" href="/vitrin.html#taze-incir"><span class="story-ring"><img src="https://images.pexels.com/photos/6310577/pexels-photo-6310577.jpeg?auto=compress&cs=tinysrgb&w=150" alt="Taze İncir"></span><span>Taze İncir</span></a>
+  <a class="story-item" href="/vitrin.html#salamura-yesil-zeytin"><span class="story-ring"><img src="https://images.pexels.com/photos/16732695/pexels-photo-16732695.jpeg?auto=compress&cs=tinysrgb&w=150" alt="Salamura Yeşil Zeytin"></span><span>Yeşil Zeytin</span></a>
+  <a class="story-item" href="/vitrin.html#siyah-sele-zeytin"><span class="story-ring"><img src="https://images.pexels.com/photos/4096837/pexels-photo-4096837.jpeg?auto=compress&cs=tinysrgb&w=150" alt="Siyah Sele Zeytin"></span><span>Siyah Zeytin</span></a>
+  <a class="story-item" href="/vitrin.html#soguk-sikim-zeytinyagi"><span class="story-ring"><img src="https://images.pexels.com/photos/3737656/pexels-photo-3737656.jpeg?auto=compress&cs=tinysrgb&w=150" alt="Soğuk Sıkım Zeytinyağı"></span><span>Zeytinyağı</span></a>
+  <a class="story-item" href="/vitrin.html#geleneksel-domates-salcasi"><span class="story-ring"><img src="https://images.pexels.com/photos/4361645/pexels-photo-4361645.jpeg?auto=compress&cs=tinysrgb&w=150" alt="Geleneksel Domates Salçası"></span><span>Domates Salçası</span></a>
+  <a class="story-item" href="/vitrin.html#ev-yapimi-tarhana"><span class="story-ring"><img src="https://images.pexels.com/photos/3559899/pexels-photo-3559899.jpeg?auto=compress&cs=tinysrgb&w=150" alt="Ev Yapımı Tarhana"></span><span>Tarhana</span></a>
+</div>
+
+<div class="piyasa-row">
+  <div id="dovizTicker" class="doviz-ticker">
+    <div class="doviz-item"><span class="di-label">Piyasa verileri yükleniyor…</span></div>
+  </div>
+  <div class="namaz-widget">
+    <span id="namazWidget">Namaz vakti hesaplanıyor…</span>
+    <span class="nw-loc">📍 <span id="namazLoc">—</span></span>
+  </div>
+  <div id="havaWidget" class="hava-widget">Hava durumu yükleniyor…</div>
+</div>
+
+<div class="news-ticker">
+  <span class="nt-tag">SON DAKİKA</span>
+  <div class="news-ticker-viewport">
+    <div id="tickerTrack" class="news-ticker-track">
+      <span>Yükleniyor…</span>
+    </div>
+  </div>
+</div>
+
+<div class="news-subnav">
+  <a href="#tarim-haberleri">Tarım Haberleri</a>
+  <a href="#gundem">Gündem</a>
+  <a href="#teknoloji">Teknoloji</a>
+  <a href="#tarifler">Tarifler</a>
+  <a href="#rehber">Rehber</a>
+</div>
+<div class="news-body">
+  <div class="news-main">
+    <section id="tarim-haberleri" class="agenda-section">
+      <div class="feed-head"><h2>Tarım Gündemi</h2><span>Ajans kaynaklarından derlenmiştir</span></div>
+      <div class="agenda-grid">
+        <div class="agenda-card">
+          <h3><a href="tarimda-2026-rekor-hasat-bekleniyor.html">Tarımda 2026'da Rekor Hasat Bekleniyor</a></h3>
+          <p>Sıcaklık ve yağışların beklentilere uygun seyretmesiyle bu yıl rekor bir hasat öngörülüyor; destekleme katsayısı da yüzde 27 artırılarak dekara 310 TL'ye çıkarıldı.</p>
+          <div class="agenda-source"><a href="tarimda-2026-rekor-hasat-bekleniyor.html">Devamını Oku →</a> · Kaynak: <a href="https://mobil.aa.com.tr/tr/info/infografik/52183" target="_blank" rel="noopener">AA</a></div>
+        </div>
+        <div class="agenda-card">
+          <h3><a href="karadenizde-bugday-fiyatlari-yukseliyor.html">Karadeniz'de Buğday Fiyatları Yükseliyor</a></h3>
+          <p>Kuraklık ve Karadeniz'deki gerilim buğday fiyatlarını yılbaşından bu yana yüzde 25 yükseltti. Türkiye'nin güvenli koridor önerisi ve dörtlü stratejik rolü.</p>
+          <div class="agenda-source"><a href="karadenizde-bugday-fiyatlari-yukseliyor.html">Devamını Oku →</a> · Kaynak: <a href="https://www.fastmarkets.com/insights/the-black-sea-wheat-and-corn-price-outlook-for-2026/" target="_blank" rel="noopener">Reuters</a></div>
+        </div>
+        <div class="agenda-card">
+          <h3><a href="aydinda-incir-hasadi-basladi.html">Aydın'da İncir Hasadı Başladı</a></h3>
+          <p>Bu yılki incir rekoltesi, kuraklığın yaşanmadığı sezon sayesinde geçen yılı geride bıraktı. Hasadın resmi açılışını Tarım Bakanlığı yaptı.</p>
+          <div class="agenda-source"><a href="aydinda-incir-hasadi-basladi.html">Devamını Oku →</a> · Kaynak: <a href="https://dokuzeylul.com/egenin-goz-bebegi-incire-kiymayin" target="_blank" rel="noopener">İHA</a></div>
+        </div>
+        <div class="agenda-card">
+          <h3><a href="gida-enflasyonu-tahmini-yukseltildi.html">Gıda Enflasyonu Tahmini Yüzde 26,3'e Yükseltildi</a></h3>
+          <p>TCMB, 2026 yıl sonu gıda enflasyonu varsayımını yüzde 19'dan yüzde 26,3'e güncelledi; gübre fiyatları önümüzdeki dönem için risk olarak işaretlendi.</p>
+          <div class="agenda-source"><a href="gida-enflasyonu-tahmini-yukseltildi.html">Devamını Oku →</a> · Kaynak: <a href="https://www.tcmb.gov.tr/wps/wcm/connect/731bb1f3-8895-4e44-a1af-45a19b47dfb5/2b26_ii.pdf" target="_blank" rel="noopener">TCMB</a></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="saglik" class="agenda-section">
+      <div class="feed-head"><h2>Uzman Köşesi</h2><span>Sağlık içerik ajanı</span></div>
+      <a class="agenda-card" style="display:flex;gap:14px;align-items:center;" href="incirin-faydalari-bilimsel-bakis.html">
+        <img src="https://images.pexels.com/photos/5447088/pexels-photo-5447088.jpeg?auto=compress&cs=tinysrgb&w=300" alt="İncirin Faydaları" style="width:96px;height:96px;object-fit:cover;border-radius:8px;flex-shrink:0;">
+        <div>
+          <span class="nc-cat tag-saglik" style="display:inline-block;">Sağlık</span>
+          <h3 style="margin:4px 0 4px;">İncirin Faydaları: Bilim Ne Diyor?</h3>
+          <p>Taze ve kuru incirin lif, potasyum ve antioksidan içeriği; tüketirken nelere dikkat etmek gerektiği.</p>
+        </div>
+      </a>
+    </section>
+
+    <div class="native-ad-strip">
+      <a class="native-ad" href="/urun/soguk-sikim-zeytinyagi.html">
+        <span class="na-tag">Ürün Tanıtımı</span>
+        <img src="https://images.pexels.com/photos/3737656/pexels-photo-3737656.jpeg?auto=compress&cs=tinysrgb&w=500" alt="Soğuk Sıkım Zeytinyağı" loading="lazy">
+        <div class="na-body"><div class="na-title">Soğuk Sıkım Zeytinyağı</div><div class="na-price">420₺</div></div>
+      </a>
+      <a class="native-ad" href="/urun/geleneksel-uzum-pekmezi.html">
+        <span class="na-tag">Ürün Tanıtımı</span>
+        <img src="https://images.pexels.com/photos/4480158/pexels-photo-4480158.jpeg?auto=compress&cs=tinysrgb&w=500" alt="Geleneksel Üzüm Pekmezi" loading="lazy">
+        <div class="na-body"><div class="na-title">Geleneksel Üzüm Pekmezi</div><div class="na-price">220₺</div></div>
+      </a>
+      <a class="native-ad" href="/urun/kuru-incir.html">
+        <span class="na-tag">Ürün Tanıtımı</span>
+        <img src="https://images.pexels.com/photos/4499221/pexels-photo-4499221.jpeg?auto=compress&cs=tinysrgb&w=500" alt="Kuru İncir" loading="lazy">
+        <div class="na-body"><div class="na-title">Kuru İncir</div><div class="na-price">260₺</div></div>
+      </a>
+    </div>
+
+    <div id="heroCarousel" class="hero-carousel">
+      <a class="hero-slide active" href="incirin-faydalari-bilimsel-bakis.html">
+        <img src="https://images.pexels.com/photos/5447088/pexels-photo-5447088.jpeg?auto=compress&cs=tinysrgb&w=900" alt="İncirin Faydaları: Bilim Ne Diyor?">
+        <div class="nh-cat tag-saglik">Sağlık</div>
+        <div class="nh-text"><h2>İncirin Faydaları: Bilim Ne Diyor?</h2><p>Taze ve kuru incirin lif, potasyum ve antioksidan içeriği; tüketirken nelere dikkat etmek gerekir.</p></div>
+      </a>
+      <a class="hero-slide" href="tarimda-2026-rekor-hasat-bekleniyor.html">
+        <img src="https://images.pexels.com/photos/2255935/pexels-photo-2255935.jpeg?auto=compress&cs=tinysrgb&w=900" alt="Tarımda 2026'da Rekor Hasat Bekleniyor">
+        <div class="nh-cat tag-tarim">Tarım Haberleri</div>
+        <div class="nh-text"><h2>Tarımda 2026'da Rekor Hasat Bekleniyor</h2><p>Destekleme katsayısı yüzde 27 artırılarak dekara 310 TL'ye çıkarıldı.</p></div>
+      </a>
+      <a class="hero-slide" href="karadenizde-bugday-fiyatlari-yukseliyor.html">
+        <img src="https://images.pexels.com/photos/2933243/pexels-photo-2933243.jpeg?auto=compress&cs=tinysrgb&w=900" alt="Karadeniz'de Buğday Fiyatları Yükseliyor">
+        <div class="nh-cat tag-gundem">Global Ekonomi</div>
+        <div class="nh-text"><h2>Karadeniz'de Buğday Fiyatları Yükseliyor</h2><p>Türkiye'nin güvenli koridor önerisi ve tahıl piyasasındaki dörtlü stratejik rolü.</p></div>
+      </a>
+      <a class="hero-slide" href="aydinda-incir-hasadi-basladi.html">
+        <img src="https://images.pexels.com/photos/5447088/pexels-photo-5447088.jpeg?auto=compress&cs=tinysrgb&w=900" alt="Aydın'da İncir Hasadı Başladı">
+        <div class="nh-cat tag-tarim">Tarım Haberleri</div>
+        <div class="nh-text"><h2>Aydın'da İncir Hasadı Başladı</h2><p>Kuraklığın yaşanmadığı sezonda rekolte geçen yılı geride bıraktı.</p></div>
+      </a>
+      <div id="heroDots" class="hero-dots"></div>
+    </div>
+    <div class="news-grid">
+      <a class="news-card" href="/blog/bagcilikta-hasat-donemi-nelere-dikkat-edilir.html">
+        <img src="https://images.pexels.com/photos/18624642/pexels-photo-18624642.jpeg?auto=compress&cs=tinysrgb&w=700" alt="Bağcılıkta Hasat Dönemi: Nelere Dikkat Edilir?" loading="lazy">
+        <div class="nc-cat tag-tarim">Tarım Haberleri</div>
+        <h3>Bağcılıkta Hasat Dönemi: Nelere Dikkat Edilir?</h3><p>Doğru hasat zamanının belirlenmesi, toplama teknikleri ve ürün kalitesini etkileyen faktörler.</p>
+      </a>
+      <a class="news-card" href="/blog/organik-gidaya-talep-neden-artiyor.html">
+        <img src="https://images.pexels.com/photos/25033570/pexels-photo-25033570.jpeg?auto=compress&cs=tinysrgb&w=700" alt="Organik ve Doğal Gıdaya Talep Neden Artıyor?" loading="lazy">
+        <div class="nc-cat tag-gundem">Gündem</div>
+        <h3>Organik ve Doğal Gıdaya Talep Neden Artıyor?</h3><p>Tüketici tercihlerindeki değişimin arkasındaki başlıca nedenlere genel bir bakış.</p>
+      </a>
+      <a class="news-card" href="/blog/yerel-uretimden-alisverisin-toplumsal-faydalari.html">
+        <img src="https://images.pexels.com/photos/868110/pexels-photo-868110.jpeg?auto=compress&cs=tinysrgb&w=700" alt="Yerel Üretimden Alışverişin Toplumsal Faydaları" loading="lazy">
+        <div class="nc-cat tag-gundem">Gündem</div>
+        <h3>Yerel Üretimden Alışverişin Toplumsal Faydaları</h3><p>Yerel üreticiyi desteklemenin ekonomik ve toplumsal etkilerine kısa bir bakış.</p>
+      </a>
+      <a class="news-card" href="/blog/damla-sulama-sistemleri-nasil-calisir.html">
+        <img src="https://images.pexels.com/photos/10606633/pexels-photo-10606633.jpeg?auto=compress&cs=tinysrgb&w=700" alt="Damla Sulama Sistemleri Nasıl Çalışır?" loading="lazy">
+        <div class="nc-cat tag-teknoloji">Teknoloji</div>
+        <h3>Damla Sulama Sistemleri Nasıl Çalışır?</h3><p>Su tasarrufu sağlayan damla sulama teknolojisinin temel çalışma prensibi ve avantajları.</p>
+      </a>
+      <a class="news-card" href="/urun/ev-yapimi-tarhana.html">
+        <img src="https://images.pexels.com/photos/3559899/pexels-photo-3559899.jpeg?auto=compress&cs=tinysrgb&w=700" alt="Ev Yapımı Tarhana" loading="lazy">
+        <div class="nc-cat tag-urun">Ürün Tanıtımı</div>
+        <h3>Ev Yapımı Tarhana</h3><p>Geleneksel yöntemle üretilmiş, katkısız ev yapımı tarhana · 130₺</p>
+      </a>
+      <a class="news-card" href="/blog/akilli-tarim-sensorlerle-verim-takibi.html">
+        <img src="https://images.pexels.com/photos/8316303/pexels-photo-8316303.jpeg?auto=compress&cs=tinysrgb&w=700" alt="Akıllı Tarım: Sensörlerle Verim Takibi" loading="lazy">
+        <div class="nc-cat tag-teknoloji">Teknoloji</div>
+        <h3>Akıllı Tarım: Sensörlerle Verim Takibi</h3><p>Toprak nemi, sıcaklık ve bitki sağlığı verilerinin sensörlerle nasıl izlendiğine genel bir bakış.</p>
+      </a>
+      <a class="news-card" href="/blog/pekmezli-kahvalti-tarifleri.html">
+        <img src="https://images.pexels.com/photos/4480158/pexels-photo-4480158.jpeg?auto=compress&cs=tinysrgb&w=700" alt="Pekmezle Yapılabilecek 5 Basit Kahvaltı Tarifi" loading="lazy">
+        <div class="nc-cat tag-tarifler">Tarifler</div>
+        <h3>Pekmezle Yapılabilecek 5 Basit Kahvaltı Tarifi</h3><p>Tahin-pekmezden pekmezli yulaf ezmesine, sabahlara enerji katacak beş pratik tarif.</p>
+      </a>
+      <a class="news-card" href="/blog/zeytinyagli-yaprak-sarma-tarifi.html">
+        <img src="https://images.pexels.com/photos/5626933/pexels-photo-5626933.jpeg?auto=compress&cs=tinysrgb&w=700" alt="Zeytinyağlı Yaprak Sarma Tarifi: Adım Adım" loading="lazy">
+        <div class="nc-cat tag-tarifler">Tarifler</div>
+        <h3>Zeytinyağlı Yaprak Sarma Tarifi: Adım Adım</h3><p>Pirinçli iç harcından sarma tekniğine, klasik zeytinyağlı yaprak sarmanın tarifi.</p>
+      </a>
+      <a class="news-card" href="/blog/pekmez-nasil-yapilir.html">
+        <img src="https://images.pexels.com/photos/12734622/pexels-photo-12734622.jpeg?auto=compress&cs=tinysrgb&w=700" alt="Pekmez Nasıl Yapılır? Geleneksel Üretim Süreci" loading="lazy">
+        <div class="nc-cat tag-rehber">Rehber</div>
+        <h3>Pekmez Nasıl Yapılır? Geleneksel Üretim Süreci</h3><p>Üzümden pekmeze uzanan geleneksel yöntemi, hangi aşamalarda nelere dikkat edildiğini anlatıyoruz.</p>
+      </a>
+      <a class="news-card" href="/blog/asma-yapragi-nasil-saklanir.html">
+        <img src="https://images.pexels.com/photos/7728088/pexels-photo-7728088.jpeg?auto=compress&cs=tinysrgb&w=700" alt="Asma Yaprağı Nasıl Saklanır?" loading="lazy">
+        <div class="nc-cat tag-rehber">Rehber</div>
+        <h3>Asma Yaprağı Nasıl Saklanır?</h3><p>Taze ve salamura asma yaprağını uzun süre bozulmadan saklamanın yöntemleri.</p>
+      </a>
+      <a class="news-card" href="/urun/soguk-sikim-zeytinyagi.html">
+        <img src="https://images.pexels.com/photos/3737656/pexels-photo-3737656.jpeg?auto=compress&cs=tinysrgb&w=700" alt="Soğuk Sıkım Zeytinyağı" loading="lazy">
+        <div class="nc-cat tag-urun">Ürün Tanıtımı</div>
+        <h3>Soğuk Sıkım Zeytinyağı</h3><p>Erken hasat zeytinden, soğuk sıkım yöntemiyle üretilmiş sızma zeytinyağı · 420₺</p>
+      </a>
+    </div>
+  </div>
+  <div class="news-sidebar">
+    <h3>Çok Okunanlar</h3>
+    <ul class="news-most-read">
+      <li><span class="nr-num">1</span><a href="/blog/kucuk-uretici-icin-dogrudan-satisin-onemi.html">Küçük Üretici İçin Doğrudan Satışın Önemi</a></li>
+      <li><span class="nr-num">2</span><a href="/blog/bagcilikta-hasat-donemi-nelere-dikkat-edilir.html">Bağcılıkta Hasat Dönemi: Nelere Dikkat Edilir?</a></li>
+      <li><span class="nr-num">3</span><a href="/blog/organik-gidaya-talep-neden-artiyor.html">Organik ve Doğal Gıdaya Talep Neden Artıyor?</a></li>
+      <li><span class="nr-num">4</span><a href="/blog/yerel-uretimden-alisverisin-toplumsal-faydalari.html">Yerel Üretimden Alışverişin Toplumsal Faydaları</a></li>
+      <li><span class="nr-num">5</span><a href="/blog/damla-sulama-sistemleri-nasil-calisir.html">Damla Sulama Sistemleri Nasıl Çalışır?</a></li>
+      <li><span class="nr-num">6</span><a href="/blog/akilli-tarim-sensorlerle-verim-takibi.html">Akıllı Tarım: Sensörlerle Verim Takibi</a></li>
+    </ul>
+    <h3 style="margin-top:26px;">Ürün Tanıtımı</h3>
+    <a class="native-ad-single" href="/urun/salamura-yesil-zeytin.html">
+      <img src="https://images.pexels.com/photos/16732695/pexels-photo-16732695.jpeg?auto=compress&cs=tinysrgb&w=200" alt="Salamura Yeşil Zeytin">
+      <div><span class="na-tag">Ürün Tanıtımı</span><div class="na-title">Salamura Yeşil Zeytin</div><div class="na-price">Köylü Dostu'nda incele →</div></div>
+    </a>
+    <a class="native-ad-single" href="/urun/taze-incir.html">
+      <img src="https://images.pexels.com/photos/6310577/pexels-photo-6310577.jpeg?auto=compress&cs=tinysrgb&w=200" alt="Taze İncir">
+      <div><span class="na-tag">Ürün Tanıtımı</span><div class="na-title">Taze İncir</div><div class="na-price">Köylü Dostu'nda incele →</div></div>
+    </a>
+  </div>
+</div>
+<footer class="site-footer">
+  <b>Köylü Dostu</b> · Üreticilerden doğrudan alışveriş · Platform iletişim: Enes Tezcan, 0542 517 4860
+  · <a href="admin/">Ajan Ayarları</a>
+</footer>
+<script src="assets/widgets.js"></script>
+
+<script>if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("/sw.js").catch(function(){});});}</script>
+</body>
+</html>

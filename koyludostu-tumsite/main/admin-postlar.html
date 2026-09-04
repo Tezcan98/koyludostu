@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Postlarım — Köylü Dostu Yönetim</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  body{background:var(--bg);}
+  .adm-wrap{max-width:640px;margin:0 auto;padding:24px 16px 60px;}
+  .adm-wrap h1{font-size:20px;font-weight:800;margin:6px 0 4px;}
+  .adm-wrap p.lead{font-size:12.5px;color:var(--muted);margin:0 0 18px;}
+  .adm-wrap p.lead a{color:var(--ring1);font-weight:700;}
+  .post-form{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:20px;}
+  .post-field{margin-bottom:12px;}
+  .post-field label{font-size:12px;font-weight:700;color:var(--muted);display:block;margin-bottom:6px;}
+  .post-field select, .post-field textarea{
+    width:100%;padding:10px 12px;border-radius:10px;border:1.5px solid var(--line);
+    font-family:inherit;font-size:13.5px;background:var(--bg);
+  }
+  .post-field textarea{min-height:70px;resize:vertical;}
+  .post-ad-row{display:flex;align-items:center;gap:8px;margin-bottom:12px;}
+  .post-ad-row label{font-size:12.5px;color:var(--ink);}
+  .post-submit{
+    padding:11px 20px;border-radius:12px;background:var(--ink);color:#fff;border:none;
+    font-size:13.5px;font-weight:700;cursor:pointer;
+  }
+  .post-msg{font-size:12.5px;color:var(--ring3);min-height:16px;margin-top:8px;}
+  .post-item{display:flex;gap:12px;align-items:center;padding:12px;background:var(--card);border:1px solid var(--line);border-radius:12px;margin-bottom:8px;}
+  .post-item img{width:48px;height:48px;border-radius:10px;object-fit:cover;flex-shrink:0;}
+  .post-item-body{flex:1;min-width:0;}
+  .post-item-title{font-size:13px;font-weight:700;}
+  .post-item-cap{font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .post-item-badge{font-size:10px;font-weight:800;padding:2px 8px;border-radius:8px;flex-shrink:0;}
+  .post-item-badge.ad{background:#fbf3e3;color:#c08a2e;}
+  .post-item-badge.active{background:#e0ecdc;color:var(--ring1);}
+  .post-item-badge.expired{background:var(--bg);color:var(--muted);}
+  .post-del{background:none;border:none;color:var(--ring3);font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0;}
+  .adm-empty{padding:30px;text-align:center;color:var(--muted);font-size:13px;}
+</style>
+</head>
+<body>
+<div class="adm-wrap">
+  <h1>Postlarım <span id="sellerName" style="font-weight:500;color:var(--muted);font-size:13px;"></span></h1>
+  <p class="lead">Ana sayfadaki story baloncuklarında görünen ürün tanıtımların. Normal postlar 24 saat sonra kaybolur; "Reklam" işaretlenenler kalıcı görünür. <a href="/admin-mesajlar.html">← Mesaj kutusuna dön</a></p>
+
+  <div class="post-form">
+    <div class="post-field">
+      <label>Ürün</label>
+      <select id="productSelect"></select>
+    </div>
+    <div class="post-field">
+      <label>Kısa Açıklama</label>
+      <textarea id="captionField" maxlength="200" placeholder="Örn. Bu hafta hasat başladı, taze kirazlar geldi!"></textarea>
+    </div>
+    <div class="post-ad-row">
+      <input type="checkbox" id="isAdField">
+      <label for="isAdField">Reklam olarak işaretle (24 saatte kaybolmaz)</label>
+    </div>
+    <button class="post-submit" id="postSubmitBtn">Paylaş</button>
+    <p class="post-msg" id="postMsg"></p>
+  </div>
+
+  <div id="postList"></div>
+</div>
+
+<script src="assets/auth.js"></script>
+<script>
+(function () {
+  if (!window.KDAuth.requireSeller('/admin-postlar.html')) return;
+  document.getElementById('sellerName').textContent = '· ' + window.KDAuth.name();
+
+  window.KDAuth.authedFetch('/api/admin/products/mine').then(function (r) { return r.json(); }).then(function (data) {
+    var select = document.getElementById('productSelect');
+    var products = data.products || [];
+    if (!products.length) { select.innerHTML = '<option value="">Ürünün yok</option>'; return; }
+    select.innerHTML = products.map(function (p) { return '<option value="' + p.slug + '">' + p.title + '</option>'; }).join('');
+  }).catch(function () {});
+
+  function timeLeft(iso) {
+    var diff = new Date(iso).getTime() - Date.now();
+    if (diff <= 0) return null;
+    var h = Math.floor(diff / 3600000);
+    if (h < 1) return Math.floor(diff / 60000) + ' dk kaldı';
+    return h + ' sa kaldı';
+  }
+
+  function loadPosts() {
+    window.KDAuth.authedFetch('/api/admin/posts/mine').then(function (r) { return r.json(); }).then(function (data) {
+      var list = document.getElementById('postList');
+      var posts = data.posts || [];
+      if (!posts.length) { list.innerHTML = '<div class="adm-empty">Henüz post paylaşmadın.</div>'; return; }
+      list.innerHTML = posts.map(function (post) {
+        var badge = '';
+        if (post.isAd) badge = '<span class="post-item-badge ad">Reklam</span>';
+        else {
+          var left = timeLeft(post.expiresAt);
+          badge = left ? '<span class="post-item-badge active">' + left + '</span>' : '<span class="post-item-badge expired">Süresi doldu</span>';
+        }
+        return '<div class="post-item" data-id="' + post.id + '">' +
+          '<img src="https://images.pexels.com/photos/' + post.img + '/pexels-photo-' + post.img + '.jpeg?auto=compress&cs=tinysrgb&w=150" alt="">' +
+          '<div class="post-item-body"><div class="post-item-title">' + post.productTitle + '</div><div class="post-item-cap">' + (post.caption || '—') + '</div></div>' +
+          badge +
+          '<button class="post-del" data-id="' + post.id + '">Sil</button>' +
+        '</div>';
+      }).join('');
+      list.querySelectorAll('.post-del').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          window.KDAuth.authedFetch('/api/admin/posts/delete', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: btn.dataset.id }),
+          }).then(function () { loadPosts(); }).catch(function () {});
+        });
+      });
+    }).catch(function () {});
+  }
+
+  document.getElementById('postSubmitBtn').addEventListener('click', function () {
+    var msg = document.getElementById('postMsg');
+    var slug = document.getElementById('productSelect').value;
+    var caption = document.getElementById('captionField').value.trim();
+    var isAd = document.getElementById('isAdField').checked;
+    if (!slug) { msg.textContent = 'Önce bir ürün seç.'; return; }
+    msg.textContent = '';
+    window.KDAuth.authedFetch('/api/posts', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ productSlug: slug, caption: caption, isAd: isAd }),
+    }).then(function (r) { return r.json(); }).then(function (data) {
+      if (data.error) { msg.textContent = data.error; return; }
+      document.getElementById('captionField').value = '';
+      document.getElementById('isAdField').checked = false;
+      loadPosts();
+    }).catch(function () {});
+  });
+
+  loadPosts();
+})();
+</script>
+</body>
+</html>

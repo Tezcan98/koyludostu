@@ -1,0 +1,16 @@
+{
+  "name": "Köylü Dostu",
+  "short_name": "Köylü Dostu",
+  "description": "Tarladan şehre güvenli, aracısız alışveriş.",
+  "start_url": "/index.html",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FAFAF9",
+  "theme_color": "#4E6B3A",
+  "lang": "tr",
+  "icons": [
+    { "src": "/assets/logo-circle.jpg", "sizes": "1024x1024", "type": "image/jpeg", "purpose": "any" },
+    { "src": "/assets/logo-circle.jpg", "sizes": "1024x1024", "type": "image/jpeg", "purpose": "maskable" }
+  ]
+}

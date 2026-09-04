@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#4E6B3A">
+<link rel="apple-touch-icon" href="/assets/logo-icon.jpg">
+<title>Satıcı Başvurum — Köylü Dostu</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  body{background:var(--bg);}
+  .app-wrap{max-width:460px;margin:0 auto;padding:32px 20px 60px;}
+  .status-card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:24px;text-align:center;margin-bottom:20px;}
+  .status-icon{font-size:36px;margin-bottom:10px;}
+  .status-card h1{font-size:18px;font-weight:800;margin:0 0 6px;}
+  .status-card p{font-size:13.5px;color:var(--muted);line-height:1.6;margin:0;}
+  .status-badge{display:inline-block;font-size:11px;font-weight:800;padding:4px 12px;border-radius:20px;margin-top:12px;}
+  .status-badge.pending{background:rgba(192,138,46,.15);color:var(--ring2);}
+  .status-badge.approved{background:rgba(78,107,58,.12);color:var(--ring1);}
+  .status-badge.rejected{background:rgba(200,60,60,.12);color:var(--ring3);}
+  .info-card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:16px;}
+  .info-card h2{font-size:13px;font-weight:800;margin:0 0 10px;color:var(--muted);}
+  .info-card p{font-size:13.5px;line-height:1.6;margin:0;}
+  .doc-field input{width:100%;padding:10px 12px;border-radius:10px;border:1.5px solid var(--line);font-family:inherit;font-size:13px;background:var(--bg);margin-bottom:8px;}
+  .doc-btn{padding:10px 18px;border-radius:10px;background:var(--ink);color:#fff;border:none;font-size:13px;font-weight:700;cursor:pointer;}
+  .doc-status{font-size:11.5px;color:var(--ring1);margin-top:6px;}
+  .go-btn{display:block;text-align:center;padding:13px;border-radius:14px;background:var(--ink);color:#fff;font-weight:700;font-size:13.5px;margin-top:6px;}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <a href="/index.html" class="avatar-ring">
+    <div class="avatar"><img src="/assets/logo-icon.jpg" alt="Köylü Dostu" style="width:92%;height:92%;object-fit:contain;"></div>
+  </a>
+  <a href="/index.html" class="brand-info" style="text-decoration:none;">
+    <h1>köylüdostu</h1>
+    <p>Satıcı Başvurum</p>
+  </a>
+  <div id="authSlot"></div>
+</div>
+
+<div class="app-wrap">
+  <div class="status-card" id="statusCard">
+    <div class="status-icon">⏳</div>
+    <h1>Yükleniyor…</h1>
+  </div>
+
+  <div class="info-card">
+    <h2>Başvurunda Anlattığın</h2>
+    <p id="businessInfoText">—</p>
+  </div>
+
+  <div class="info-card" id="docCard">
+    <h2>Destekleyici Belge (opsiyonel)</h2>
+    <p style="margin-bottom:10px;">Kimlik, vergi levhası ya da çiftçi kayıt belgesi gibi bir belge eklemek başvurunun daha hızlı onaylanmasına yardımcı olur.</p>
+    <div class="doc-field">
+      <input type="file" id="docInput" accept="image/png,image/jpeg,image/webp,application/pdf">
+    </div>
+    <button class="doc-btn" id="docUploadBtn">Belgeyi Yükle</button>
+    <p class="doc-status" id="docStatus"></p>
+  </div>
+
+  <a class="go-btn" id="goBtn" href="/admin-urunlerim.html" style="display:none;">Ürün Eklemeye Başla →</a>
+</div>
+
+<script src="assets/auth.js"></script>
+<script>
+(function () {
+  if (!window.KDAuth.requireSeller('/satici-basvurum.html')) return;
+
+  var docDataUrl = '';
+  document.getElementById('docInput').addEventListener('change', function (e) {
+    var file = e.target.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function () {
+      docDataUrl = reader.result;
+      document.getElementById('docStatus').textContent = 'Seçildi: ' + file.name;
+    };
+    reader.readAsDataURL(file);
+  });
+
+  document.getElementById('docUploadBtn').addEventListener('click', function () {
+    if (!docDataUrl) { document.getElementById('docStatus').textContent = 'Önce bir dosya seç.'; return; }
+    window.KDAuth.authedFetch('/api/admin/upload-doc', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dataUrl: docDataUrl }),
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      if (d.error) { document.getElementById('docStatus').textContent = d.error; return; }
+      return window.KDAuth.authedFetch('/api/auth/seller-application/doc', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ docUrl: d.url }),
+      }).then(function (r) { return r.json(); });
+    }).then(function () {
+      document.getElementById('docStatus').textContent = 'Belge yüklendi, admin inceleyecek.';
+    }).catch(function () {});
+  });
+
+  function render(user) {
+    var status = user.sellerStatus || 'pending';
+    var card = document.getElementById('statusCard');
+    document.getElementById('businessInfoText').textContent = user.businessInfo || '—';
+
+    if (status === 'approved') {
+      card.innerHTML = '<div class="status-icon">✅</div><h1>Başvurun Onaylandı</h1>' +
+        '<p>Artık ürün ekleyip satışa başlayabilirsin.</p>' +
+        '<span class="status-badge approved">ONAYLANDI</span>';
+      document.getElementById('docCard').style.display = 'none';
+      document.getElementById('goBtn').style.display = 'block';
+    } else if (status === 'rejected') {
+      card.innerHTML = '<div class="status-icon">✕</div><h1>Başvurun Reddedildi</h1>' +
+        '<p>Daha fazla bilgi için bize ulaşabilir ya da belge ekleyip tekrar değerlendirilmesini isteyebilirsin.</p>' +
+        '<span class="status-badge rejected">REDDEDİLDİ</span>';
+    } else {
+      card.innerHTML = '<div class="status-icon">⏳</div><h1>Başvurun İnceleniyor</h1>' +
+        '<p>Admin ekibimiz en kısa sürede başvurunu değerlendirecek. Onaylanınca buradan ve (tercih ettiysen) SMS/e-posta ile haber alırsın.</p>' +
+        '<span class="status-badge pending">İNCELENİYOR</span>';
+    }
+  }
+
+  window.KDAuth.authedFetch('/api/auth/me').then(function (r) { return r.json(); }).then(function (data) {
+    if (data.user) render(data.user);
+  }).catch(function () {});
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,47 @@
+{
+  "pk_cw0v7hq1q2": {
+    "id": "pk_cw0v7hq1q2",
+    "name": "Kilolu Karton Kutu",
+    "description": "Kuru gıda ve kavanoz ürünleri için standart nakliye kutusu, 30x20x15 cm.",
+    "price": "12₺",
+    "unit": "/ adet",
+    "active": true,
+    "createdAt": "2026-09-04T13:05:42.005Z"
+  },
+  "pk_fgqg4z0aiv": {
+    "id": "pk_fgqg4z0aiv",
+    "name": "Strafor Soğuk Zincir Kutusu",
+    "description": "Çabuk bozulan ürünler için jel akülü, yalıtımlı strafor kutu.",
+    "price": "35₺",
+    "unit": "/ adet",
+    "active": true,
+    "createdAt": "2026-09-04T13:05:42.005Z"
+  },
+  "pk_l1z3z6qhcg": {
+    "id": "pk_l1z3z6qhcg",
+    "name": "Kavanoz Ambalaj Seti (12li)",
+    "description": "Reçel, bal, salça gibi ürünler için kapaklı cam kavanoz, 12 adet.",
+    "price": "90₺",
+    "unit": "/ paket",
+    "active": true,
+    "createdAt": "2026-09-04T13:05:42.005Z"
+  },
+  "pk_tjd1rblzle": {
+    "id": "pk_tjd1rblzle",
+    "name": "Streç Film (Endüstriyel)",
+    "description": "Palet ve kutu sarmalamak için geniş endüstriyel streç film.",
+    "price": "45₺",
+    "unit": "/ rulo",
+    "active": true,
+    "createdAt": "2026-09-04T13:05:42.005Z"
+  },
+  "pk_s807ch4gez": {
+    "id": "pk_s807ch4gez",
+    "name": "Kraft Kağıt Poşet",
+    "description": "Sebze/meyve gibi taze ürünler için nefes alabilir kraft kağıt poşet.",
+    "price": "60₺",
+    "unit": "/ 50 adet",
+    "active": true,
+    "createdAt": "2026-09-04T13:05:42.005Z"
+  }
+}

@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#4E6B3A">
+<link rel="apple-touch-icon" href="/assets/logo-icon.jpg">
+<title>Blog — Köylü Dostu</title>
+<meta name="description" content="Tarifler, tarım haberleri, teknoloji ve gündem yazıları.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="hamburger-btn" onclick="document.getElementById('kdDrawer').classList.add('open');document.getElementById('kdOverlay').classList.add('open');" aria-label="Menü">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+  </button>
+  <a href="/index.html" class="avatar-ring">
+    <div class="avatar">
+      <img src="/assets/logo-icon.jpg" alt="Köylü Dostu" style="width:92%;height:92%;object-fit:contain;">
+    </div>
+  </a>
+  <a href="/index.html" class="brand-info" style="text-decoration:none;">
+    <h1>köylüdostu</h1>
+    <p>Tarladan şehre güvenli alışveriş</p>
+  </a>
+  <a class="cta-btn" href="https://wa.me/905425174860?text=Merhaba%2C%20%C3%BCr%C3%BCnleriniz%20hakk%C4%B1nda%20bilgi%20almak%20istiyorum." target="_blank">
+    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12c0 1.85.5 3.58 1.35 5.07L2 22l5.06-1.33A9.94 9.94 0 0 0 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2zm0 18c-1.6 0-3.1-.44-4.38-1.2l-.31-.19-3 .79.8-2.92-.2-.3A7.94 7.94 0 0 1 4 12c0-4.41 3.59-8 8-8s8 3.59 8 8-3.59 8-8 8z"/></svg>
+    Yaz
+  </a>
+</div>
+<div class="drawer-overlay" id="kdOverlay" onclick="document.getElementById('kdDrawer').classList.remove('open');this.classList.remove('open');"></div>
+<div class="drawer" id="kdDrawer">
+  <div class="drawer-head">
+    <div class="avatar-ring" style="width:40px;height:40px;">
+      <div class="avatar">
+        <img src="/assets/logo-icon.jpg" alt="Köylü Dostu" style="width:92%;height:92%;object-fit:contain;">
+      </div>
+    </div>
+    <div class="brand-info"><h1>köylüdostu</h1></div>
+    <button class="drawer-close" onclick="document.getElementById('kdDrawer').classList.remove('open');document.getElementById('kdOverlay').classList.remove('open');" aria-label="Kapat">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+  </div>
+  <nav class="drawer-nav">
+    <a href="/index.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>Anasayfa</a>
+    <a href="/index.html#urunler"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="7" width="18" height="14" rx="2"/><path d="M8 7V5a4 4 0 0 1 8 0v2"/></svg>Ürünler</a>
+    <a href="/vitrin.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 3l14 9-14 9V3z"/></svg>Vitrin</a>
+    <div class="drawer-section-label">Kanallar</div>
+    <a href="/haber/index.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h13v16H4z"/><path d="M17 8h3v10a2 2 0 0 1-2 2H8"/><path d="M8 8h6M8 12h6M8 16h3"/></svg>Haberler</a>
+  </nav>
+  <div class="drawer-foot">
+    <a class="cta-btn outline" href="https://wa.me/905425174860?text=Merhaba%2C%20K%C3%B6yl%C3%BC%20Dostu%27nda%20sat%C4%B1c%C4%B1%20olmak%20istiyorum." target="_blank"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Sen de Satıcı Ol</a>
+    <a class="cta-btn" href="https://wa.me/905425174860?text=Merhaba%2C%20%C3%BCr%C3%BCnleriniz%20hakk%C4%B1nda%20bilgi%20almak%20istiyorum." target="_blank">WhatsApp'tan Yaz</a>
+  </div>
+</div>
+<div class="breadcrumb"><a href="/index.html">Köylü Dostu</a><span>›</span>Blog</div><div class="navstrip"><a class="navchip active" href="index.html">Tümü</a><a class="navchip" href="#rehber">Rehber</a><a class="navchip" href="#tarifler">Tarifler</a><a class="navchip" href="#tarim-haberleri">Tarım Haberleri</a><a class="navchip" href="#teknoloji">Teknoloji</a><a class="navchip" href="#gundem">Gündem</a></div><div class="blog-list"><h1 style="font-size:22px;font-weight:800;margin-bottom:8px;">Blog</h1><h2 id="rehber" style="font-size:16px;font-weight:800;margin:26px 0 4px;color:var(--ring1);">Rehber</h2><a class="blog-card-img" href="pekmez-nasil-yapilir.html">
+  <img src="https://images.pexels.com/photos/12734622/pexels-photo-12734622.jpeg?auto=compress&cs=tinysrgb&w=700" alt="Pekmez Nasıl Yapılır? Geleneksel Üretim Süreci" loading="lazy">
+  <div class="bc-body"><h2>Pekmez Nasıl Yapılır? Geleneksel Üretim Süreci</h2><p>Üzümden pekmeze uzanan geleneksel yöntemi, hangi aşamalarda nelere dikkat edildiğini anlatıyoruz.</p></div>
+</a><a class="blog-card-img" href="asma-yapragi-nasil-saklanir.html">
+  <img src="https://images.pexels.com/photos/19702480/pexels-photo-19702480.jpeg?auto=compress&cs=tinysrgb&w=700" alt="Asma Yaprağı Nasıl Saklanır? Taze ve Salamura Saklama Yöntemleri" loading="lazy">
+  <div class="bc-body"><h2>Asma Yaprağı Nasıl Saklanır? Taze ve Salamura Saklama Yöntemleri</h2><p>Taze asma yaprağını buzdolabında, salamura yaprağı kavanozda nasıl uzun süre taze tutarsın, adım adım anlatıyoruz.</p></div>
+</a><h2 id="tarifler" style="font-size:16px;font-weight:800;margin:26px 0 4px;color:var(--ring1);">Tarifler</h2><a class="blog-card-img" href="pekmezli-kahvalti-tarifleri.html">
+  <img src="https://images.pexels.com/photos/4480158/pexels-photo-4480158.jpeg?auto=compress&cs=tinysrgb&w=700" alt="Pekmezle Yapılabilecek 5 Basit Kahvaltı Tarifi" loading="lazy">
+  <div class="bc-body"><h2>Pekmezle Yapılabilecek 5 Basit Kahvaltı Tarifi</h2><p>Tahin-pekmezden pekmezli yulaf ezmesine, sabahlara enerji katacak beş pratik tarif.</p></div>
+</a><a class="blog-card-img" href="zeytinyagli-yaprak-sarma-tarifi.html">
+  <img src="https://images.pexels.com/photos/5626933/pexels-photo-5626933.jpeg?auto=compress&cs=tinysrgb&w=700" alt="Zeytinyağlı Yaprak Sarma Tarifi: Adım Adım" loading="lazy">
+  <div class="bc-body"><h2>Zeytinyağlı Yaprak Sarma Tarifi: Adım Adım</h2><p>Pirinçli iç harcından sarma tekniğine, klasik zeytinyağlı yaprak sarmanın tarifi.</p></div>
+</a><h2 id="tarim-haberleri" style="font-size:16px;font-weight:800;margin:26px 0 4px;color:var(--ring1);">Tarım Haberleri</h2><a class="blog-card-img" href="kucuk-uretici-icin-dogrudan-satisin-onemi.html">
+  <img src="https://images.pexels.com/photos/12956002/pexels-photo-12956002.jpeg?auto=compress&cs=tinysrgb&w=700" alt="Küçük Üretici İçin Doğrudan Satışın Önemi" loading="lazy">
+  <div class="bc-body"><h2>Küçük Üretici İçin Doğrudan Satışın Önemi</h2><p>Aracı sayısının azalması üreticinin eline geçen payı nasıl etkiler, doğrudan satış modelleri nelerdir.</p></div>
+</a><a class="blog-card-img" href="bagcilikta-hasat-donemi-nelere-dikkat-edilir.html">
+  <img src="https://images.pexels.com/photos/18624642/pexels-photo-18624642.jpeg?auto=compress&cs=tinysrgb&w=700" alt="Bağcılıkta Hasat Dönemi: Nelere Dikkat Edilir?" loading="lazy">
+  <div class="bc-body"><h2>Bağcılıkta Hasat Dönemi: Nelere Dikkat Edilir?</h2><p>Doğru hasat zamanının belirlenmesi, toplama teknikleri ve ürün kalitesini etkileyen faktörler.</p></div>
+</a><h2 id="teknoloji" style="font-size:16px;font-weight:800;margin:26px 0 4px;color:var(--ring1);">Teknoloji</h2><a class="blog-card-img" href="damla-sulama-sistemleri-nasil-calisir.html">
+  <img src="https://images.pexels.com/photos/10606633/pexels-photo-10606633.jpeg?auto=compress&cs=tinysrgb&w=700" alt="Damla Sulama Sistemleri Nasıl Çalışır?" loading="lazy">
+  <div class="bc-body"><h2>Damla Sulama Sistemleri Nasıl Çalışır?</h2><p>Su tasarrufu sağlayan damla sulama teknolojisinin temel çalışma prensibi ve avantajları.</p></div>
+</a><a class="blog-card-img" href="akilli-tarim-sensorlerle-verim-takibi.html">
+  <img src="https://images.pexels.com/photos/8316303/pexels-photo-8316303.jpeg?auto=compress&cs=tinysrgb&w=700" alt="Akıllı Tarım: Sensörlerle Verim Takibi" loading="lazy">
+  <div class="bc-body"><h2>Akıllı Tarım: Sensörlerle Verim Takibi</h2><p>Toprak nemi, sıcaklık ve bitki sağlığı verilerinin sensörlerle nasıl izlendiğine genel bir bakış.</p></div>
+</a><h2 id="gundem" style="font-size:16px;font-weight:800;margin:26px 0 4px;color:var(--ring1);">Gündem</h2><a class="blog-card-img" href="organik-gidaya-talep-neden-artiyor.html">
+  <img src="https://images.pexels.com/photos/25033570/pexels-photo-25033570.jpeg?auto=compress&cs=tinysrgb&w=700" alt="Organik ve Doğal Gıdaya Talep Neden Artıyor?" loading="lazy">
+  <div class="bc-body"><h2>Organik ve Doğal Gıdaya Talep Neden Artıyor?</h2><p>Tüketici tercihlerindeki değişimin arkasındaki başlıca nedenlere genel bir bakış.</p></div>
+</a><a class="blog-card-img" href="yerel-uretimden-alisverisin-toplumsal-faydalari.html">
+  <img src="https://images.pexels.com/photos/868110/pexels-photo-868110.jpeg?auto=compress&cs=tinysrgb&w=700" alt="Yerel Üretimden Alışverişin Toplumsal Faydaları" loading="lazy">
+  <div class="bc-body"><h2>Yerel Üretimden Alışverişin Toplumsal Faydaları</h2><p>Yerel üreticiyi desteklemenin ekonomik ve toplumsal etkilerine kısa bir bakış.</p></div>
+</a></div><footer class="site-footer">
+  <b>Köylü Dostu</b> · Üreticilerden doğrudan alışveriş · Platform iletişim: Enes Tezcan, 0542 517 4860
+</footer>
+
+<script>if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("/sw.js").catch(function(){});});}</script>
+</body>
+</html>

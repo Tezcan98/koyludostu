@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#4E6B3A">
+<link rel="apple-touch-icon" href="/assets/logo-icon.jpg">
+<title>Şikayetlerim — Köylü Dostu</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  .inbox-wrap{max-width:640px;margin:0 auto;padding:20px 16px 60px;}
+  .inbox-wrap h1{font-size:20px;font-weight:800;margin:6px 0 18px;}
+  .cx-item{padding:14px;background:var(--card);border:1px solid var(--line);border-radius:12px;margin-bottom:10px;}
+  .cx-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:6px;}
+  .cx-title{font-size:13.5px;font-weight:700;}
+  .cx-status{font-size:10.5px;font-weight:800;padding:3px 9px;border-radius:10px;flex-shrink:0;}
+  .cx-status.open{background:#f4e3c8;color:#8a5a10;}
+  .cx-status.resolved{background:#e0ecdc;color:var(--ring1);}
+  .cx-reason{font-size:11.5px;color:var(--muted);margin-bottom:6px;}
+  .cx-text{font-size:12.5px;color:var(--ink);line-height:1.5;}
+  .cx-response{margin-top:10px;padding:10px 12px;background:var(--bg);border-radius:10px;font-size:12.5px;}
+  .cx-response b{display:block;margin-bottom:3px;font-size:11.5px;color:var(--muted);}
+  .inbox-empty{text-align:center;padding:60px 20px;color:var(--muted);font-size:13.5px;}
+  .inbox-empty a{color:var(--ring1);font-weight:700;}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <button class="hamburger-btn" onclick="document.getElementById('kdDrawer').classList.add('open');document.getElementById('kdOverlay').classList.add('open');" aria-label="Menü">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+  </button>
+  <a href="/index.html" class="avatar-ring">
+    <div class="avatar"><img src="/assets/logo-icon.jpg" alt="Köylü Dostu" style="width:92%;height:92%;object-fit:contain;"></div>
+  </a>
+  <a href="/index.html" class="brand-info" style="text-decoration:none;">
+    <h1>köylüdostu</h1>
+    <p>Şikayetlerim</p>
+  </a>
+  <div id="authSlot"></div>
+</div>
+<div class="drawer-overlay" id="kdOverlay" onclick="document.getElementById('kdDrawer').classList.remove('open');this.classList.remove('open');"></div>
+<div class="drawer" id="kdDrawer">
+  <div class="drawer-head">
+    <div class="avatar-ring" style="width:40px;height:40px;">
+      <div class="avatar"><img src="/assets/logo-icon.jpg" alt="Köylü Dostu" style="width:92%;height:92%;object-fit:contain;"></div>
+    </div>
+    <div class="brand-info"><h1>köylüdostu</h1></div>
+    <button class="drawer-close" onclick="document.getElementById('kdDrawer').classList.remove('open');document.getElementById('kdOverlay').classList.remove('open');" aria-label="Kapat">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+  </div>
+  <nav class="drawer-nav">
+    <a href="/index.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>Anasayfa</a>
+    <a href="/mesajlarim.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Mesajlarım</a>
+    <div class="drawer-section-label">Hesabım</div>
+    <a href="/favorilerim.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>Favori İlanlarım</a>
+    <a href="/favori-saticilarim.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>Favori Satıcılarım</a>
+    <a href="/mesajlarim.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Mesajlar</a>
+    <a href="/yorumlarim.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>Yorumlarım</a>
+    <a href="/hesap-ayarlarim.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Hesap Ayarları</a>
+    <!-- <div class="drawer-section-label">Kanallar</div>
+    <a href="/haber/index.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h13v16H4z"/><path d="M17 8h3v10a2 2 0 0 1-2 2H8"/><path d="M8 8h6M8 12h6M8 16h3"/></svg>Haberler</a> -->
+    <div class="drawer-section-label">Diğer</div>
+    <a href="/hakkimizda.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>Hakkımızda</a>
+    <a href="/gizlilik.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z"/></svg>Gizlilik</a>
+    <a href="/kullanim-sartlari.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h6"/></svg>Kullanım Şartları</a>
+    <a href="/kvkk.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z"/><path d="M9 12l2 2 4-4"/></svg>KVKK Aydınlatma Metni</a>
+
+  </nav>
+</div>
+
+<div class="inbox-wrap">
+  <h1>Şikayetlerim</h1>
+  <div id="cxList"></div>
+</div>
+
+<script src="assets/auth.js"></script>
+<script>
+(function () {
+  if (!window.KDAuth.requireLogin('/sikayetlerim.html')) return;
+
+  var REASON_LABELS = { kalite: 'Kalite düşük', gelmedi: 'Ürün hiç gelmedi', farkli: 'Tarif edilenden farklı', diger: 'Diğer' };
+
+  function timeAgo(iso) {
+    var diff = Date.now() - new Date(iso).getTime();
+    var min = Math.floor(diff / 60000);
+    if (min < 1) return 'az önce';
+    if (min < 60) return min + ' dk önce';
+    var h = Math.floor(min / 60);
+    if (h < 24) return h + ' sa önce';
+    return Math.floor(h / 24) + ' gün önce';
+  }
+
+  window.KDAuth.authedFetch('/api/complaints/mine')
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      var list = document.getElementById('cxList');
+      var items = data.complaints || [];
+      if (!items.length) {
+        list.innerHTML = '<div class="inbox-empty">Henüz bir şikayetin yok.<br><a href="/mesajlarim.html">Mesajlarıma dön →</a></div>';
+        return;
+      }
+      list.innerHTML = items.map(function (c) {
+        var statusLabel = c.status === 'resolved' ? 'Çözüldü' : 'Beklemede';
+        var response = c.sellerResponse
+          ? '<div class="cx-response"><b>Satıcı yanıtı</b>' + c.sellerResponse + '</div>'
+          : '';
+        return '<div class="cx-item">' +
+          '<div class="cx-head"><span class="cx-title">' + c.productTitle + '</span><span class="cx-status ' + c.status + '">' + statusLabel + '</span></div>' +
+          '<div class="cx-reason">' + (REASON_LABELS[c.reason] || c.reason) + ' · ' + timeAgo(c.createdAt) + '</div>' +
+          '<div class="cx-text">' + c.text.replace(/[<>]/g, '') + '</div>' +
+          response +
+        '</div>';
+      }).join('');
+    });
+})();
+</script>
+<script>if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("/sw.js").catch(function(){});});}</script>
+</body>
+</html>

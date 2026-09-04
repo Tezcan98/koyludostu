@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ürünlerim — Köylü Dostu Yönetim</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  body{background:var(--bg);}
+  .adm-wrap{max-width:640px;margin:0 auto;padding:24px 16px 60px;}
+  .adm-wrap h1{font-size:20px;font-weight:800;margin:6px 0 4px;}
+  .adm-wrap p.lead{font-size:12.5px;color:var(--muted);margin:0 0 18px;}
+  .adm-wrap p.lead a{color:var(--ring1);font-weight:700;}
+  .prod-form{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:22px;}
+  .prod-form h2{font-size:14px;font-weight:800;margin:0 0 14px;}
+  .prod-row{display:flex;gap:10px;}
+  .prod-row .prod-field{flex:1;}
+  .prod-field{margin-bottom:12px;}
+  .prod-field label{font-size:12px;font-weight:700;color:var(--muted);display:block;margin-bottom:6px;}
+  .prod-field input, .prod-field select, .prod-field textarea{
+    width:100%;padding:10px 12px;border-radius:10px;border:1.5px solid var(--line);
+    font-family:inherit;font-size:13.5px;background:var(--bg);
+  }
+  .prod-field textarea{min-height:70px;resize:vertical;}
+  .prod-checks{display:flex;gap:8px;flex-wrap:wrap;}
+  .prod-checks label{
+    display:flex;align-items:center;gap:6px;padding:7px 12px;border-radius:16px;
+    border:1px solid var(--line);background:var(--bg);font-size:12.5px;font-weight:600;cursor:pointer;
+  }
+  .photo-preview{width:90px;height:90px;border-radius:12px;object-fit:cover;margin-top:8px;display:none;}
+  .extra-thumbs{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;}
+  .extra-thumb{position:relative;width:64px;height:64px;}
+  .extra-thumb img{width:100%;height:100%;border-radius:9px;object-fit:cover;border:1px solid var(--line);}
+  .extra-thumb button{
+    position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;
+    background:var(--ring3);color:#fff;border:none;font-size:12px;line-height:1;cursor:pointer;
+  }
+  .ai-enhance-box{margin-top:12px;padding:12px 14px;background:linear-gradient(135deg,rgba(78,107,58,.07),rgba(192,138,46,.07));border:1px dashed var(--line);border-radius:12px;}
+  .ai-enhance-head{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;margin-bottom:6px;}
+  .ai-soon-badge{font-size:10px;font-weight:800;padding:2px 8px;border-radius:8px;background:var(--ring2);color:#fff;}
+  .ai-enhance-box p{font-size:12px;color:var(--muted);line-height:1.5;margin:0 0 10px;}
+  .ai-enhance-box button{padding:8px 16px;border-radius:9px;background:var(--ink);color:#fff;border:none;font-size:12.5px;font-weight:700;cursor:pointer;}
+  .prod-submit{
+    padding:11px 22px;border-radius:12px;background:var(--ink);color:#fff;border:none;
+    font-size:13.5px;font-weight:700;cursor:pointer;margin-top:6px;
+  }
+  .prod-submit:disabled{opacity:.5;}
+  .prod-msg{font-size:12.5px;color:var(--ring3);min-height:16px;margin-top:8px;}
+  .prod-item{display:flex;gap:12px;align-items:center;padding:12px;background:var(--card);border:1px solid var(--line);border-radius:12px;margin-bottom:8px;}
+  .prod-item img{width:52px;height:52px;border-radius:10px;object-fit:cover;flex-shrink:0;}
+  .prod-item-body{flex:1;min-width:0;}
+  .prod-item-title{font-size:13px;font-weight:700;}
+  .prod-item-sub{font-size:11.5px;color:var(--muted);}
+  .prod-del{background:none;border:none;color:var(--ring3);font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0;}
+  .adm-empty{padding:30px;text-align:center;color:var(--muted);font-size:13px;}
+  .prod-check-label{display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:600;cursor:pointer;}
+  .doc-status{font-size:11.5px;color:var(--ring1);margin-top:4px;}
+  .prod-item.is-paused{opacity:.55;}
+  .prod-pause-badge{font-size:10px;font-weight:800;padding:2px 8px;border-radius:8px;background:rgba(200,60,60,.12);color:var(--ring3);margin-left:6px;}
+</style>
+</head>
+<body>
+<div class="adm-wrap">
+  <h1>Ürünlerim <span id="sellerName" style="font-weight:500;color:var(--muted);font-size:13px;"></span></h1>
+  <p class="lead">Yeni ürün ekle, stok/fiyat güncelle veya mevcut ilanlarını kaldır. <a href="/admin-mesajlar.html">← Mesaj kutusuna dön</a> · <a href="/admin-yorumlarim.html">Yorumlarım</a> · <a href="/admin-kargo.html">Kargo Takip</a> · <a href="/admin-ambalaj.html">Ambalaj Satın Al</a></p>
+
+  <div class="prod-form">
+    <h2 id="formTitle">Yeni Ürün Ekle</h2>
+    <div class="prod-field">
+      <label>Ürün Başlığı</label>
+      <input type="text" id="fTitle" placeholder="Örn. Manisa Kirazı" maxlength="80">
+    </div>
+    <div class="prod-row">
+      <div class="prod-field">
+        <label>Kategori</label>
+        <select id="fCat">
+          <option>Asma Yaprağı</option><option>Üzüm</option><option>Pekmez</option><option>İncir</option>
+          <option>Zeytin</option><option>Zeytinyağı</option><option>Salça</option><option>Tarhana</option>
+          <option>Kiraz</option><option>Kuru Meyve</option><option>Kuruyemiş</option><option>Bal</option>
+          <option>Peynir</option><option>Sebze</option><option>Meyve</option><option>Reçel</option>
+        </select>
+      </div>
+      <div class="prod-field">
+        <label>Şehir</label>
+        <input type="text" id="fCity" placeholder="Örn. Manisa" maxlength="40">
+      </div>
+    </div>
+    <div class="prod-row" id="catAttrsWrap"></div>
+    <div class="prod-row">
+      <div class="prod-field">
+        <label>Fiyat (₺)</label>
+        <input type="number" id="fPrice" min="1" placeholder="220">
+      </div>
+      <div class="prod-field">
+        <label>Ambalaj / Birim</label>
+        <select id="fUnit">
+          <option value="/ kg">/ kg</option>
+          <option value="/ adet">/ adet</option>
+          <option value="/ kavanoz">/ kavanoz</option>
+          <option value="/ litre">/ litre</option>
+          <option value="/ demet">/ demet</option>
+        </select>
+      </div>
+    </div>
+    <div class="prod-row">
+      <div class="prod-field">
+        <label>Min. Tedarik Miktarı</label>
+        <input type="number" id="fMinQty" min="1" placeholder="5">
+      </div>
+      <div class="prod-field">
+        <label>Max. Tedarik Miktarı</label>
+        <input type="number" id="fMaxQty" min="1" placeholder="100">
+      </div>
+    </div>
+    <div class="prod-field">
+      <label>Stok Miktarı (boş = sınırsız)</label>
+      <input type="number" id="fStock" min="0" placeholder="Örn. 40">
+    </div>
+    <div class="prod-row">
+      <div class="prod-field">
+        <label>Birim Ağırlık (kg) — kargo için gerekli</label>
+        <input type="number" id="fWeight" min="0.1" step="0.1" placeholder="Örn. 1">
+      </div>
+      <div class="prod-field" style="display:flex;align-items:flex-end;">
+        <label class="prod-check-label"><input type="checkbox" id="fPerishable"> Çabuk bozulur (soğuk zincir gerekir)</label>
+      </div>
+    </div>
+    <p class="doc-status" id="perishableWarning" style="display:none;color:var(--ring2);">⚠️ Çabuk bozulan bir ürün için kargo yerine kendin teslim ya da otobüs tercih etmen önerilir.</p>
+    <div class="prod-field">
+      <label>Fotoğraf (kapak)</label>
+      <input type="file" id="fPhoto" accept="image/png,image/jpeg,image/webp">
+      <img class="photo-preview" id="photoPreview" alt="">
+    </div>
+    <div class="prod-field">
+      <label>Ek Fotoğraflar (opsiyonel, en fazla 5 — birden fazla seçebilirsin)</label>
+      <input type="file" id="fExtraPhotos" accept="image/png,image/jpeg,image/webp" multiple>
+      <div class="extra-thumbs" id="extraThumbs"></div>
+      <div class="ai-enhance-box">
+        <div class="ai-enhance-head"><span>🤖 Yapay Zeka ile Otomatik Fotoğraf Düzenleme</span><span class="ai-soon-badge">Yakında</span></div>
+        <p>Yüklediğin fotoğrafların arka planını temizleyip ışığını otomatik düzenleyeceğiz — ürünün daha profesyonel görünecek. Şimdilik dene, ne zaman hazır olduğunu buradan görebilirsin.</p>
+        <button type="button" id="aiEnhanceBtn">Fotoğrafları Düzenle</button>
+        <p class="doc-status" id="aiEnhanceMsg"></p>
+      </div>
+    </div>
+    <div class="prod-field">
+      <label class="prod-check-label"><input type="checkbox" id="fOrganic"> Organik ürün</label>
+    </div>
+    <div class="prod-field" id="organicDocWrap" style="display:none;">
+      <label>Organik Belgesi (zorunlu — organik iddiası için admin onayına gider)</label>
+      <input type="file" id="fOrganicDoc" accept="image/png,image/jpeg,image/webp,application/pdf">
+      <div class="doc-status" id="organicDocStatus"></div>
+    </div>
+    <div class="prod-field">
+      <label>Sertifika (opsiyonel — ör. İyi Tarım Uygulamaları belgesi)</label>
+      <input type="file" id="fCert" accept="image/png,image/jpeg,image/webp,application/pdf">
+      <div class="doc-status" id="certStatus"></div>
+    </div>
+    <div class="prod-field">
+      <label>Nakliye Yöntemi</label>
+      <div class="prod-checks">
+        <label><input type="checkbox" class="fDelivery" value="pickup"> Kendim Alacağım</label>
+        <label><input type="checkbox" class="fDelivery" value="bus"> Otobüs</label>
+        <label><input type="checkbox" class="fDelivery" value="kargo"> Kargo</label>
+      </div>
+    </div>
+    <div class="prod-field">
+      <label>Saklama Koşulları</label>
+      <textarea id="fStorage" maxlength="300" placeholder="Örn. Serin ve kuru yerde saklayın."></textarea>
+    </div>
+    <div class="prod-field">
+      <label>Ürün Açıklaması</label>
+      <textarea id="fDesc" maxlength="1000" placeholder="Ürünün hakkında birkaç cümle yaz."></textarea>
+    </div>
+    <button class="prod-submit" id="submitBtn">Ürünü Yayınla</button>
+    <button type="button" class="prod-del" id="cancelEditBtn" style="display:none;margin-left:10px;">Vazgeç</button>
+    <p class="prod-msg" id="formMsg"></p>
+  </div>
+
+  <div id="prodList"></div>
+</div>
+
+<script src="assets/auth.js"></script>
+<script>
+(function () {
+  if (!window.KDAuth.requireSeller('/admin-urunlerim.html')) return;
+  document.getElementById('sellerName').textContent = '· ' + window.KDAuth.name();
+
+  var photoDataUrl = '';
+  var editingSlug = null;
+  var editingProduct = null;
+  var myProducts = [];
+  document.getElementById('fPhoto').addEventListener('change', function (e) {
+    var file = e.target.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function () {
+      photoDataUrl = reader.result;
+      var img = document.getElementById('photoPreview');
+      img.src = photoDataUrl;
+      img.style.display = 'block';
+    };
+    reader.readAsDataURL(file);
+  });
+
+  // Ek fotoğraflar: her biri { isNew:true, dataUrl } (henüz yüklenmemiş, base64) ya da
+  // { isNew:false, url } (düzenleme sırasında zaten yüklü olan mevcut fotoğraf) şeklinde tutulur.
+  var extraPhotoItems = [];
+  var MAX_EXTRA_PHOTOS = 5;
+
+  function renderExtraThumbs() {
+    var wrap = document.getElementById('extraThumbs');
+    wrap.innerHTML = extraPhotoItems.map(function (item, i) {
+      var src = item.isNew ? item.dataUrl : item.url;
+      return '<div class="extra-thumb"><img src="' + src + '" alt=""><button type="button" data-remove-extra="' + i + '">×</button></div>';
+    }).join('');
+    wrap.querySelectorAll('[data-remove-extra]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        extraPhotoItems.splice(Number(btn.dataset.removeExtra), 1);
+        renderExtraThumbs();
+      });
+    });
+  }
+
+  document.getElementById('fExtraPhotos').addEventListener('change', function (e) {
+    var files = Array.prototype.slice.call(e.target.files);
+    var room = MAX_EXTRA_PHOTOS - extraPhotoItems.length;
+    files.slice(0, room).forEach(function (file) {
+      var reader = new FileReader();
+      reader.onload = function () {
+        extraPhotoItems.push({ isNew: true, dataUrl: reader.result });
+        renderExtraThumbs();
+      };
+      reader.readAsDataURL(file);
+    });
+    e.target.value = '';
+  });
+
+  document.getElementById('aiEnhanceBtn').addEventListener('click', function () {
+    var msg = document.getElementById('aiEnhanceMsg');
+    if (!editingSlug) {
+      msg.style.color = 'var(--ring2)';
+      msg.textContent = 'Bunu denemek için önce ürünü kaydet, sonra listeden "Düzenle" ile tekrar aç.';
+      return;
+    }
+    msg.style.color = 'var(--muted)';
+    msg.textContent = 'Kontrol ediliyor…';
+    window.KDAuth.authedFetch('/api/admin/products/ai-enhance-photos', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slug: editingSlug }),
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      msg.style.color = 'var(--ring2)';
+      msg.textContent = d.message || d.error || 'Şu an kullanılamıyor.';
+    }).catch(function () {
+      msg.style.color = 'var(--ring3)';
+      msg.textContent = 'Bağlantı hatası, tekrar dene.';
+    });
+  });
+
+  // Kategoriye özel ürün özellikleri: sunucudaki CATEGORY_ATTRS ile birebir aynı olmalı.
+  var CATEGORY_ATTRS = {
+    'Zeytinyağı': [
+      { key: 'sikim', label: 'Sıkım Türü', options: ['Soğuk Sıkım', 'Sıcak Sıkım'] },
+      { key: 'filtre', label: 'Filtreleme', options: ['Filtreli', 'Filtresiz'] },
+    ],
+    'Üzüm': [
+      { key: 'cekirdek', label: 'Çekirdek', options: ['Çekirdekli', 'Çekirdeksiz'] },
+    ],
+    'Bal': [
+      { key: 'baltur', label: 'Bal Türü', options: ['Çiçek Balı', 'Çam Balı', 'Kestane Balı', 'Ayçiçek Balı'] },
+      { key: 'islenis', label: 'İşleniş', options: ['Süzme', 'Petekli'] },
+    ],
+    'Peynir': [
+      { key: 'peynirtur', label: 'Peynir Türü', options: ['Beyaz Peynir', 'Tulum', 'Kaşar', 'Lor', 'Ezine Tulum'] },
+      { key: 'yagorani', label: 'Yağ Oranı', options: ['Tam Yağlı', 'Yarım Yağlı', 'Light'] },
+    ],
+    'Zeytin': [
+      { key: 'renk', label: 'Zeytin Rengi', options: ['Yeşil Zeytin', 'Siyah Zeytin'] },
+      { key: 'islenis', label: 'İşleniş', options: ['Salamura', 'Sele', 'Kırma'] },
+    ],
+    'Salça': [
+      { key: 'salcatur', label: 'Salça Türü', options: ['Domates Salçası', 'Biber Salçası'] },
+      { key: 'acilik', label: 'Acılık', options: ['Acı', 'Tatlı'] },
+    ],
+    'Kuruyemiş': [
+      { key: 'kavrulma', label: 'Kavrulma', options: ['Çiğ', 'Kavrulmuş'] },
+      { key: 'tuz', label: 'Tuz', options: ['Tuzlu', 'Tuzsuz'] },
+    ],
+    'Pekmez': [
+      { key: 'anamadde', label: 'Ana Madde', options: ['Üzüm Pekmezi', 'Dut Pekmezi', 'Keçiboynuzu Pekmezi'] },
+    ],
+  };
+
+  function updatePerishableWarning() {
+    var kargo = document.querySelector('.fDelivery[value="kargo"]').checked;
+    var perishable = document.getElementById('fPerishable').checked;
+    document.getElementById('perishableWarning').style.display = (kargo && perishable) ? 'block' : 'none';
+  }
+  document.getElementById('fPerishable').addEventListener('change', updatePerishableWarning);
+  document.querySelector('.fDelivery[value="kargo"]').addEventListener('change', updatePerishableWarning);
+
+  function renderCatAttrs(values) {
+    values = values || {};
+    var wrap = document.getElementById('catAttrsWrap');
+    var fields = CATEGORY_ATTRS[document.getElementById('fCat').value] || [];
+    if (!fields.length) { wrap.innerHTML = ''; return; }
+    wrap.innerHTML = fields.map(function (f) {
+      var opts = f.options.map(function (o) {
+        return '<option' + (values[f.key] === o ? ' selected' : '') + '>' + o + '</option>';
+      }).join('');
+      return '<div class="prod-field"><label>' + f.label + '</label>' +
+        '<select data-attr-key="' + f.key + '"><option value="">Seçiniz</option>' + opts + '</select></div>';
+    }).join('');
+  }
+  document.getElementById('fCat').addEventListener('change', function () { renderCatAttrs({}); });
+
+  var organicDocDataUrl = '';
+  var certDataUrl = '';
+  document.getElementById('fOrganic').addEventListener('change', function (e) {
+    document.getElementById('organicDocWrap').style.display = e.target.checked ? 'block' : 'none';
+  });
+  document.getElementById('fOrganicDoc').addEventListener('change', function (e) {
+    var file = e.target.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function () {
+      organicDocDataUrl = reader.result;
+      document.getElementById('organicDocStatus').textContent = 'Yeni belge seçildi: ' + file.name;
+    };
+    reader.readAsDataURL(file);
+  });
+  document.getElementById('fCert').addEventListener('change', function (e) {
+    var file = e.target.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function () {
+      certDataUrl = reader.result;
+      document.getElementById('certStatus').textContent = 'Yeni sertifika seçildi: ' + file.name;
+    };
+    reader.readAsDataURL(file);
+  });
+
+  function stockLabel(p) {
+    if (p.stock === null || p.stock === undefined) return 'Stok: sınırsız';
+    return p.stock > 0 ? 'Stok: ' + p.stock + ' ' + p.unit.replace(/^\/\s*/, '') : 'Stok: tükendi';
+  }
+
+  function loadProducts() {
+    window.KDAuth.authedFetch('/api/admin/products/mine').then(function (r) { return r.json(); }).then(function (data) {
+      var list = document.getElementById('prodList');
+      var items = data.products || [];
+      myProducts = items;
+      if (!items.length) { list.innerHTML = '<div class="adm-empty">Henüz ürün eklemedin.</div>'; return; }
+      list.innerHTML = items.map(function (p) {
+        var imgSrc = /^\d+$/.test(String(p.img)) ?
+          'https://images.pexels.com/photos/' + p.img + '/pexels-photo-' + p.img + '.jpeg?auto=compress&cs=tinysrgb&w=150' : p.img;
+        var pauseBadge = p.active === false ? '<span class="prod-pause-badge">PASİF</span>' : '';
+        return '<div class="prod-item' + (p.active === false ? ' is-paused' : '') + '" data-slug="' + p.slug + '">' +
+          '<img src="' + imgSrc + '" alt="">' +
+          '<div class="prod-item-body"><div class="prod-item-title">' + p.title + pauseBadge + '</div><div class="prod-item-sub">' + p.cat + ' · ' + p.price + ' ' + p.unit + ' · ' + stockLabel(p) + '</div></div>' +
+          '<a href="urun/' + p.slug + '.html" class="prod-del" style="color:var(--ring1);">Görüntüle</a>' +
+          '<button class="prod-del" style="color:var(--ink);" data-edit="' + p.slug + '">Düzenle</button>' +
+          '<button class="prod-del" data-pause="' + p.slug + '" data-active="' + (p.active !== false) + '">' + (p.active === false ? 'Aktifleştir' : 'Pasife Al') + '</button>' +
+          '<button class="prod-del" data-slug="' + p.slug + '">Sil</button>' +
+        '</div>';
+      }).join('');
+      list.querySelectorAll('button[data-edit]').forEach(function (btn) {
+        btn.addEventListener('click', function () { startEdit(btn.dataset.edit); });
+      });
+      list.querySelectorAll('button[data-pause]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var nextActive = btn.dataset.active !== 'true';
+          window.KDAuth.authedFetch('/api/admin/products/update', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ slug: btn.dataset.pause, active: nextActive }),
+          }).then(function () { loadProducts(); }).catch(function () {});
+        });
+      });
+      list.querySelectorAll('button[data-slug]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          if (!confirm('Bu ürünü silmek istediğine emin misin?')) return;
+          window.KDAuth.authedFetch('/api/admin/products/delete', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ slug: btn.dataset.slug }),
+          }).then(function () { loadProducts(); }).catch(function () {});
+        });
+      });
+    }).catch(function () {});
+  }
+
+  function startEdit(slug) {
+    var p = myProducts.filter(function (x) { return x.slug === slug; })[0];
+    if (!p) return;
+    editingSlug = slug;
+    editingProduct = p;
+    document.getElementById('formTitle').textContent = '"' + p.title + '" Ürününü Düzenle';
+    document.getElementById('fTitle').value = p.title;
+    document.getElementById('fCat').value = p.cat;
+    renderCatAttrs(p.attrs || {});
+    document.getElementById('fCity').value = p.city;
+    document.getElementById('fPrice').value = parseInt(p.price, 10) || '';
+    document.getElementById('fUnit').value = p.unit;
+    document.getElementById('fMinQty').value = p.minQty || '';
+    document.getElementById('fMaxQty').value = p.maxQty || '';
+    document.getElementById('fStock').value = (p.stock === null || p.stock === undefined) ? '' : p.stock;
+    document.getElementById('fWeight').value = p.weightKg || '';
+    document.getElementById('fPerishable').checked = !!p.perishable;
+    document.getElementById('fStorage').value = p.storageConditions || '';
+    document.getElementById('fDesc').value = p.description || '';
+    document.querySelectorAll('.fDelivery').forEach(function (c) { c.checked = (p.delivery || []).indexOf(c.value) !== -1; });
+    photoDataUrl = '';
+    document.getElementById('fPhoto').value = '';
+    document.getElementById('photoPreview').style.display = 'none';
+    extraPhotoItems = (p.images || []).map(function (url) { return { isNew: false, url: url }; });
+    renderExtraThumbs();
+    organicDocDataUrl = '';
+    certDataUrl = '';
+    document.getElementById('fOrganic').checked = !!p.organic;
+    document.getElementById('organicDocWrap').style.display = p.organic ? 'block' : 'none';
+    document.getElementById('fOrganicDoc').value = '';
+    document.getElementById('organicDocStatus').textContent = p.organicDocUrl
+      ? (p.organicApproved ? 'Yüklü belge onaylandı.' : 'Yüklü belge admin onayı bekliyor.') : '';
+    document.getElementById('fCert').value = '';
+    document.getElementById('certStatus').textContent = p.certificateUrl ? 'Yüklü sertifika var.' : '';
+    document.getElementById('submitBtn').textContent = 'Değişiklikleri Kaydet';
+    document.getElementById('cancelEditBtn').style.display = 'inline-block';
+    document.getElementById('formMsg').textContent = '';
+    updatePerishableWarning();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function resetForm() {
+    editingSlug = null;
+    editingProduct = null;
+    document.getElementById('formTitle').textContent = 'Yeni Ürün Ekle';
+    document.getElementById('fTitle').value = '';
+    document.getElementById('fCat').selectedIndex = 0;
+    renderCatAttrs({});
+    document.getElementById('fCity').value = '';
+    document.getElementById('fPrice').value = '';
+    document.getElementById('fMinQty').value = '';
+    document.getElementById('fMaxQty').value = '';
+    document.getElementById('fStock').value = '';
+    document.getElementById('fWeight').value = '';
+    document.getElementById('fPerishable').checked = false;
+    document.getElementById('fStorage').value = '';
+    document.getElementById('fDesc').value = '';
+    document.getElementById('fPhoto').value = '';
+    document.getElementById('photoPreview').style.display = 'none';
+    photoDataUrl = '';
+    extraPhotoItems = [];
+    renderExtraThumbs();
+    document.getElementById('fOrganic').checked = false;
+    document.getElementById('organicDocWrap').style.display = 'none';
+    document.getElementById('fOrganicDoc').value = '';
+    document.getElementById('organicDocStatus').textContent = '';
+    document.getElementById('fCert').value = '';
+    document.getElementById('certStatus').textContent = '';
+    organicDocDataUrl = '';
+    certDataUrl = '';
+    document.querySelectorAll('.fDelivery').forEach(function (c) { c.checked = false; });
+    document.getElementById('submitBtn').textContent = 'Ürünü Yayınla';
+    document.getElementById('cancelEditBtn').style.display = 'none';
+    updatePerishableWarning();
+  }
+
+  document.getElementById('cancelEditBtn').addEventListener('click', resetForm);
+
+  function uploadDoc(dataUrl) {
+    return window.KDAuth.authedFetch('/api/admin/upload-doc', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dataUrl: dataUrl }),
+    }).then(function (r) { return r.json(); });
+  }
+
+  document.getElementById('submitBtn').addEventListener('click', function () {
+    var msg = document.getElementById('formMsg');
+    var submitBtn = document.getElementById('submitBtn');
+    var isEdit = !!editingSlug;
+    var busyLabel = isEdit ? 'Kaydediliyor…' : 'Yayınlanıyor…';
+    var idleLabel = isEdit ? 'Değişiklikleri Kaydet' : 'Ürünü Yayınla';
+    var delivery = Array.prototype.slice.call(document.querySelectorAll('.fDelivery:checked')).map(function (c) { return c.value; });
+    var attrs = {};
+    document.querySelectorAll('#catAttrsWrap [data-attr-key]').forEach(function (sel) {
+      if (sel.value) attrs[sel.dataset.attrKey] = sel.value;
+    });
+    var organic = document.getElementById('fOrganic').checked;
+    var existingOrganicDoc = editingProduct ? editingProduct.organicDocUrl : null;
+    var existingCert = editingProduct ? editingProduct.certificateUrl : null;
+
+    var payload = {
+      title: document.getElementById('fTitle').value.trim(),
+      cat: document.getElementById('fCat').value,
+      city: document.getElementById('fCity').value.trim(),
+      price: document.getElementById('fPrice').value,
+      unit: document.getElementById('fUnit').value,
+      minQty: document.getElementById('fMinQty').value,
+      maxQty: document.getElementById('fMaxQty').value,
+      stock: document.getElementById('fStock').value,
+      weightKg: document.getElementById('fWeight').value,
+      perishable: document.getElementById('fPerishable').checked,
+      storageConditions: document.getElementById('fStorage').value.trim(),
+      description: document.getElementById('fDesc').value.trim(),
+      delivery: delivery,
+      attrs: attrs,
+      organic: organic,
+    };
+
+    if (!payload.title) { msg.textContent = 'Ürün başlığı gerekli.'; return; }
+    if (!payload.city) { msg.textContent = 'Şehir gerekli.'; return; }
+    if (!payload.price) { msg.textContent = 'Fiyat gerekli.'; return; }
+    if (!delivery.length) { msg.textContent = 'En az bir nakliye yöntemi seç.'; return; }
+    if (!isEdit && !photoDataUrl) { msg.textContent = 'Bir fotoğraf yükle.'; return; }
+    if (organic && !organicDocDataUrl && !existingOrganicDoc) { msg.textContent = 'Organik işaretlemek için bir belge yükle.'; return; }
+
+    msg.textContent = '';
+    submitBtn.disabled = true;
+    submitBtn.textContent = busyLabel;
+
+    function submitPayload() {
+      if (existingOrganicDoc && !payload.organicDocUrl) payload.organicDocUrl = existingOrganicDoc;
+      if (existingCert && !payload.certificateUrl) payload.certificateUrl = existingCert;
+      if (isEdit) payload.slug = editingSlug;
+      return window.KDAuth.authedFetch(isEdit ? '/api/admin/products/update' : '/api/admin/products', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      }).then(function (r) { return r.json(); });
+    }
+
+    var chain = Promise.resolve();
+    if (photoDataUrl) {
+      chain = chain.then(function () {
+        return window.KDAuth.authedFetch('/api/admin/upload-image', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ dataUrl: photoDataUrl }),
+        }).then(function (r) { return r.json(); }).then(function (d) {
+          if (d.error) throw new Error(d.error);
+          payload.img = d.url;
+        });
+      });
+    }
+    if (organicDocDataUrl) {
+      chain = chain.then(function () {
+        return uploadDoc(organicDocDataUrl).then(function (d) {
+          if (d.error) throw new Error(d.error);
+          payload.organicDocUrl = d.url;
+        });
+      });
+    }
+    if (certDataUrl) {
+      chain = chain.then(function () {
+        return uploadDoc(certDataUrl).then(function (d) {
+          if (d.error) throw new Error(d.error);
+          payload.certificateUrl = d.url;
+        });
+      });
+    }
+    payload.images = extraPhotoItems.filter(function (it) { return !it.isNew; }).map(function (it) { return it.url; });
+    extraPhotoItems.filter(function (it) { return it.isNew; }).forEach(function (item) {
+      chain = chain.then(function () {
+        return window.KDAuth.authedFetch('/api/admin/upload-image', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ dataUrl: item.dataUrl }),
+        }).then(function (r) { return r.json(); }).then(function (d) {
+          if (d.error) throw new Error(d.error);
+          payload.images.push(d.url);
+        });
+      });
+    });
+    chain = chain.then(submitPayload);
+
+    chain.then(function (data) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = idleLabel;
+      if (!data) return;
+      if (data.error) { msg.textContent = data.error; return; }
+      msg.style.color = 'var(--ring1)';
+      msg.textContent = isEdit ? 'Değişiklikler kaydedildi!' : 'Ürün yayınlandı!';
+      resetForm();
+      loadProducts();
+    }).catch(function (err) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = idleLabel;
+      msg.textContent = (err && err.message) || 'Bir hata oluştu.';
+    });
+  });
+
+  loadProducts();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#4E6B3A">
+<link rel="apple-touch-icon" href="/assets/logo-icon.jpg">
+<title>Hesap Ayarları — Köylü Dostu</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  .acc-wrap{max-width:460px;margin:0 auto;padding:20px 16px 60px;}
+  .acc-wrap h1{font-size:20px;font-weight:800;margin:6px 0 4px;}
+  .acc-card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:16px;}
+  .acc-card h2{font-size:13.5px;font-weight:800;margin:0 0 14px;}
+  .acc-field{margin-bottom:12px;}
+  .acc-field label{font-size:12px;font-weight:700;color:var(--muted);display:block;margin-bottom:6px;}
+  .acc-field input{
+    width:100%;padding:11px 13px;border-radius:10px;border:1.5px solid var(--line);
+    font-family:inherit;font-size:14px;background:var(--bg);
+  }
+  .acc-field input:disabled{color:var(--muted);}
+  .acc-btn{
+    padding:11px 20px;border-radius:12px;background:var(--ink);color:#fff;border:none;
+    font-size:13.5px;font-weight:700;cursor:pointer;
+  }
+  .acc-msg{font-size:12.5px;min-height:16px;margin-top:8px;}
+  .acc-msg.ok{color:var(--ring1);}
+  .acc-msg.err{color:var(--ring3);}
+  .acc-role-badge{display:inline-block;font-size:11px;font-weight:800;padding:3px 9px;border-radius:10px;background:var(--bg);color:var(--muted);}
+  .acc-logout{color:var(--ring3);font-size:12.5px;font-weight:700;text-decoration:none;}
+  .acc-toggle{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);}
+  .acc-toggle:last-of-type{border-bottom:none;}
+  .acc-toggle span{font-size:13px;font-weight:600;}
+  .acc-toggle small{display:block;font-size:11px;color:var(--muted);font-weight:400;margin-top:2px;}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <button class="hamburger-btn" onclick="document.getElementById('kdDrawer').classList.add('open');document.getElementById('kdOverlay').classList.add('open');" aria-label="Menü">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+  </button>
+  <a href="/index.html" class="avatar-ring">
+    <div class="avatar"><img src="/assets/logo-icon.jpg" alt="Köylü Dostu" style="width:92%;height:92%;object-fit:contain;"></div>
+  </a>
+  <a href="/index.html" class="brand-info" style="text-decoration:none;">
+    <h1>köylüdostu</h1>
+    <p>Hesap Ayarları</p>
+  </a>
+  <div id="authSlot"></div>
+</div>
+<div class="drawer-overlay" id="kdOverlay" onclick="document.getElementById('kdDrawer').classList.remove('open');this.classList.remove('open');"></div>
+<div class="drawer" id="kdDrawer">
+  <div class="drawer-head">
+    <div class="avatar-ring" style="width:40px;height:40px;">
+      <div class="avatar"><img src="/assets/logo-icon.jpg" alt="Köylü Dostu" style="width:92%;height:92%;object-fit:contain;"></div>
+    </div>
+    <div class="brand-info"><h1>köylüdostu</h1></div>
+    <button class="drawer-close" onclick="document.getElementById('kdDrawer').classList.remove('open');document.getElementById('kdOverlay').classList.remove('open');" aria-label="Kapat">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+  </div>
+  <nav class="drawer-nav">
+    <a href="/index.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>Anasayfa</a>
+    <a href="/vitrin.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 3l14 9-14 9V3z"/></svg>Vitrin</a>
+    <div class="drawer-section-label">Hesabım</div>
+    <a href="/favorilerim.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>Favori İlanlarım</a>
+    <a href="/favori-saticilarim.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>Favori Satıcılarım</a>
+    <a href="/mesajlarim.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Mesajlar</a>
+    <a href="/yorumlarim.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>Yorumlarım</a>
+    <a href="/hesap-ayarlarim.html" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/></svg>Hesap Ayarları</a>
+    <div class="drawer-section-label">Diğer</div>
+    <a href="/hakkimizda.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>Hakkımızda</a>
+    <a href="/gizlilik.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z"/></svg>Gizlilik</a>
+    <a href="/kullanim-sartlari.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h6"/></svg>Kullanım Şartları</a>
+    <a href="/kvkk.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z"/><path d="M9 12l2 2 4-4"/></svg>KVKK Aydınlatma Metni</a>
+  </nav>
+</div>
+
+<div class="acc-wrap">
+  <h1>Hesap Ayarları</h1>
+
+  <div class="acc-card">
+    <h2>Profil Bilgileri <span class="acc-role-badge" id="roleBadge"></span></h2>
+    <div class="acc-field"><label>Telefon</label><input type="text" id="phoneField" disabled></div>
+    <div class="acc-field"><label>Ad Soyad</label><input type="text" id="nameField"></div>
+    <div class="acc-field"><label>Şehir</label><input type="text" id="cityField"></div>
+    <div class="acc-field"><label>İlçe</label><input type="text" id="districtField"></div>
+    <div class="acc-field"><label>Mahalle (opsiyonel)</label><input type="text" id="neighborhoodField"></div>
+    <div class="acc-field"><label>E-posta (bildirimler için)</label><input type="email" id="emailField" placeholder="ornek@eposta.com"></div>
+    <button class="acc-btn" id="saveProfileBtn">Kaydet</button>
+    <p class="acc-msg" id="profileMsg"></p>
+  </div>
+
+  <div class="acc-card">
+    <h2>Bildirim Tercihleri</h2>
+    <label class="acc-toggle"><span>SMS ile bildirim al<small>Yeni mesaj ve yorum geldiğinde</small></span><input type="checkbox" id="notifySms"></label>
+    <label class="acc-toggle"><span>E-posta ile bildirim al<small>Yukarıdaki e-posta adresine, yeni mesaj ve yorum geldiğinde</small></span><input type="checkbox" id="notifyEmail"></label>
+    <button class="acc-btn" id="saveNotifyBtn" style="margin-top:12px;">Kaydet</button>
+    <p class="acc-msg" id="notifyMsg"></p>
+  </div>
+
+  <div class="acc-card">
+    <h2>Parola Değiştir</h2>
+    <div class="acc-field"><label>Mevcut Parola</label><input type="password" id="curPassField"></div>
+    <div class="acc-field"><label>Yeni Parola</label><input type="password" id="newPassField"></div>
+    <div class="acc-field"><label>Yeni Parola (Tekrar)</label><input type="password" id="newPassField2"></div>
+    <button class="acc-btn" id="savePassBtn">Parolayı Güncelle</button>
+    <p class="acc-msg" id="passMsg"></p>
+  </div>
+
+  <a class="acc-logout" href="javascript:;" id="logoutLink">Çıkış yap</a>
+</div>
+
+<script src="assets/auth.js"></script>
+<script>
+(function () {
+  if (!window.KDAuth.requireLogin('/hesap-ayarlarim.html')) return;
+
+  document.getElementById('phoneField').value = window.KDAuth.fmtPhone(window.KDAuth.phone());
+  document.getElementById('nameField').value = window.KDAuth.name();
+  document.getElementById('roleBadge').textContent = window.KDAuth.role() === 'satici' ? 'SATICI' : 'ALICI';
+
+  window.KDAuth.authedFetch('/api/auth/me').then(function (r) { return r.json(); }).then(function (data) {
+    if (!data.user) return;
+    document.getElementById('cityField').value = data.user.city || '';
+    document.getElementById('districtField').value = data.user.district || '';
+    document.getElementById('neighborhoodField').value = data.user.neighborhood || '';
+    document.getElementById('emailField').value = data.user.email || '';
+    var prefs = data.user.notifyPrefs || {};
+    document.getElementById('notifySms').checked = !!prefs.sms;
+    document.getElementById('notifyEmail').checked = !!prefs.email;
+  }).catch(function () {});
+
+  document.getElementById('saveProfileBtn').addEventListener('click', function () {
+    var msg = document.getElementById('profileMsg');
+    var name = document.getElementById('nameField').value.trim();
+    var city = document.getElementById('cityField').value.trim();
+    var district = document.getElementById('districtField').value.trim();
+    var neighborhood = document.getElementById('neighborhoodField').value.trim();
+    var email = document.getElementById('emailField').value.trim();
+    msg.className = 'acc-msg';
+    msg.textContent = '';
+    window.KDAuth.authedFetch('/api/auth/update-profile', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: name, city: city, district: district, neighborhood: neighborhood, email: email }),
+    }).then(function (r) { return r.json(); }).then(function (data) {
+      if (data.error) { msg.className = 'acc-msg err'; msg.textContent = data.error; return; }
+      localStorage.setItem('kd_auth_name', data.user.name);
+      msg.className = 'acc-msg ok';
+      msg.textContent = 'Kaydedildi.';
+    }).catch(function () {});
+  });
+
+  document.getElementById('saveNotifyBtn').addEventListener('click', function () {
+    var msg = document.getElementById('notifyMsg');
+    var email = document.getElementById('notifyEmail').checked;
+    var emailField = document.getElementById('emailField').value.trim();
+    msg.className = 'acc-msg';
+    if (email && !emailField) {
+      msg.className = 'acc-msg err'; msg.textContent = 'E-posta bildirimi için önce yukarıya bir e-posta adresi gir ve kaydet.'; return;
+    }
+    window.KDAuth.authedFetch('/api/auth/notify-prefs', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sms: document.getElementById('notifySms').checked, email: email }),
+    }).then(function (r) { return r.json(); }).then(function (data) {
+      if (data.error) { msg.className = 'acc-msg err'; msg.textContent = data.error; return; }
+      msg.className = 'acc-msg ok';
+      msg.textContent = 'Kaydedildi.';
+    }).catch(function () {});
+  });
+
+  document.getElementById('savePassBtn').addEventListener('click', function () {
+    var msg = document.getElementById('passMsg');
+    var cur = document.getElementById('curPassField').value;
+    var next = document.getElementById('newPassField').value;
+    var next2 = document.getElementById('newPassField2').value;
+    msg.className = 'acc-msg';
+    if (!cur || !next) { msg.className = 'acc-msg err'; msg.textContent = 'Tüm alanları doldur.'; return; }
+    if (next !== next2) { msg.className = 'acc-msg err'; msg.textContent = 'Yeni parolalar eşleşmiyor.'; return; }
+    window.KDAuth.authedFetch('/api/auth/change-password', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ currentPassword: cur, newPassword: next }),
+    }).then(function (r) { return r.json(); }).then(function (data) {
+      if (data.error) { msg.className = 'acc-msg err'; msg.textContent = data.error; return; }
+      document.getElementById('curPassField').value = '';
+      document.getElementById('newPassField').value = '';
+      document.getElementById('newPassField2').value = '';
+      msg.className = 'acc-msg ok';
+      msg.textContent = 'Parola güncellendi.';
+    }).catch(function () {});
+  });
+
+  document.getElementById('logoutLink').addEventListener('click', function () {
+    window.KDAuth.logout(); location.href = '/index.html';
+  });
+})();
+</script>
+<script>if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("/sw.js").catch(function(){});});}</script>
+</body>
+</html>

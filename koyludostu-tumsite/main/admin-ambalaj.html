@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ambalaj Satın Al — Köylü Dostu Yönetim</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  body{background:var(--bg);}
+  .adm-wrap{max-width:640px;margin:0 auto;padding:24px 16px 60px;}
+  .adm-wrap h1{font-size:20px;font-weight:800;margin:6px 0 4px;}
+  .adm-wrap p.lead{font-size:12.5px;color:var(--muted);margin:0 0 18px;}
+  .adm-wrap p.lead a{color:var(--ring1);font-weight:700;}
+  .adm-wrap h2.sub{font-size:14.5px;font-weight:800;margin:26px 0 12px;}
+  .pk-item{padding:14px;background:var(--card);border:1px solid var(--line);border-radius:12px;margin-bottom:10px;}
+  .pk-top{display:flex;align-items:baseline;justify-content:space-between;gap:10px;}
+  .pk-name{font-size:14px;font-weight:700;}
+  .pk-price{font-size:13.5px;font-weight:800;color:var(--ring1);white-space:nowrap;}
+  .pk-desc{font-size:12.5px;color:var(--muted);margin:4px 0 10px;line-height:1.5;}
+  .pk-order-row{display:flex;gap:8px;}
+  .pk-order-row input{width:70px;padding:9px 10px;border-radius:9px;border:1px solid var(--line);font-family:inherit;font-size:13px;background:var(--bg);}
+  .pk-order-row button{background:var(--ink);color:#fff;border:none;padding:0 16px;border-radius:9px;font-size:12.5px;font-weight:700;cursor:pointer;}
+  .pk-order-row button:disabled{opacity:.5;}
+  .ord-item{padding:12px 14px;background:var(--card);border:1px solid var(--line);border-radius:12px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;gap:10px;}
+  .ord-title{font-size:13px;font-weight:700;}
+  .ord-sub{font-size:11.5px;color:var(--muted);margin-top:2px;}
+  .ord-status{font-size:10px;font-weight:800;padding:3px 9px;border-radius:10px;flex-shrink:0;}
+  .ord-status.requested{background:rgba(192,138,46,.15);color:var(--ring2);}
+  .ord-status.confirmed{background:rgba(46,110,192,.12);color:#2e6ec0;}
+  .ord-status.delivered{background:rgba(78,107,58,.12);color:var(--ring1);}
+  .ord-status.cancelled{background:rgba(200,60,60,.12);color:var(--ring3);}
+  .adm-empty{padding:30px;text-align:center;color:var(--muted);font-size:13px;}
+</style>
+</head>
+<body>
+<div class="adm-wrap">
+  <h1>Ambalaj Satın Al <span id="sellerName" style="font-weight:500;color:var(--muted);font-size:13px;"></span></h1>
+  <p class="lead">Platformun sağladığı ambalaj malzemelerini buradan talep et; admin onayladıktan sonra teslimat/fatura ayrıca ayarlanır. <a href="/admin-mesajlar.html">Mesaj kutusu</a> · <a href="/admin-urunlerim.html">Ürünlerim</a> · <a href="/admin-kargo.html">Kargo Takip</a></p>
+
+  <div id="pkList"><div class="adm-empty">Yükleniyor…</div></div>
+
+  <h2 class="sub">Taleplerim</h2>
+  <div id="ordList"><div class="adm-empty">Yükleniyor…</div></div>
+</div>
+
+<script src="assets/auth.js"></script>
+<script>
+(function () {
+  if (!window.KDAuth.requireSeller('/admin-ambalaj.html')) return;
+  document.getElementById('sellerName').textContent = '· ' + window.KDAuth.name();
+
+  var STATUS_LABELS = { requested: 'Talep Edildi', confirmed: 'Onaylandı', delivered: 'Teslim Edildi', cancelled: 'İptal Edildi' };
+
+  function timeStr(iso) {
+    var d = new Date(iso);
+    return d.toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+  }
+
+  function loadOrders() {
+    window.KDAuth.authedFetch('/api/admin/packaging/orders/mine').then(function (r) { return r.json(); }).then(function (data) {
+      var list = document.getElementById('ordList');
+      var items = data.orders || [];
+      if (!items.length) { list.innerHTML = '<div class="adm-empty">Henüz ambalaj talebin yok.</div>'; return; }
+      list.innerHTML = items.map(function (o) {
+        return '<div class="ord-item">' +
+          '<div><div class="ord-title">' + o.itemName + ' × ' + o.quantity + '</div>' +
+          '<div class="ord-sub">' + timeStr(o.createdAt) + (o.note ? ' · ' + o.note.replace(/[<>]/g, '') : '') + '</div></div>' +
+          '<span class="ord-status ' + o.status + '">' + STATUS_LABELS[o.status] + '</span>' +
+        '</div>';
+      }).join('');
+    }).catch(function () {
+      document.getElementById('ordList').innerHTML = '<div class="adm-empty">Talepler yüklenemedi.</div>';
+    });
+  }
+
+  window.KDAuth.authedFetch('/api/packaging').then(function (r) { return r.json(); }).then(function (data) {
+    var list = document.getElementById('pkList');
+    var items = data.items || [];
+    if (!items.length) { list.innerHTML = '<div class="adm-empty">Şu an satışta ambalaj yok.</div>'; return; }
+    list.innerHTML = items.map(function (item) {
+      return '<div class="pk-item" data-id="' + item.id + '">' +
+        '<div class="pk-top"><div class="pk-name">' + item.name + '</div><div class="pk-price">' + item.price + ' ' + item.unit + '</div></div>' +
+        (item.description ? '<div class="pk-desc">' + item.description.replace(/[<>]/g, '') + '</div>' : '') +
+        '<div class="pk-order-row">' +
+          '<input type="number" min="1" value="1" data-qty>' +
+          '<button data-order>Talep Et</button>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+    list.querySelectorAll('[data-order]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var row = btn.closest('.pk-item');
+        var qty = row.querySelector('[data-qty]').value;
+        btn.disabled = true;
+        window.KDAuth.authedFetch('/api/admin/packaging/order', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ itemId: row.dataset.id, quantity: qty }),
+        }).then(function (r) { return r.json(); }).then(function (d) {
+          btn.disabled = false;
+          if (d.error) { alert(d.error); return; }
+          row.querySelector('[data-qty]').value = '1';
+          loadOrders();
+        }).catch(function () { btn.disabled = false; });
+      });
+    });
+  }).catch(function () {
+    document.getElementById('pkList').innerHTML = '<div class="adm-empty">Ambalaj kataloğu yüklenemedi.</div>';
+  });
+
+  loadOrders();
+})();
+</script>
+</body>
+</html>

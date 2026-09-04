@@ -1,0 +1,74 @@
+{
+  "p_55nqzkl9xk": {
+    "id": "p_55nqzkl9xk",
+    "productSlug": "manisa-kirazi",
+    "productTitle": "Manisa Kirazı",
+    "img": "3614942",
+    "sellerId": "u_2uceptwtey",
+    "sellerName": "Kemal Öztürk",
+    "caption": "Bu hafta hasat başladı, taze kirazlar geldi!",
+    "isAd": false,
+    "createdAt": "2026-09-03T19:41:31.089Z",
+    "expiresAt": "2026-09-05T03:39:52.124Z"
+  },
+  "p_wvl412xvcj": {
+    "id": "p_wvl412xvcj",
+    "productSlug": "suzme-cicek-bali",
+    "productTitle": "Süzme Çiçek Balı",
+    "img": "315420",
+    "sellerId": "u_nzn1yqpml6",
+    "sellerName": "Mustafa Demirel",
+    "caption": "Yeni sezon süzme çiçek balı stokta.",
+    "isAd": false,
+    "createdAt": "2026-09-03T16:41:31.089Z",
+    "expiresAt": "2026-09-04T16:41:31.089Z"
+  },
+  "p_7qqffurnq9": {
+    "id": "p_7qqffurnq9",
+    "productSlug": "kuru-incir",
+    "productTitle": "Kuru İncir",
+    "img": "4499221",
+    "sellerId": "u_a22lxspiap",
+    "sellerName": "Mehmet Arslan",
+    "caption": "Sınırlı stok, kaçırmayın!",
+    "isAd": true,
+    "createdAt": "2026-09-03T01:41:31.089Z",
+    "expiresAt": null
+  },
+  "p_lvgx8mc5bp": {
+    "id": "p_lvgx8mc5bp",
+    "productSlug": "soguk-sikim-zeytinyagi",
+    "productTitle": "Soğuk Sıkım Zeytinyağı",
+    "img": "3737656",
+    "sellerId": "u_cxnbscne1a",
+    "sellerName": "Osman Çelik",
+    "caption": "Erken hasat soğuk sıkım zeytinyağı.",
+    "isAd": true,
+    "createdAt": "2026-09-02T05:41:31.089Z",
+    "expiresAt": null
+  },
+  "p_96x27x0d0g": {
+    "id": "p_96x27x0d0g",
+    "productSlug": "taze-domates",
+    "productTitle": "Taze Domates",
+    "img": "4022083",
+    "sellerId": "u_w1lp4bncv3",
+    "sellerName": "İbrahim Şahin",
+    "caption": "Günlük toplanan salkım domates.",
+    "isAd": false,
+    "createdAt": "2026-09-03T13:41:31.089Z",
+    "expiresAt": "2026-09-04T13:41:31.089Z"
+  },
+  "p_i1uy1g78oe": {
+    "id": "p_i1uy1g78oe",
+    "productSlug": "ezine-tulum-peyniri",
+    "productTitle": "Ezine Tulum Peyniri",
+    "img": "6660248",
+    "sellerId": "u_em0i7zbbi0",
+    "sellerName": "Ayşe Güneş",
+    "caption": "Mağarada olgunlaşan tulum peyniri.",
+    "isAd": false,
+    "createdAt": "2026-09-03T20:41:31.089Z",
+    "expiresAt": "2026-09-04T20:41:31.089Z"
+  }
+}

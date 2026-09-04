@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Şikayetler — Köylü Dostu Yönetim</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  body{background:var(--bg);}
+  .adm-wrap{max-width:720px;margin:0 auto;padding:24px 16px 60px;}
+  .adm-wrap h1{font-size:20px;font-weight:800;margin:6px 0 4px;}
+  .adm-wrap p.lead{font-size:12.5px;color:var(--muted);margin:0 0 18px;}
+  .adm-wrap p.lead a{color:var(--ring1);font-weight:700;}
+  .cx-item{padding:14px;background:var(--card);border:1px solid var(--line);border-radius:12px;margin-bottom:10px;}
+  .cx-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:6px;}
+  .cx-title{font-size:13.5px;font-weight:700;}
+  .cx-status{font-size:10.5px;font-weight:800;padding:3px 9px;border-radius:10px;flex-shrink:0;}
+  .cx-status.open{background:#f4e3c8;color:#8a5a10;}
+  .cx-status.resolved{background:#e0ecdc;color:var(--ring1);}
+  .cx-reason{font-size:11.5px;color:var(--muted);margin-bottom:6px;}
+  .cx-text{font-size:12.5px;color:var(--ink);line-height:1.5;margin-bottom:10px;}
+  .cx-response{padding:10px 12px;background:var(--bg);border-radius:10px;font-size:12.5px;}
+  .cx-response b{display:block;margin-bottom:3px;font-size:11.5px;color:var(--muted);}
+  .cx-reply-row{display:flex;gap:8px;margin-top:10px;}
+  .cx-reply-row input{flex:1;padding:9px 12px;border-radius:9px;border:1px solid var(--line);font-family:inherit;font-size:12.5px;background:var(--bg);}
+  .cx-reply-row button{background:var(--ink);color:#fff;border:none;padding:0 16px;border-radius:9px;font-size:12.5px;font-weight:700;cursor:pointer;}
+  .adm-empty{padding:40px;text-align:center;color:var(--muted);font-size:13px;}
+</style>
+</head>
+<body>
+<div class="adm-wrap">
+  <h1>Şikayetler <span id="sellerName" style="font-weight:500;color:var(--muted);font-size:13px;"></span></h1>
+  <p class="lead">Kendi ürünlerinle ilgili alıcı şikayetleri. Yanıt yazıp "Çözüldü" olarak işaretleyebilirsin. <a href="/admin-mesajlar.html">← Mesaj kutusuna dön</a></p>
+  <div id="cxList"></div>
+</div>
+
+<script src="assets/auth.js"></script>
+<script>
+(function () {
+  if (!window.KDAuth.requireSeller('/admin-sikayetler.html')) return;
+  document.getElementById('sellerName').textContent = '· ' + window.KDAuth.name();
+  var REASON_LABELS = { kalite: 'Kalite düşük', gelmedi: 'Ürün hiç gelmedi', farkli: 'Tarif edilenden farklı', diger: 'Diğer' };
+
+  function timeAgo(iso) {
+    var diff = Date.now() - new Date(iso).getTime();
+    var min = Math.floor(diff / 60000);
+    if (min < 1) return 'az önce';
+    if (min < 60) return min + ' dk önce';
+    var h = Math.floor(min / 60);
+    if (h < 24) return h + ' sa önce';
+    return Math.floor(h / 24) + ' gün önce';
+  }
+
+  function render(items) {
+    var list = document.getElementById('cxList');
+    if (!items.length) { list.innerHTML = '<div class="adm-empty">Henüz şikayet yok.</div>'; return; }
+    list.innerHTML = items.map(function (c) {
+      var statusLabel = c.status === 'resolved' ? 'Çözüldü' : 'Beklemede';
+      var body = '<div class="cx-item" data-id="' + c.id + '">' +
+        '<div class="cx-head"><span class="cx-title">' + c.productTitle + ' · ' + c.buyerName + '</span><span class="cx-status ' + c.status + '">' + statusLabel + '</span></div>' +
+        '<div class="cx-reason">' + (REASON_LABELS[c.reason] || c.reason) + ' · ' + timeAgo(c.createdAt) + '</div>' +
+        '<div class="cx-text">' + c.text.replace(/[<>]/g, '') + '</div>';
+      if (c.status === 'resolved') {
+        body += '<div class="cx-response"><b>Yanıtın</b>' + c.sellerResponse.replace(/[<>]/g, '') + '</div>';
+      } else {
+        body += '<div class="cx-reply-row"><input type="text" placeholder="Yanıt yaz ve çözüldü olarak işaretle…" class="cx-reply-input"><button class="cx-reply-btn">Gönder</button></div>';
+      }
+      return body + '</div>';
+    }).join('');
+
+    list.querySelectorAll('.cx-item').forEach(function (el) {
+      var btn = el.querySelector('.cx-reply-btn');
+      if (!btn) return;
+      btn.addEventListener('click', function () {
+        var input = el.querySelector('.cx-reply-input');
+        var text = input.value.trim();
+        if (!text) return;
+        window.KDAuth.authedFetch('/api/admin/complaints/resolve', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: el.dataset.id, response: text }),
+        }).then(function (r) { return r.json(); }).then(function () { load(); }).catch(function () {});
+      });
+    });
+  }
+
+  function load() {
+    window.KDAuth.authedFetch('/api/admin/complaints').then(function (r) { return r.json(); }).then(function (data) {
+      render(data.complaints || []);
+    }).catch(function () {});
+  }
+
+  load();
+})();
+</script>
+</body>
+</html>

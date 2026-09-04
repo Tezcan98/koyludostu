@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mesaj Kutusu — Köylü Dostu Yönetim</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  body{background:var(--bg);}
+  .adm-wrap{max-width:960px;margin:0 auto;padding:24px 16px 60px;display:grid;grid-template-columns:280px 1fr;gap:18px;}
+  @media (max-width:760px){.adm-wrap{grid-template-columns:1fr;}}
+  .adm-wrap h1{grid-column:1/-1;font-size:20px;font-weight:800;margin:6px 0 4px;}
+  .adm-wrap p.lead{grid-column:1/-1;font-size:12.5px;color:var(--muted);margin:0 0 10px;}
+  .adm-list{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:8px;max-height:70vh;overflow-y:auto;}
+  .adm-conv{padding:11px 10px;border-radius:9px;cursor:pointer;margin-bottom:2px;}
+  .adm-conv:hover{background:var(--bg);}
+  .adm-conv.active{background:var(--ring1);}
+  .adm-conv.active .adm-conv-title, .adm-conv.active .adm-conv-phone{color:#fff;}
+  .adm-conv-title{font-size:13px;font-weight:700;}
+  .adm-conv-phone{font-size:11px;color:var(--muted);}
+  .adm-thread-wrap{background:var(--card);border:1px solid var(--line);border-radius:12px;display:flex;flex-direction:column;min-height:400px;}
+  .adm-thread-head{padding:14px 16px;border-bottom:1px solid var(--line);font-size:13.5px;font-weight:700;}
+  .adm-thread{flex:1;padding:16px;display:flex;flex-direction:column;gap:10px;overflow-y:auto;max-height:50vh;}
+  .adm-input-row{display:flex;gap:8px;padding:12px;border-top:1px solid var(--line);}
+  .adm-input-row input{flex:1;padding:10px 12px;border-radius:9px;border:1px solid var(--line);font-family:inherit;font-size:13px;background:var(--bg);}
+  .adm-input-row button{background:var(--ink);color:#fff;border:none;padding:0 18px;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;}
+  .adm-empty{padding:40px;text-align:center;color:var(--muted);font-size:13px;}
+</style>
+</head>
+<body>
+<div class="adm-wrap">
+  <h1>Mesaj Kutusu <span id="sellerName" style="font-weight:500;color:var(--muted);font-size:13px;"></span></h1>
+  <p class="lead">Ürün sayfalarından "Satıcıya Mesaj Yaz" ile gelen, sadece kendi ürünlerinle ilgili alıcı mesajları. Buradan yanıt vermek, alıcının uygulamasında satıcı mesajı olarak görünür. <a href="/index.html">← Anasayfaya dön</a> · <a href="/admin-urunlerim.html">Ürünlerim</a> · <a href="/admin-yorumlarim.html">Yorumlarım</a> · <a href="/admin-kargo.html">Kargo Takip</a> · <a href="/admin-ambalaj.html">Ambalaj</a> · <a href="/admin-sikayetler.html">Şikayetler</a> · <a href="/admin-postlar.html">Postlarım</a> · <a href="javascript:;" id="logoutLink">Çıkış yap</a></p>
+  <div class="adm-list" id="convList"></div>
+  <div class="adm-thread-wrap">
+    <div class="adm-thread-head" id="threadHead">Bir sohbet seçin</div>
+    <div class="adm-thread" id="threadBody"></div>
+    <div class="adm-input-row">
+      <input type="text" id="replyInput" placeholder="Yanıt yaz…" disabled>
+      <button id="replyBtn" disabled>Gönder</button>
+    </div>
+  </div>
+</div>
+
+<script src="assets/auth.js"></script>
+<script>
+(function () {
+  if (!window.KDAuth.requireSeller('/admin-mesajlar.html')) return;
+  document.getElementById('sellerName').textContent = '· ' + window.KDAuth.name();
+  document.getElementById('logoutLink').addEventListener('click', function () {
+    window.KDAuth.logout(); location.href = '/index.html';
+  });
+
+  var activeId = null;
+
+  function timeStr(iso) {
+    var d = new Date(iso);
+    return d.toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+  }
+
+  function loadList() {
+    window.KDAuth.authedFetch('/api/admin/messages').then(function (r) { return r.json(); }).then(function (data) {
+      var convs = data.conversations || [];
+      var list = document.getElementById('convList');
+      if (!convs.length) { list.innerHTML = '<div class="adm-empty">Henüz mesaj yok.</div>'; return; }
+      list.innerHTML = convs.map(function (c) {
+        return '<div class="adm-conv' + (c.id === activeId ? ' active' : '') + '" data-id="' + c.id + '">' +
+          '<div class="adm-conv-title">' + c.productTitle + '</div>' +
+          '<div class="adm-conv-phone">0' + c.buyerPhone.slice(0, 3) + ' ' + c.buyerPhone.slice(3, 6) + ' ' + c.buyerPhone.slice(6) + '</div>' +
+        '</div>';
+      }).join('');
+      list.querySelectorAll('.adm-conv').forEach(function (el) {
+        el.addEventListener('click', function () { openConv(el.dataset.id, convs); });
+      });
+      if (activeId) {
+        var current = convs.filter(function (c) { return c.id === activeId; })[0];
+        if (current) renderThread(current);
+      }
+    }).catch(function () {});
+  }
+
+  function openConv(id, convs) {
+    activeId = id;
+    var conv = convs.filter(function (c) { return c.id === id; })[0];
+    if (conv) renderThread(conv);
+    document.querySelectorAll('.adm-conv').forEach(function (el) {
+      el.classList.toggle('active', el.dataset.id === id);
+    });
+  }
+
+  function renderThread(conv) {
+    document.getElementById('threadHead').textContent = conv.productTitle + ' · 0' + conv.buyerPhone.slice(0, 3) + ' ' + conv.buyerPhone.slice(3, 6) + ' ' + conv.buyerPhone.slice(6);
+    var body = document.getElementById('threadBody');
+    body.innerHTML = conv.messages.map(function (m) {
+      return '<div class="msg-bubble ' + (m.from === 'buyer' ? 'seller' : 'buyer') + '">' + m.text.replace(/[<>]/g, '') +
+        '<div style="font-size:10px;opacity:.7;margin-top:3px;">' + timeStr(m.at) + '</div></div>';
+    }).join('');
+    body.scrollTop = body.scrollHeight;
+    document.getElementById('replyInput').disabled = false;
+    document.getElementById('replyBtn').disabled = false;
+  }
+
+  document.getElementById('replyBtn').addEventListener('click', function () {
+    var input = document.getElementById('replyInput');
+    var text = input.value.trim();
+    if (!text || !activeId) return;
+    window.KDAuth.authedFetch('/api/admin/messages/reply', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ conversationId: activeId, text: text }),
+    }).then(function (r) { return r.json(); }).then(function (conv) {
+      input.value = '';
+      renderThread(conv);
+      loadList();
+    }).catch(function () {});
+  });
+  document.getElementById('replyInput').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') document.getElementById('replyBtn').click();
+  });
+
+  loadList();
+  setInterval(loadList, 8000);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Yorumlarım — Köylü Dostu Yönetim</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  body{background:var(--bg);}
+  .adm-wrap{max-width:640px;margin:0 auto;padding:24px 16px 60px;}
+  .adm-wrap h1{font-size:20px;font-weight:800;margin:6px 0 4px;}
+  .adm-wrap p.lead{font-size:12.5px;color:var(--muted);margin:0 0 18px;}
+  .adm-wrap p.lead a{color:var(--ring1);font-weight:700;}
+  .rev-item{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:10px;}
+  .rev-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px;}
+  .rev-product{font-size:12.5px;font-weight:700;color:var(--ring1);}
+  .rev-stars{font-size:13px;color:var(--ring2);letter-spacing:1px;}
+  .rev-name{font-size:12px;color:var(--muted);margin-bottom:6px;}
+  .rev-text{font-size:13.5px;line-height:1.5;}
+  .rev-time{font-size:11px;color:var(--muted);margin-top:6px;}
+  .rev-status{font-size:10px;font-weight:800;padding:2px 8px;border-radius:8px;margin-left:6px;}
+  .rev-status.pending{background:rgba(192,138,46,.15);color:var(--ring2);}
+  .rev-reply-box{margin-top:10px;padding:10px 12px;background:var(--bg);border-radius:9px;font-size:12.5px;line-height:1.5;}
+  .rev-reply-box b{color:var(--ink);}
+  .rev-reply-form{display:flex;gap:8px;margin-top:10px;}
+  .rev-reply-form input{flex:1;padding:9px 11px;border-radius:9px;border:1px solid var(--line);font-family:inherit;font-size:12.5px;background:var(--bg);}
+  .rev-reply-form button{background:var(--ink);color:#fff;border:none;padding:0 14px;border-radius:9px;font-size:12.5px;font-weight:700;cursor:pointer;}
+  .adm-empty{padding:40px;text-align:center;color:var(--muted);font-size:13px;}
+</style>
+</head>
+<body>
+<div class="adm-wrap">
+  <h1>Yorumlarım <span id="sellerName" style="font-weight:500;color:var(--muted);font-size:13px;"></span></h1>
+  <p class="lead">Ürünlerine yapılan tüm değerlendirmeler. 4-5 yıldızlılar doğrudan yayınlanır; düşük puanlılar admin onayından geçer. Onaylı yorumlara yanıt yazabilirsin. <a href="/admin-mesajlar.html">Mesaj kutusu</a> · <a href="/admin-urunlerim.html">Ürünlerim</a> · <a href="/admin-kargo.html">Kargo Takip</a> · <a href="/admin-ambalaj.html">Ambalaj</a></p>
+  <div id="revList"><div class="adm-empty">Yükleniyor…</div></div>
+</div>
+
+<script src="assets/auth.js"></script>
+<script>
+(function () {
+  if (!window.KDAuth.requireSeller('/admin-yorumlarim.html')) return;
+  document.getElementById('sellerName').textContent = '· ' + window.KDAuth.name();
+
+  function starsHtml(n) {
+    var s = '';
+    for (var i = 1; i <= 5; i++) s += i <= n ? '★' : '☆';
+    return s;
+  }
+
+  function timeStr(iso) {
+    var d = new Date(iso);
+    return d.toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  }
+
+  function load() {
+    window.KDAuth.authedFetch('/api/admin/reviews/mine').then(function (r) { return r.json(); }).then(function (data) {
+      var list = document.getElementById('revList');
+      var items = data.reviews || [];
+      if (!items.length) { list.innerHTML = '<div class="adm-empty">Ürünlerine henüz yorum yapılmamış.</div>'; return; }
+      list.innerHTML = items.map(function (r) {
+        var statusBadge = r.status === 'pending' ? '<span class="rev-status pending">ONAY BEKLİYOR</span>' : '';
+        var body;
+        if (r.sellerReply) {
+          body = '<div class="rev-reply-box"><b>Yanıtın:</b> ' + r.sellerReply.text.replace(/[<>]/g, '') + '</div>';
+        } else if (r.status === 'approved') {
+          body = '<div class="rev-reply-form"><input type="text" maxlength="500" placeholder="Bu yoruma yanıt yaz…" data-review="' + r.id + '" data-product="' + r.productSlug + '">' +
+            '<button data-reply-btn="' + r.id + '">Yanıtla</button></div>';
+        } else {
+          body = '';
+        }
+        return '<div class="rev-item">' +
+          '<div class="rev-top"><a class="rev-product" href="urun/' + r.productSlug + '.html">' + r.productTitle + '</a>' +
+          '<span class="rev-stars">' + starsHtml(r.rating) + '</span></div>' +
+          '<div class="rev-name">' + r.name.replace(/[<>]/g, '') + statusBadge + '</div>' +
+          '<div class="rev-text">' + r.text.replace(/[<>]/g, '') + '</div>' +
+          '<div class="rev-time">' + timeStr(r.createdAt) + '</div>' +
+          body +
+        '</div>';
+      }).join('');
+
+      list.querySelectorAll('[data-reply-btn]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var id = btn.dataset.replyBtn;
+          var input = list.querySelector('input[data-review="' + id + '"]');
+          var text = input.value.trim();
+          if (!text) return;
+          btn.disabled = true;
+          window.KDAuth.authedFetch('/api/admin/reviews/reply', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ productSlug: input.dataset.product, reviewId: id, text: text }),
+          }).then(function (r) { return r.json(); }).then(function () { load(); }).catch(function () { btn.disabled = false; });
+        });
+      });
+    }).catch(function () {
+      document.getElementById('revList').innerHTML = '<div class="adm-empty">Yorumlar yüklenemedi.</div>';
+    });
+  }
+
+  load();
+})();
+</script>
+</body>
+</html>

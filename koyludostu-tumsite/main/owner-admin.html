@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Yönetici Paneli — Köylü Dostu</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  body{background:var(--bg);}
+  .own-wrap{max-width:900px;margin:0 auto;padding:24px 16px 60px;}
+  .own-wrap h1{font-size:20px;font-weight:800;margin:6px 0 4px;}
+  .own-wrap p.lead{font-size:12.5px;color:var(--muted);margin:0 0 18px;}
+
+  .login-box{max-width:340px;margin:80px auto;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:24px;}
+  .login-box h2{font-size:16px;font-weight:800;margin:0 0 14px;text-align:center;}
+  .login-box input{width:100%;padding:12px 14px;border-radius:10px;border:1.5px solid var(--line);font-family:inherit;font-size:14px;background:var(--bg);margin-bottom:10px;}
+  .login-box button{width:100%;padding:12px;border-radius:12px;background:var(--ink);color:#fff;border:none;font-size:13.5px;font-weight:700;cursor:pointer;}
+  .login-err{font-size:12.5px;color:var(--ring3);text-align:center;min-height:16px;margin-top:8px;}
+
+  .own-tabs{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;}
+  .own-tab{padding:9px 16px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--muted);font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;}
+  .own-tab.active{background:var(--ink);color:#fff;border-color:var(--ink);}
+  .own-stats{display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap;}
+  .own-stat{flex:1;min-width:100px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;text-align:center;}
+  .own-stat b{display:block;font-size:20px;font-weight:800;}
+  .own-stat span{font-size:11px;color:var(--muted);}
+
+  .own-row{display:flex;gap:12px;align-items:center;padding:12px;background:var(--card);border:1px solid var(--line);border-radius:12px;margin-bottom:8px;}
+  .own-row img{width:44px;height:44px;border-radius:9px;object-fit:cover;flex-shrink:0;}
+  .own-row .own-body{flex:1;min-width:0;}
+  .own-row .own-title{font-size:13px;font-weight:700;}
+  .own-row .own-sub{font-size:11.5px;color:var(--muted);}
+  .own-del{background:none;border:none;color:var(--ring3);font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0;}
+  .own-empty{padding:30px;text-align:center;color:var(--muted);font-size:13px;}
+  .own-badge{font-size:10px;font-weight:800;padding:2px 8px;border-radius:8px;background:var(--bg);color:var(--muted);flex-shrink:0;}
+  .own-star{background:none;border:none;font-size:18px;cursor:pointer;flex-shrink:0;}
+  .own-ad-btn{background:none;border:1px solid var(--line);border-radius:8px;color:var(--muted);font-size:11px;font-weight:700;padding:4px 10px;cursor:pointer;flex-shrink:0;font-family:inherit;}
+  .own-ad-btn.is-ad{border-color:#c08a2e;color:#c08a2e;background:#fbf3e3;}
+  .own-pause-badge{font-size:10px;font-weight:800;padding:2px 8px;border-radius:8px;background:rgba(200,60,60,.12);color:#8e3b46;margin-left:6px;}
+  .own-organic-badge{font-size:10px;font-weight:800;padding:2px 8px;border-radius:8px;background:rgba(78,107,58,.12);color:#4e6b3a;margin-left:6px;}
+  .own-sel{padding:5px 8px;border-radius:8px;border:1px solid var(--line);font-family:inherit;font-size:11px;background:var(--bg);flex-shrink:0;}
+  .own-track-input{width:110px;padding:5px 8px;border-radius:8px;border:1px solid var(--line);font-family:inherit;font-size:11px;background:var(--bg);flex-shrink:0;}
+  .own-approve-btn{background:none;border:1px solid var(--ring1);border-radius:8px;color:var(--ring1);font-size:11px;font-weight:700;padding:4px 10px;cursor:pointer;flex-shrink:0;font-family:inherit;}
+  .own-reject-btn{background:none;border:1px solid var(--ring3);border-radius:8px;color:var(--ring3);font-size:11px;font-weight:700;padding:4px 10px;cursor:pointer;flex-shrink:0;font-family:inherit;}
+  .pk-add-form{display:flex;gap:8px;flex-wrap:wrap;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;}
+  .pk-add-form input{flex:1;min-width:120px;padding:9px 11px;border-radius:9px;border:1px solid var(--line);font-family:inherit;font-size:12.5px;background:var(--bg);}
+  .pk-add-form button{background:var(--ink);color:#fff;border:none;padding:0 16px;border-radius:9px;font-size:12.5px;font-weight:700;cursor:pointer;}
+  .notif-toggle-row{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:13px;font-weight:700;}
+  .notif-toggle-row input{width:38px;height:22px;flex-shrink:0;}
+</style>
+</head>
+<body>
+
+<div class="login-box" id="loginBox">
+  <h2>🔐 Yönetici Girişi</h2>
+  <input type="password" id="pwField" placeholder="Yönetici parolası">
+  <button id="loginBtn">Giriş Yap</button>
+  <p class="login-err" id="loginErr"></p>
+</div>
+
+<div class="own-wrap" id="ownWrap" hidden>
+  <h1>Yönetici Paneli</h1>
+  <p class="lead">Platformdaki tüm ürünler, kullanıcılar, şikayetler ve postlar burada. Silme işlemleri geri alınamaz.</p>
+
+  <div class="own-stats">
+    <div class="own-stat"><b id="statProducts">-</b><span>Ürün</span></div>
+    <div class="own-stat"><b id="statUsers">-</b><span>Kullanıcı</span></div>
+    <div class="own-stat"><b id="statComplaints">-</b><span>Şikayet</span></div>
+    <div class="own-stat"><b id="statPosts">-</b><span>Post</span></div>
+  </div>
+
+  <div class="own-tabs">
+    <button type="button" class="own-tab active" data-tab="products">Ürünler</button>
+    <button type="button" class="own-tab" data-tab="sellers">Satıcılar</button>
+    <button type="button" class="own-tab" data-tab="users">Kullanıcılar</button>
+    <button type="button" class="own-tab" data-tab="messages">Mesajlar</button>
+    <button type="button" class="own-tab" data-tab="reviews">Yorum Onayı</button>
+    <button type="button" class="own-tab" data-tab="shipments">Kargo</button>
+    <button type="button" class="own-tab" data-tab="packaging">Ambalaj</button>
+    <button type="button" class="own-tab" data-tab="notifications">Bildirimler</button>
+    <button type="button" class="own-tab" data-tab="complaints">Şikayetler</button>
+    <button type="button" class="own-tab" data-tab="posts">Postlar</button>
+    <button type="button" class="own-tab" data-tab="ads">Reklamlar</button>
+  </div>
+
+  <div id="tabContent"></div>
+</div>
+
+<script>
+(function () {
+  var TOKEN_KEY = 'kd_owner_token';
+  var loginBox = document.getElementById('loginBox');
+  var ownWrap = document.getElementById('ownWrap');
+  var data = null;
+  var activeTab = 'products';
+
+  function authedFetch(url, options) {
+    options = options || {};
+    options.headers = Object.assign({}, options.headers, { Authorization: 'Bearer ' + localStorage.getItem(TOKEN_KEY) });
+    return fetch(url, options).then(function (r) {
+      if (r.status === 401) {
+        localStorage.removeItem(TOKEN_KEY);
+        showLogin();
+        return Promise.reject(new Error('unauthorized'));
+      }
+      return r;
+    });
+  }
+
+  function showLogin() {
+    loginBox.hidden = false;
+    ownWrap.hidden = true;
+  }
+
+  function imgSrc(img) {
+    return /^\d+$/.test(String(img)) ?
+      'https://images.pexels.com/photos/' + img + '/pexels-photo-' + img + '.jpeg?auto=compress&cs=tinysrgb&w=100' : img;
+  }
+
+  var sellersCache = null;
+  var messagesCache = null;
+
+  function render() {
+    document.getElementById('statProducts').textContent = data.products.length;
+    document.getElementById('statUsers').textContent = data.users.length;
+    document.getElementById('statComplaints').textContent = data.complaints.length;
+    document.getElementById('statPosts').textContent = data.posts.length;
+
+    var content = document.getElementById('tabContent');
+    if (activeTab === 'products') {
+      if (!data.products.length) { content.innerHTML = '<div class="own-empty">Ürün yok.</div>'; return; }
+      content.innerHTML = data.products.map(function (p) {
+        var pauseBadge = p.active === false ? '<span class="own-pause-badge">PASİF</span>' : '';
+        var organicBadge = p.organic ? '<span class="own-organic-badge">' + (p.organicApproved ? '🌱 Onaylı' : '🌱 Onay Bekliyor') + '</span>' : '';
+        var docLink = p.organic && p.organicDocUrl ? '<a href="' + p.organicDocUrl + '" target="_blank" class="own-badge" style="text-decoration:none;">Belge</a>' : '';
+        var certLink = p.certificateUrl ? '<a href="' + p.certificateUrl + '" target="_blank" class="own-badge" style="text-decoration:none;">Sertifika</a>' : '';
+        var organicBtn = p.organic
+          ? '<button class="own-approve-btn" data-organic-approve="' + p.slug + '" data-approved="' + (!p.organicApproved) + '">' + (p.organicApproved ? 'Onayı Kaldır' : 'Onayla') + '</button>'
+          : '';
+        return '<div class="own-row" data-kind="products" data-key="' + p.slug + '">' +
+          '<img src="' + imgSrc(p.img) + '" alt="">' +
+          '<div class="own-body"><div class="own-title">' + p.title + pauseBadge + organicBadge + '</div><div class="own-sub">' + p.cat + ' · ' + p.city + ' · ' + p.sellerName + ' · ' + p.price + '</div></div>' +
+          docLink + certLink + organicBtn +
+          '<button class="own-star" data-feature="' + (!p.featured) + '" title="Öne çıkar">' + (p.featured ? '★' : '☆') + '</button>' +
+          '<button class="own-del">Sil</button>' +
+        '</div>';
+      }).join('');
+      content.querySelectorAll('.own-star').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var row = btn.closest('.own-row');
+          authedFetch('/api/owner/products/feature', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ slug: row.dataset.key, featured: btn.dataset.feature === 'true' }),
+          }).then(function () { return authedFetch('/api/owner/overview').then(function (r) { return r.json(); }); })
+            .then(function (d) { data = d; render(); }).catch(function () {});
+        });
+      });
+      content.querySelectorAll('[data-organic-approve]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          authedFetch('/api/owner/products/approve-organic', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ slug: btn.dataset.organicApprove, approved: btn.dataset.approved === 'true' }),
+          }).then(function () { return authedFetch('/api/owner/overview').then(function (r) { return r.json(); }); })
+            .then(function (d) { data = d; render(); }).catch(function () {});
+        });
+      });
+    } else if (activeTab === 'users') {
+      if (!data.users.length) { content.innerHTML = '<div class="own-empty">Kullanıcı yok.</div>'; return; }
+      content.innerHTML = data.users.map(function (u) {
+        return '<div class="own-row" data-kind="users" data-key="' + u.phone + '">' +
+          '<div class="own-body"><div class="own-title">' + u.name + '</div><div class="own-sub">' + u.phone + ' · ' + u.city + '</div></div>' +
+          '<span class="own-badge">' + (u.role === 'satici' ? 'SATICI' : 'ALICI') + '</span>' +
+          '<button class="own-del">Sil</button>' +
+        '</div>';
+      }).join('');
+    } else if (activeTab === 'complaints') {
+      if (!data.complaints.length) { content.innerHTML = '<div class="own-empty">Şikayet yok.</div>'; return; }
+      content.innerHTML = data.complaints.map(function (c) {
+        return '<div class="own-row" data-kind="complaints" data-key="' + c.id + '">' +
+          '<div class="own-body"><div class="own-title">' + c.productTitle + '</div><div class="own-sub">' + c.buyerName + ' → ' + c.sellerName + ' · ' + c.text.replace(/[<>]/g, '') + '</div></div>' +
+          '<span class="own-badge">' + (c.status === 'resolved' ? 'Çözüldü' : 'Beklemede') + '</span>' +
+          '<button class="own-del">Sil</button>' +
+        '</div>';
+      }).join('');
+    } else if (activeTab === 'posts') {
+      if (!data.posts.length) { content.innerHTML = '<div class="own-empty">Post yok.</div>'; return; }
+      content.innerHTML = data.posts.map(function (p) {
+        return '<div class="own-row" data-kind="posts" data-key="' + p.id + '">' +
+          '<img src="' + imgSrc(p.img) + '" alt="">' +
+          '<div class="own-body"><div class="own-title">' + p.productTitle + '</div><div class="own-sub">' + p.sellerName + ' · ' + (p.caption || '—') + '</div></div>' +
+          '<span class="own-badge">' + (p.isAd ? 'Reklam' : 'Normal') + '</span>' +
+          '<button class="own-del">Sil</button>' +
+        '</div>';
+      }).join('');
+    } else if (activeTab === 'ads') {
+      var ads = data.posts.filter(function (p) { return p.isAd; });
+      renderAdsTab(content, ads);
+      return;
+    } else if (activeTab === 'sellers') {
+      renderSellersTab(content);
+      return;
+    } else if (activeTab === 'messages') {
+      renderMessagesTab(content);
+      return;
+    } else if (activeTab === 'reviews') {
+      renderReviewsTab(content);
+      return;
+    } else if (activeTab === 'shipments') {
+      renderShipmentsTab(content);
+      return;
+    } else if (activeTab === 'packaging') {
+      renderPackagingTab(content);
+      return;
+    } else if (activeTab === 'notifications') {
+      renderNotificationsTab(content);
+      return;
+    }
+
+    wireDeleteButtons(content);
+  }
+
+  function wireDeleteButtons(content) {
+    content.querySelectorAll('.own-del').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var row = btn.closest('.own-row');
+        var kind = row.dataset.kind, key = row.dataset.key;
+        if (!confirm('Silinsin mi? Bu işlem geri alınamaz.')) return;
+        var endpoints = {
+          products: { url: '/api/owner/products/delete', body: { slug: key } },
+          users: { url: '/api/owner/users/delete', body: { phone: key } },
+          complaints: { url: '/api/owner/complaints/delete', body: { id: key } },
+          posts: { url: '/api/owner/posts/delete', body: { id: key } },
+        };
+        var e = endpoints[kind];
+        authedFetch(e.url, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(e.body),
+        }).then(function () { load(); }).catch(function () {});
+      });
+    });
+  }
+
+  // Reklam verme ayarları: her postu tek tıkla reklam yapabilir/reklamdan indirebilir.
+  function renderAdsTab(content, ads) {
+    var normalPosts = data.posts.filter(function (p) { return !p.isAd; });
+    var html = '<p style="font-size:12px;color:var(--muted);margin:0 0 10px;">Reklam olarak işaretlenen postlar süresiz görünür (24 saatte kaybolmaz).</p>';
+    if (ads.length) {
+      html += ads.map(function (p) {
+        return '<div class="own-row" data-key="' + p.id + '">' +
+          '<img src="' + imgSrc(p.img) + '" alt="">' +
+          '<div class="own-body"><div class="own-title">' + p.productTitle + '</div><div class="own-sub">' + p.sellerName + ' · ' + (p.caption || '—') + '</div></div>' +
+          '<button class="own-ad-btn is-ad">Reklamdan indir</button>' +
+        '</div>';
+      }).join('');
+    } else {
+      html += '<div class="own-empty">Aktif reklam yok.</div>';
+    }
+    if (normalPosts.length) {
+      html += '<p style="font-size:12px;color:var(--muted);margin:18px 0 10px;">Reklam yapılabilecek normal postlar:</p>';
+      html += normalPosts.map(function (p) {
+        return '<div class="own-row" data-key="' + p.id + '">' +
+          '<img src="' + imgSrc(p.img) + '" alt="">' +
+          '<div class="own-body"><div class="own-title">' + p.productTitle + '</div><div class="own-sub">' + p.sellerName + ' · ' + (p.caption || '—') + '</div></div>' +
+          '<button class="own-ad-btn">Reklam yap</button>' +
+        '</div>';
+      }).join('');
+    }
+    content.innerHTML = html;
+    content.querySelectorAll('.own-ad-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var id = btn.closest('.own-row').dataset.key;
+        authedFetch('/api/owner/posts/toggle-ad', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: id }),
+        }).then(function () { return authedFetch('/api/owner/overview').then(function (r) { return r.json(); }); })
+          .then(function (d) { data = d; render(); }).catch(function () {});
+      });
+    });
+  }
+
+  var SELLER_STATUS_LABELS = { pending: 'Bekliyor', approved: 'Onaylı', rejected: 'Reddedildi' };
+
+  function renderSellersTab(content) {
+    content.innerHTML = '<div class="own-empty">Yükleniyor…</div>';
+    var go = function (sellers) {
+      sellersCache = sellers;
+      if (!sellers.length) { content.innerHTML = '<div class="own-empty">Satıcı yok.</div>'; return; }
+      var pending = sellers.filter(function (s) { return s.sellerStatus === 'pending'; });
+      var rest = sellers.filter(function (s) { return s.sellerStatus !== 'pending'; });
+
+      var html = '';
+      if (pending.length) {
+        html += '<p style="font-size:12px;color:var(--muted);margin:0 0 10px;">' + pending.length + ' satıcı başvurusu onay bekliyor.</p>';
+        html += pending.map(sellerRow).join('');
+        html += '<p style="font-size:12px;color:var(--muted);margin:18px 0 10px;">Diğer satıcılar:</p>';
+      }
+      html += rest.length ? rest.map(sellerRow).join('') : '<div class="own-empty">Başka satıcı yok.</div>';
+      content.innerHTML = html;
+
+      content.querySelectorAll('[data-seller-decide]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          authedFetch('/api/owner/sellers/approve', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phone: btn.dataset.phone, status: btn.dataset.sellerDecide }),
+          }).then(function () { sellersCache = null; renderSellersTab(content); }).catch(function () {});
+        });
+      });
+    };
+    if (sellersCache) { go(sellersCache); return; }
+    authedFetch('/api/owner/sellers').then(function (r) { return r.json(); }).then(function (d) { go(d.sellers || []); }).catch(function () {});
+
+    function sellerRow(s) {
+      var status = s.sellerStatus || 'approved';
+      var statusBadge = '<span class="own-badge' + (status === 'pending' ? '' : '') + '" style="' +
+        (status === 'pending' ? 'background:rgba(192,138,46,.15);color:#8a5a10;' : status === 'rejected' ? 'background:rgba(200,60,60,.12);color:#8e3b46;' : 'background:rgba(78,107,58,.12);color:#4e6b3a;') +
+        '">' + SELLER_STATUS_LABELS[status] + '</span>';
+      var docLink = s.sellerDocUrl ? '<a href="' + s.sellerDocUrl + '" target="_blank" class="own-badge" style="text-decoration:none;">Belge</a>' : '';
+      var decideBtns = status === 'pending'
+        ? '<button class="own-approve-btn" data-seller-decide="approved" data-phone="' + s.phone + '">Onayla</button>' +
+          '<button class="own-reject-btn" data-seller-decide="rejected" data-phone="' + s.phone + '">Reddet</button>'
+        : '';
+      return '<div class="own-row">' +
+        '<div class="own-body"><div class="own-title">' + s.name + '</div><div class="own-sub">' + s.phone + ' · ' + s.city +
+        (s.businessInfo ? ' · ' + s.businessInfo.replace(/[<>]/g, '') : '') + '</div></div>' +
+        '<span class="own-badge">' + s.productCount + ' ürün</span>' +
+        '<span class="own-badge">' + s.convoCount + ' sohbet</span>' +
+        '<span class="own-badge" style="' + (s.openComplaints ? 'background:#f4e3c8;color:#8a5a10;' : '') + '">' + s.openComplaints + ' açık şikayet</span>' +
+        statusBadge + docLink + decideBtns +
+      '</div>';
+    }
+  }
+
+  function renderMessagesTab(content) {
+    content.innerHTML = '<div class="own-empty">Yükleniyor…</div>';
+    var go = function (convos) {
+      messagesCache = convos;
+      if (!convos.length) { content.innerHTML = '<div class="own-empty">Mesaj yok.</div>'; return; }
+      content.innerHTML = convos.map(function (c) {
+        var last = c.messages[c.messages.length - 1];
+        return '<div class="own-row">' +
+          '<div class="own-body"><div class="own-title">' + c.productTitle + '</div><div class="own-sub">' + (last ? last.text.replace(/[<>]/g, '') : '') + '</div></div>' +
+          '<span class="own-badge">' + c.messages.length + ' mesaj</span>' +
+        '</div>';
+      }).join('');
+    };
+    if (messagesCache) { go(messagesCache); return; }
+    authedFetch('/api/owner/messages').then(function (r) { return r.json(); }).then(function (d) { go(d.conversations || []); }).catch(function () {});
+  }
+
+  // Yorum onay kuyruğu: 1-3 yıldızlı yorumlar admin onayı/reddi bekler; onaylı/reddedilmiş
+  // olanlar da referans için altta listelenir.
+  function renderReviewsTab(content) {
+    content.innerHTML = '<div class="own-empty">Yükleniyor…</div>';
+    authedFetch('/api/owner/reviews').then(function (r) { return r.json(); }).then(function (d) {
+      var reviews = d.reviews || [];
+      var pending = reviews.filter(function (r) { return r.status === 'pending'; });
+      var rest = reviews.filter(function (r) { return r.status !== 'pending'; });
+      var html = '';
+      html += '<p style="font-size:12px;color:var(--muted);margin:0 0 10px;">' + pending.length + ' yorum onay bekliyor.</p>';
+      if (pending.length) {
+        html += pending.map(reviewRow).join('');
+      } else {
+        html += '<div class="own-empty">Onay bekleyen yorum yok.</div>';
+      }
+      if (rest.length) {
+        html += '<p style="font-size:12px;color:var(--muted);margin:18px 0 10px;">Diğer tüm yorumlar:</p>';
+        html += rest.map(reviewRow).join('');
+      }
+      content.innerHTML = html;
+      content.querySelectorAll('[data-mod]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          authedFetch('/api/owner/reviews/moderate', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ productSlug: btn.dataset.slug, reviewId: btn.dataset.review, status: btn.dataset.mod }),
+          }).then(function () { renderReviewsTab(content); }).catch(function () {});
+        });
+      });
+    }).catch(function () {
+      content.innerHTML = '<div class="own-empty">Yorumlar yüklenemedi.</div>';
+    });
+
+    function reviewRow(r) {
+      var statusBadge = r.status === 'pending' ? '<span class="own-badge">Bekliyor</span>'
+        : r.status === 'rejected' ? '<span class="own-badge" style="background:rgba(200,60,60,.12);color:#8e3b46;">Reddedildi</span>'
+        : '<span class="own-badge" style="background:rgba(78,107,58,.12);color:#4e6b3a;">Onaylı</span>';
+      var actions = r.status === 'pending'
+        ? '<button class="own-approve-btn" data-mod="approved" data-slug="' + r.productSlug + '" data-review="' + r.id + '">Onayla</button>' +
+          '<button class="own-reject-btn" data-mod="rejected" data-slug="' + r.productSlug + '" data-review="' + r.id + '">Reddet</button>'
+        : '';
+      return '<div class="own-row">' +
+        '<div class="own-body"><div class="own-title">' + r.productTitle + ' · ' + r.rating + '★</div>' +
+        '<div class="own-sub">' + r.name.replace(/[<>]/g, '') + ': ' + r.text.replace(/[<>]/g, '') + '</div></div>' +
+        statusBadge + actions +
+      '</div>';
+    }
+  }
+
+  var SHIPMENT_STATUS_LABELS = {
+    requested: 'Talep Alındı', shipped: 'Kargoya Verildi', in_transit: 'Yolda',
+    delivered: 'Teslim Edildi', cancelled: 'İptal Edildi',
+  };
+
+  // Kargo Takip: satıcıların platforma bildirdiği kargolama taleplerinin tümü, admin
+  // durumu ve takip numarasını buradan günceller (satıcıya bildirim gider, bkz. notifyUser).
+  function renderShipmentsTab(content) {
+    content.innerHTML = '<div class="own-empty">Yükleniyor…</div>';
+    authedFetch('/api/owner/shipments').then(function (r) { return r.json(); }).then(function (d) {
+      var items = d.shipments || [];
+      if (!items.length) { content.innerHTML = '<div class="own-empty">Kargo talebi yok.</div>'; return; }
+      content.innerHTML = items.map(function (s) {
+        var opts = Object.keys(SHIPMENT_STATUS_LABELS).map(function (k) {
+          return '<option value="' + k + '"' + (k === s.status ? ' selected' : '') + '>' + SHIPMENT_STATUS_LABELS[k] + '</option>';
+        }).join('');
+        var perishBadge = s.perishable ? '<span class="own-pause-badge">❄️ Çabuk Bozulur</span>' : '';
+        var weightNote = s.totalWeightKg ? ' · ' + s.quantity + ' adet, ~' + s.totalWeightKg + ' kg' : ' · ' + s.quantity + ' adet';
+        return '<div class="own-row" data-id="' + s.id + '">' +
+          '<div class="own-body"><div class="own-title">' + s.productTitle + ' → ' + s.buyerName + perishBadge + '</div>' +
+          '<div class="own-sub">' + s.sellerName + ' · ' + s.address.replace(/[<>]/g, '') + (s.note ? ' · ' + s.note.replace(/[<>]/g, '') : '') + weightNote + '</div></div>' +
+          '<input class="own-track-input" placeholder="Takip no" value="' + (s.trackingNo || '') + '" data-track="' + s.id + '">' +
+          '<select class="own-sel" data-status="' + s.id + '">' + opts + '</select>' +
+        '</div>';
+      }).join('');
+      content.querySelectorAll('[data-status]').forEach(function (sel) {
+        sel.addEventListener('change', function () { updateShipment(sel.dataset.status); });
+      });
+      content.querySelectorAll('[data-track]').forEach(function (input) {
+        input.addEventListener('change', function () { updateShipment(input.dataset.track); });
+      });
+      function updateShipment(id) {
+        var row = content.querySelector('.own-row[data-id="' + id + '"]');
+        var status = row.querySelector('[data-status]').value;
+        var trackingNo = row.querySelector('[data-track]').value.trim();
+        authedFetch('/api/owner/shipments/update', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: id, status: status, trackingNo: trackingNo }),
+        }).catch(function () {});
+      }
+    }).catch(function () {
+      content.innerHTML = '<div class="own-empty">Kargo talepleri yüklenemedi.</div>';
+    });
+  }
+
+  // Ambalaj: admin kataloğu yönetir (ekle/pasife al/sil), satıcı taleplerini görür ve durumunu günceller.
+  function renderPackagingTab(content) {
+    content.innerHTML = '<div class="own-empty">Yükleniyor…</div>';
+    Promise.all([
+      authedFetch('/api/owner/packaging').then(function (r) { return r.json(); }),
+      authedFetch('/api/owner/packaging/orders').then(function (r) { return r.json(); }),
+    ]).then(function (results) {
+      var items = results[0].items || [];
+      var orders = results[1].orders || [];
+
+      var html = '<div class="pk-add-form">' +
+        '<input type="text" id="pkName" placeholder="Ambalaj adı (ör. Kilolu Kutu)">' +
+        '<input type="text" id="pkUnit" placeholder="Birim (ör. / adet)">' +
+        '<input type="number" id="pkPrice" placeholder="Fiyat ₺" min="1">' +
+        '<input type="text" id="pkDesc" placeholder="Açıklama (opsiyonel)">' +
+        '<button type="button" id="pkAddBtn">Ekle</button>' +
+      '</div>';
+
+      html += '<p style="font-size:12px;color:var(--muted);margin:16px 0 10px;">Katalog:</p>';
+      html += items.length ? items.map(function (it) {
+        return '<div class="own-row" data-pk="' + it.id + '">' +
+          '<div class="own-body"><div class="own-title">' + it.name + (it.active === false ? ' <span class="own-pause-badge">PASİF</span>' : '') + '</div>' +
+          '<div class="own-sub">' + it.price + ' ' + it.unit + (it.description ? ' · ' + it.description.replace(/[<>]/g, '') : '') + '</div></div>' +
+          '<button class="own-ad-btn" data-pk-toggle="' + it.id + '" data-active="' + (it.active !== false) + '">' + (it.active === false ? 'Aktifleştir' : 'Pasife Al') + '</button>' +
+          '<button class="own-del" data-pk-del="' + it.id + '">Sil</button>' +
+        '</div>';
+      }).join('') : '<div class="own-empty">Henüz ambalaj eklenmedi.</div>';
+
+      html += '<p style="font-size:12px;color:var(--muted);margin:20px 0 10px;">Gelen talepler:</p>';
+      html += orders.length ? orders.map(function (o) {
+        var opts = ['requested', 'confirmed', 'delivered', 'cancelled'].map(function (s) {
+          return '<option value="' + s + '"' + (s === o.status ? ' selected' : '') + '>' + s + '</option>';
+        }).join('');
+        return '<div class="own-row" data-order="' + o.id + '">' +
+          '<div class="own-body"><div class="own-title">' + o.itemName + ' × ' + o.quantity + '</div>' +
+          '<div class="own-sub">' + o.sellerName + ' · ' + o.sellerPhone + '</div></div>' +
+          '<select class="own-sel" data-order-status="' + o.id + '">' + opts + '</select>' +
+        '</div>';
+      }).join('') : '<div class="own-empty">Ambalaj talebi yok.</div>';
+
+      content.innerHTML = html;
+
+      document.getElementById('pkAddBtn').addEventListener('click', function () {
+        var name = document.getElementById('pkName').value.trim();
+        var unit = document.getElementById('pkUnit').value.trim();
+        var price = document.getElementById('pkPrice').value;
+        var description = document.getElementById('pkDesc').value.trim();
+        if (!name || !unit || !price) { alert('Ad, birim ve fiyat gerekli.'); return; }
+        authedFetch('/api/owner/packaging', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: name, unit: unit, price: price, description: description }),
+        }).then(function (r) { return r.json(); }).then(function (d) {
+          if (d.error) { alert(d.error); return; }
+          renderPackagingTab(content);
+        }).catch(function () {});
+      });
+
+      content.querySelectorAll('[data-pk-toggle]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          authedFetch('/api/owner/packaging/update', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: btn.dataset.pkToggle, active: btn.dataset.active !== 'true' }),
+          }).then(function () { renderPackagingTab(content); }).catch(function () {});
+        });
+      });
+      content.querySelectorAll('[data-pk-del]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          if (!confirm('Bu ambalaj kalıcı olarak silinsin mi?')) return;
+          authedFetch('/api/owner/packaging/delete', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: btn.dataset.pkDel }),
+          }).then(function () { renderPackagingTab(content); }).catch(function () {});
+        });
+      });
+      content.querySelectorAll('[data-order-status]').forEach(function (sel) {
+        sel.addEventListener('change', function () {
+          authedFetch('/api/owner/packaging/orders/update', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: sel.dataset.orderStatus, status: sel.value }),
+          }).catch(function () {});
+        });
+      });
+    }).catch(function () {
+      content.innerHTML = '<div class="own-empty">Ambalaj verileri yüklenemedi.</div>';
+    });
+  }
+
+  var NOTIF_CHANNEL_LABELS = { sms: 'SMS', email: 'E-posta' };
+
+  // Bildirimler: SMS/E-posta kanalları için sistem geneli açma-kapama anahtarı
+  // (kullanıcı tercihinden ayrı — burada kapatılırsa kimse o kanaldan bildirim almaz)
+  // ve gönderilen (şu an simüle edilen) tüm bildirimlerin geçmişi.
+  function renderNotificationsTab(content) {
+    content.innerHTML = '<div class="own-empty">Yükleniyor…</div>';
+    Promise.all([
+      authedFetch('/api/owner/notification-settings').then(function (r) { return r.json(); }),
+      authedFetch('/api/owner/notifications').then(function (r) { return r.json(); }),
+    ]).then(function (results) {
+      var settings = results[0].settings;
+      var channels = results[0].channels;
+      var notifications = results[1].notifications || [];
+
+      var html = '<div class="pk-add-form" style="flex-direction:column;align-items:stretch;gap:12px;">';
+      channels.forEach(function (ch) {
+        var enabled = ch.key === 'sms' ? settings.smsEnabled !== false : settings.emailEnabled !== false;
+        html += '<label class="notif-toggle-row">' +
+          '<span>' + ch.label + ' Kanalı' + (ch.configured ? '' : ' <span class="own-pause-badge" style="background:rgba(192,138,46,.15);color:#8a5a10;">Simüle — sağlayıcı bağlı değil</span>') + '</span>' +
+          '<input type="checkbox" data-channel-toggle="' + ch.key + '"' + (enabled ? ' checked' : '') + '>' +
+        '</label>';
+      });
+      html += '</div>';
+
+      html += '<p style="font-size:12px;color:var(--muted);margin:18px 0 10px;">Son bildirimler (' + notifications.length + '):</p>';
+      html += notifications.length ? notifications.slice(0, 50).map(function (n) {
+        return '<div class="own-row">' +
+          '<div class="own-body"><div class="own-title">' + (NOTIF_CHANNEL_LABELS[n.channel] || n.channel) + ' → ' + n.target + '</div>' +
+          '<div class="own-sub">' + n.message.replace(/[<>]/g, '') + '</div></div>' +
+          '<span class="own-badge">' + n.event + '</span>' +
+        '</div>';
+      }).join('') : '<div class="own-empty">Henüz bildirim gönderilmedi.</div>';
+
+      content.innerHTML = html;
+      content.querySelectorAll('[data-channel-toggle]').forEach(function (cb) {
+        cb.addEventListener('change', function () {
+          var body = {};
+          body[cb.dataset.channelToggle === 'sms' ? 'smsEnabled' : 'emailEnabled'] = cb.checked;
+          authedFetch('/api/owner/notification-settings', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+          }).catch(function () {});
+        });
+      });
+    }).catch(function () {
+      content.innerHTML = '<div class="own-empty">Bildirim verileri yüklenemedi.</div>';
+    });
+  }
+
+  document.querySelectorAll('.own-tab').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      document.querySelectorAll('.own-tab').forEach(function (b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      activeTab = btn.dataset.tab;
+      render();
+    });
+  });
+
+  function load() {
+    authedFetch('/api/owner/overview').then(function (r) { return r.json(); }).then(function (d) {
+      data = d;
+      loginBox.hidden = true;
+      ownWrap.hidden = false;
+      render();
+    }).catch(function () {});
+  }
+
+  document.getElementById('loginBtn').addEventListener('click', function () {
+    var pw = document.getElementById('pwField').value;
+    var err = document.getElementById('loginErr');
+    err.textContent = '';
+    fetch('/api/owner/login', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: pw }),
+    }).then(function (r) { return r.json(); }).then(function (data) {
+      if (data.error) { err.textContent = data.error; return; }
+      localStorage.setItem(TOKEN_KEY, data.token);
+      load();
+    }).catch(function () { err.textContent = 'Bağlantı hatası.'; });
+  });
+  document.getElementById('pwField').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') document.getElementById('loginBtn').click();
+  });
+
+  if (localStorage.getItem(TOKEN_KEY)) load(); else showLogin();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,8 @@
+{
+  "name": "koyludostu",
+  "private": true,
+  "scripts": {
+    "start": "node serve.js",
+    "test": "node --test"
+  }
+}

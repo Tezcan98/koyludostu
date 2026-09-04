@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#4E6B3A">
+<link rel="apple-touch-icon" href="/assets/logo-icon.jpg">
+<title>Akıllı Tarım: Sensörlerle Verim Takibi — Köylü Dostu Blog</title>
+<meta name="description" content="Toprak nemi, sıcaklık ve bitki sağlığı verilerinin sensörlerle nasıl izlendiğine genel bir bakış.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="hamburger-btn" onclick="document.getElementById('kdDrawer').classList.add('open');document.getElementById('kdOverlay').classList.add('open');" aria-label="Menü">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+  </button>
+  <a href="/index.html" class="avatar-ring">
+    <div class="avatar">
+      <img src="/assets/logo-icon.jpg" alt="Köylü Dostu" style="width:92%;height:92%;object-fit:contain;">
+    </div>
+  </a>
+  <a href="/index.html" class="brand-info" style="text-decoration:none;">
+    <h1>köylüdostu</h1>
+    <p>Tarladan şehre güvenli alışveriş</p>
+  </a>
+  <a class="cta-btn" href="https://wa.me/905425174860?text=Merhaba%2C%20%C3%BCr%C3%BCnleriniz%20hakk%C4%B1nda%20bilgi%20almak%20istiyorum." target="_blank">
+    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12c0 1.85.5 3.58 1.35 5.07L2 22l5.06-1.33A9.94 9.94 0 0 0 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2zm0 18c-1.6 0-3.1-.44-4.38-1.2l-.31-.19-3 .79.8-2.92-.2-.3A7.94 7.94 0 0 1 4 12c0-4.41 3.59-8 8-8s8 3.59 8 8-3.59 8-8 8z"/></svg>
+    Yaz
+  </a>
+</div>
+<div class="drawer-overlay" id="kdOverlay" onclick="document.getElementById('kdDrawer').classList.remove('open');this.classList.remove('open');"></div>
+<div class="drawer" id="kdDrawer">
+  <div class="drawer-head">
+    <div class="avatar-ring" style="width:40px;height:40px;">
+      <div class="avatar">
+        <img src="/assets/logo-icon.jpg" alt="Köylü Dostu" style="width:92%;height:92%;object-fit:contain;">
+      </div>
+    </div>
+    <div class="brand-info"><h1>köylüdostu</h1></div>
+    <button class="drawer-close" onclick="document.getElementById('kdDrawer').classList.remove('open');document.getElementById('kdOverlay').classList.remove('open');" aria-label="Kapat">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+  </div>
+  <nav class="drawer-nav">
+    <a href="/index.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>Anasayfa</a>
+    <a href="/index.html#urunler"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="7" width="18" height="14" rx="2"/><path d="M8 7V5a4 4 0 0 1 8 0v2"/></svg>Ürünler</a>
+    <a href="/vitrin.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 3l14 9-14 9V3z"/></svg>Vitrin</a>
+    <div class="drawer-section-label">Kanallar</div>
+    <a href="/haber/index.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h13v16H4z"/><path d="M17 8h3v10a2 2 0 0 1-2 2H8"/><path d="M8 8h6M8 12h6M8 16h3"/></svg>Haberler</a>
+  </nav>
+  <div class="drawer-foot">
+    <a class="cta-btn outline" href="https://wa.me/905425174860?text=Merhaba%2C%20K%C3%B6yl%C3%BC%20Dostu%27nda%20sat%C4%B1c%C4%B1%20olmak%20istiyorum." target="_blank"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Sen de Satıcı Ol</a>
+    <a class="cta-btn" href="https://wa.me/905425174860?text=Merhaba%2C%20%C3%BCr%C3%BCnleriniz%20hakk%C4%B1nda%20bilgi%20almak%20istiyorum." target="_blank">WhatsApp'tan Yaz</a>
+  </div>
+</div>
+<div class="breadcrumb"><a href="/index.html">Köylü Dostu</a><span>›</span><a href="index.html">Blog</a><span>›</span><a href="index.html#teknoloji">Teknoloji</a><span>›</span>Akıllı Tarım: Sensörlerle Verim Takibi</div><div class="blog-page">
+  <h1>Akıllı Tarım: Sensörlerle Verim Takibi</h1>
+  <div class="blog-meta">Köylü Dostu · Teknoloji · 2026-09-01</div>
+  <img class="blog-hero-img" src="https://images.pexels.com/photos/8316303/pexels-photo-8316303.jpeg?auto=compress&cs=tinysrgb&w=700" alt="Akıllı Tarım: Sensörlerle Verim Takibi">
+  <p>Bir çiftçinin en değerli aracı hâlâ kendi tecrübesi ve gözlemi — ama artık yanına bir de sensör ağı eklenebiliyor. "Akıllı tarım" ya da tarımda IoT (nesnelerin interneti) olarak adlandırılan bu yaklaşım, tarlaya yerleştirilen küçük kablosuz sensörlerin toprak nemi, sıcaklık ve nem gibi değişkenleri sürekli ölçüp bu verileri bir merkeze iletmesi esasına dayanıyor. Türkiye'deki üniversitelerde ve tarım teknolojisi şirketlerinde yürütülen çalışmalar da özellikle toprak nemine dayalı otomatik sulama sistemleri üzerine yoğunlaşmış durumda. Bu yazıda akıllı tarım sensörlerinin nasıl çalıştığını ve küçük ölçekli üreticiye ne kazandırabileceğini anlatıyoruz.</p>
+
+<h2>Toprak Nemi Sensörleri ve Otomatik Sulama</h2>
+<p>Sistemin en yaygın uygulaması toprak nemi takibidir. Toprağa gömülen sensörler belirli derinliklerdeki nem seviyesini ölçer ve bu veriyi kablosuz olarak bir kontrol ünitesine iletir. Türkiye'de yapılan araştırmalarda geliştirilen sistemlerden biri, bu nem verisine göre çalışan servo motor kontrollü akıllı vanalar kullanıyor — yani toprak kuruduğunda sistem otomatik olarak sulamayı başlatıyor, yeterli nem seviyesine ulaşıldığında ise durduruyor. Bu, hem su israfını önlüyor hem de bitkinin susuz kalma veya fazla sulanma riskini ortadan kaldırıyor; çünkü kararı artık tahmin değil, gerçek zamanlı veri veriyor.</p>
+
+<h2>Mikroklima Takibi</h2>
+<p>Toprak nemi dışında, tarlaya yerleştirilen küçük hava istasyonları sıcaklık, nem ve rüzgar gibi mikroklima verilerini de topluyor. Bu veriler özellikle don riski taşıyan bölgelerde hayati önem taşıyor: gece sıcaklığının kritik seviyeye düşmesi durumunda sistem üreticiyi anında uyarabiliyor, böylece don öncesi önlem alma (sisleme, ısıtma gibi) şansı doğuyor. Aynı şekilde nem ve sıcaklık kombinasyonu, bazı mantar hastalıklarının yayılması için ideal koşulları önceden haber verebiliyor — bu da ilaçlamanın hastalık yayılmadan, doğru zamanda yapılmasını sağlıyor.</p>
+
+<h2>Görüntü Tabanlı İzleme</h2>
+<p>Sensörlerin yanı sıra, drone ve uydu görüntüleme de akıllı tarımın önemli bir parçası haline geldi. Tarlanın havadan çekilen görüntüleri, özel yazılımlarla işlenerek bitki sağlığı haritalarına dönüştürülüyor — örneğin bazı akıllı tarım platformları uydu verilerini kullanarak tarladaki nem dağılımını görselleştirebiliyor. Bu sayede, tüm tarlayı tek tip yönetmek yerine, sorunlu bölgeler erkenden tespit edilip hedefli müdahale yapılabiliyor: bir köşede su stresi varken diğer köşede fazla nem olabiliyor, ve bu farkı gözle görmek her zaman mümkün olmuyor.</p>
+
+<h2>Küçük Üretici İçin Erişilebilirlik</h2>
+<p>Akıllı tarım denince akla genellikle büyük, endüstriyel işletmeler geliyor — ama sensör fiyatlarının düşmesi ve kablosuz iletişim teknolojilerinin (LoRa, NB-IoT gibi düşük güç tüketen ağlar) yaygınlaşmasıyla küçük ölçekli üreticiler için de erişilebilir hale geliyor. Birkaç sensörle başlayan basit bir kurulum bile, özellikle su kaynağının kısıtlı olduğu bölgelerde, sulama kararlarını önemli ölçüde iyileştirebiliyor.</p>
+
+<h2>Verinin Katkısı: Tecrübeyle Birleşince Değer Kazanır</h2>
+<p>Sensörlerin topladığı veri tek başına bir şey ifade etmiyor — asıl değer, bu verinin üreticinin yıllar içinde edindiği bilgi birikimiyle birleştiğinde ortaya çıkıyor. Deneyimli bir üretici, sensörün verdiği "toprak nemi düşük" uyarısını, o günün hava durumu, bitkinin gelişim evresi ve toprağın yapısı gibi bilgilerle harmanlayarak doğru kararı verebiliyor. Akıllı tarımın hedefi üreticinin yerini almak değil, elindeki bilgiyi somut verilerle güçlendirmek.</p>
+
+<p>Köylü Dostu'ndaki üreticilerin bir kısmı da, özellikle sulama planlamasında, bu tür basit sensör tabanlı takip sistemlerinden faydalanarak hem su tasarrufu sağlıyor hem de ürün kalitesini daha tutarlı hale getiriyor.</p>
+</div><footer class="site-footer">
+  <b>Köylü Dostu</b> · Üreticilerden doğrudan alışveriş · Platform iletişim: Enes Tezcan, 0542 517 4860
+</footer>
+
+<script>if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("/sw.js").catch(function(){});});}</script>
+</body>
+</html>

@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#4E6B3A">
+<link rel="apple-touch-icon" href="/assets/logo-icon.jpg">
+<title>Ajan Ayarları — Köylü Dostu Haber</title>
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+  .admin-page{max-width:720px;margin:0 auto;padding:28px 20px 70px;}
+  .admin-page h1{font-size:22px;font-weight:800;margin:0 0 4px;}
+  .admin-page > p.lead{font-size:13px;color:var(--muted);margin:0 0 28px;line-height:1.5;}
+  .admin-card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px;margin-bottom:18px;}
+  .admin-card h2{font-size:15px;font-weight:800;margin:0 0 4px;}
+  .admin-card .hint{font-size:12.5px;color:var(--muted);margin:0 0 14px;line-height:1.5;}
+  .admin-form{display:flex;gap:8px;margin-bottom:14px;}
+  .admin-form input[type=text],.admin-form input[type=url]{
+    flex:1;padding:10px 12px;border-radius:9px;border:1px solid var(--line);
+    font-family:inherit;font-size:13.5px;background:var(--bg);
+  }
+  .admin-form button{
+    background:var(--ink);color:#fff;border:none;padding:0 18px;border-radius:9px;
+    font-size:13px;font-weight:700;cursor:pointer;
+  }
+  .admin-form select{
+    padding:0 10px;border-radius:9px;border:1px solid var(--line);font-family:inherit;font-size:13px;background:var(--bg);
+  }
+  .region-label{font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;margin:14px 0 6px;}
+  .item-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;}
+  .item-list li{
+    display:flex;align-items:center;gap:10px;padding:9px 12px;background:var(--bg);
+    border-radius:8px;font-size:13px;word-break:break-all;
+  }
+  .item-list li span{flex:1;}
+  .item-list li button{
+    background:none;border:none;color:var(--ring3);font-size:16px;cursor:pointer;line-height:1;
+    padding:2px 6px;flex-shrink:0;
+  }
+  .word-chips{display:flex;flex-wrap:wrap;gap:8px;}
+  .word-chip{
+    display:flex;align-items:center;gap:6px;background:var(--bg);border-radius:16px;
+    padding:6px 8px 6px 14px;font-size:12.5px;font-weight:600;
+  }
+  .word-chip button{background:none;border:none;color:var(--ring3);cursor:pointer;font-size:15px;line-height:1;}
+  .empty{font-size:12.5px;color:var(--muted);padding:4px 2px;}
+  .toggle-row{display:flex;align-items:center;justify-content:space-between;gap:14px;}
+  .switch{position:relative;width:44px;height:24px;flex-shrink:0;}
+  .switch input{opacity:0;width:0;height:0;}
+  .slider{position:absolute;inset:0;background:var(--line);border-radius:24px;cursor:pointer;transition:.2s;}
+  .slider:before{content:"";position:absolute;width:18px;height:18px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s;}
+  input:checked + .slider{background:var(--ring1);}
+  input:checked + .slider:before{transform:translateX(20px);}
+  .status-msg{font-size:12px;color:var(--ring1);min-height:16px;margin-top:6px;}
+  .topic-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px;}
+  .topic-chip{
+    display:flex;align-items:center;gap:8px;background:var(--bg);border:1px solid var(--line);
+    border-radius:9px;padding:9px 12px;font-size:12.5px;font-weight:600;cursor:pointer;
+  }
+  .topic-chip input{accent-color:var(--ring1);width:15px;height:15px;flex-shrink:0;}
+</style>
+</head>
+<body>
+<div class="admin-page">
+  <p style="margin-bottom:14px;"><a href="../index.html" style="font-size:12.5px;color:var(--muted);">← Haber anasayfasına dön</a></p>
+  <h1>Haber Toplama Ajanı — Ayarlar</h1>
+  <p class="lead">Bu ekran, ileride tarımla ilgili haberleri kaynak sitelerden otomatik toplayıp özetleyerek yayınlayacak ajanın kurallarını tanımlar. Şu an için ayarları burada siz yönetiyorsunuz; ileride bu ekranı ajanın kendisi de güncelleyebilecek. Planlanan mimari: <b>Veri Toplayıcı</b> (aşağıdaki kaynaklardan ham haberi çeker) → <b>Yazar</b> (özgün, ters piramit kurallı taslak üretir) → <b>Editör</b> (tarafsızlık/halüsinasyon/dilbilgisi denetimi yapar, onaylamazsa yazara geri döndürür) → <b>SEO</b> (başlık/slug/etiket üretir). Mükerrer yayını önlemek için işlenen her haberin kaynak URL'si/başlık özeti (hash) kaydedilir ve yeni taramalarda bu kayıtla karşılaştırılır.</p>
+
+  <div class="admin-card">
+    <h2>Haber Konuları</h2>
+    <p class="hint">Ajanın hangi konularda haber toplayıp yazacağını belirler. İşaretli konular dışındaki haberler atlanır.</p>
+    <div class="topic-grid" id="newsTopicGrid"></div>
+  </div>
+
+  <div class="admin-card">
+    <h2>Kaynak Bağlantılar</h2>
+    <p class="hint">Ajanın haber taraması yapacağı site/kategori linkleri. Yeni bir kaynak eklemek için tam URL girin (ör. bir ajansın tarım kategorisi sayfası).</p>
+    <form class="admin-form" id="sourceForm">
+      <input type="url" id="sourceInput" placeholder="https://ornek-ajans.com/tarim" required>
+      <select id="sourceRegion">
+        <option value="yerel">Yerel</option>
+        <option value="global">Global</option>
+      </select>
+      <button type="submit">Ekle</button>
+    </form>
+    <div class="region-label">Yerel (Türkiye)</div>
+    <ul class="item-list" id="sourceListYerel"></ul>
+    <div class="region-label">Global (Uluslararası)</div>
+    <ul class="item-list" id="sourceListGlobal"></ul>
+  </div>
+
+  <div class="admin-card">
+    <h2>Yasaklı Kelimeler</h2>
+    <p class="hint">Başlığında veya metninde bu kelimelerden biri geçen haberler ajan tarafından atlanır, yayınlanmaz.</p>
+    <form class="admin-form" id="wordForm">
+      <input type="text" id="wordInput" placeholder="ör. magazin" required>
+      <button type="submit">Ekle</button>
+    </form>
+    <div class="word-chips" id="wordList"></div>
+  </div>
+
+  <div class="admin-card">
+    <h2>Mükerrer İçerik Engelleme</h2>
+    <div class="toggle-row">
+      <p class="hint" style="margin:0;flex:1;">Açıkken, aynı haberin birden fazla kaynakta (ör. hem AA hem DHA'da) yayınlanmış hâli tespit edilip yalnızca ilk görülen kaynaktan bir kez yayınlanır; aynı içerik farklı sitelerden tekrar tekrar paylaşılmaz.</p>
+      <label class="switch">
+        <input type="checkbox" id="dedupeToggle">
+        <span class="slider"></span>
+      </label>
+    </div>
+  </div>
+
+  <div class="admin-card">
+    <h2>İçerik Ajanı — Sağlık &amp; Ürün Yazıları</h2>
+    <p class="hint">İkinci bir ajan: bilimsel/genel beslenme kaynaklarından yararlanarak ürünlerimizle ilgili (incir, zeytinyağı, pekmez vb.) sağlık odaklı içerikler üretir ve yazının içinde doğal şekilde Köylü Dostu ürünlerine yönlendirir. Aşağıdaki kimlik/prompt bu ajana verilir.</p>
+    <textarea id="personaInput" rows="6" style="width:100%;padding:10px 12px;border-radius:9px;border:1px solid var(--line);font-family:inherit;font-size:13px;background:var(--bg);resize:vertical;margin-bottom:10px;"></textarea>
+    <div class="toggle-row">
+      <p class="hint" style="margin:0;flex:1;">Ajan etkin — yeni sağlık/ürün içerikleri bu kimlikle üretilsin.</p>
+      <label class="switch">
+        <input type="checkbox" id="healthToggle">
+        <span class="slider"></span>
+      </label>
+    </div>
+    <button type="button" id="personaSave" style="margin-top:12px;background:var(--ink);color:#fff;border:none;padding:9px 18px;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;">Kaydet</button>
+    <p class="hint" style="margin-top:10px;">Örnek üretilmiş içerik: <a href="../incirin-faydalari-bilimsel-bakis.html" target="_blank">İncirin Faydaları: Bilim Ne Diyor?</a></p>
+  </div>
+
+  <div class="admin-card">
+    <h2>İçerik Ajanı — Global Tarım-Ekonomi Analizi</h2>
+    <p class="hint">Üçüncü bir ajan: Reuters, Bloomberg, AP, AFP, S&amp;P Global gibi global kaynaklardan gelen tahıl/emtia haberlerini yalnızca çevirip özetlemez; bir tarım-ekonomi uzmanı gibi bunların Türkiye'ye olası etkileri üzerine yorum/çıkarım da ekler.</p>
+    <textarea id="globalPersonaInput" rows="6" style="width:100%;padding:10px 12px;border-radius:9px;border:1px solid var(--line);font-family:inherit;font-size:13px;background:var(--bg);resize:vertical;margin-bottom:10px;"></textarea>
+    <div class="toggle-row">
+      <p class="hint" style="margin:0;flex:1;">Ajan etkin — global kaynaklı içerikler bu kimlikle üretilsin.</p>
+      <label class="switch">
+        <input type="checkbox" id="globalToggle">
+        <span class="slider"></span>
+      </label>
+    </div>
+    <button type="button" id="globalPersonaSave" style="margin-top:12px;background:var(--ink);color:#fff;border:none;padding:9px 18px;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;">Kaydet</button>
+  </div>
+
+  <div class="admin-card">
+    <h2>İçerik Ajanı — Blog (Tarım Dışı Konular)</h2>
+    <p class="hint">Dördüncü ajan: Blog sitesi için içerik üretir. Aşağıda işaretli konu başlıklarında yazabilir — tarım dışı konuları da açarak blogu sadece tarımla sınırlı olmaktan çıkarabilirsiniz.</p>
+    <div class="topic-grid" id="topicGrid"></div>
+    <textarea id="blogPersonaInput" rows="4" style="width:100%;padding:10px 12px;border-radius:9px;border:1px solid var(--line);font-family:inherit;font-size:13px;background:var(--bg);resize:vertical;margin:14px 0 10px;"></textarea>
+    <div class="toggle-row">
+      <p class="hint" style="margin:0;flex:1;">Ajan etkin — blog içerikleri bu kimlik ve işaretli konularla üretilsin.</p>
+      <label class="switch">
+        <input type="checkbox" id="blogToggle">
+        <span class="slider"></span>
+      </label>
+    </div>
+    <button type="button" id="blogPersonaSave" style="margin-top:12px;background:var(--ink);color:#fff;border:none;padding:9px 18px;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;">Kaydet</button>
+    <p class="hint" style="margin-top:10px;">Blog sayfası: <a href="../../blog/index.html" target="_blank">/blog</a></p>
+  </div>
+
+  <p class="status-msg" id="statusMsg"></p>
+</div>
+
+<script>
+(function () {
+  var sourceListYerel = document.getElementById('sourceListYerel');
+  var sourceListGlobal = document.getElementById('sourceListGlobal');
+  var wordList = document.getElementById('wordList');
+  var dedupeToggle = document.getElementById('dedupeToggle');
+  var personaInput = document.getElementById('personaInput');
+  var healthToggle = document.getElementById('healthToggle');
+  var globalPersonaInput = document.getElementById('globalPersonaInput');
+  var globalToggle = document.getElementById('globalToggle');
+  var topicGrid = document.getElementById('topicGrid');
+  var newsTopicGrid = document.getElementById('newsTopicGrid');
+  var blogPersonaInput = document.getElementById('blogPersonaInput');
+  var blogToggle = document.getElementById('blogToggle');
+  var statusMsg = document.getElementById('statusMsg');
+
+  var TOPIC_LABELS = {
+    'tarifler': 'Tarifler',
+    'meyve-sebze-rehberi': 'Meyve-Sebze Rehberi',
+    'saklama-mutfak-ipuclari': 'Saklama & Mutfak İpuçları',
+    'saglik-beslenme': 'Sağlık & Beslenme',
+    'mevsim-hasat-takvimi': 'Mevsim/Hasat Takvimi',
+    'ev-yasam': 'Ev & Yaşam',
+    'genel-kultur': 'Genel Kültür',
+    'tarim-disi-gundem': 'Tarım Dışı Gündem'
+  };
+
+  var NEWS_TOPIC_LABELS = {
+    'tarim-haberleri': 'Tarım Haberleri',
+    'ekonomi': 'Ekonomi',
+    'hava-iklim': 'Hava Durumu / İklim',
+    'girdi-fiyatlari': 'Girdi Fiyatları (Gübre/Mazot)',
+    'destekler-subvansiyonlar': 'Destekler & Sübvansiyonlar',
+    'uluslararasi-emtia': 'Uluslararası Emtia Piyasaları',
+    'yerel-uretici': 'Yerel Üretici Haberleri',
+    'tarim-teknolojisi': 'Tarım Teknolojisi'
+  };
+
+  function say(msg) {
+    statusMsg.textContent = msg;
+    setTimeout(function () { statusMsg.textContent = ''; }, 2500);
+  }
+
+  function sourceLi(s) {
+    return '<li><span>' + s.url.replace(/[<>]/g, '') + '</span>' +
+      '<button data-url="' + encodeURIComponent(s.url) + '" class="del-source" title="Kaldır">×</button></li>';
+  }
+
+  function render(cfg) {
+    var yerel = cfg.sources.filter(function (s) { return s.region !== 'global'; });
+    var global = cfg.sources.filter(function (s) { return s.region === 'global'; });
+    sourceListYerel.innerHTML = yerel.length ? yerel.map(sourceLi).join('') : '<li class="empty" style="background:none;">Henüz kaynak eklenmedi.</li>';
+    sourceListGlobal.innerHTML = global.length ? global.map(sourceLi).join('') : '<li class="empty" style="background:none;">Henüz kaynak eklenmedi.</li>';
+
+    wordList.innerHTML = cfg.bannedWords.length ? cfg.bannedWords.map(function (w) {
+      return '<span class="word-chip">' + w.replace(/[<>]/g, '') +
+        '<button data-word="' + encodeURIComponent(w) + '" class="del-word" title="Kaldır">×</button></span>';
+    }).join('') : '<span class="empty">Yasaklı kelime yok.</span>';
+
+    dedupeToggle.checked = !!cfg.dedupeEnabled;
+
+    if (cfg.newsTopics) {
+      var nTopics = cfg.newsTopics;
+      newsTopicGrid.innerHTML = Object.keys(NEWS_TOPIC_LABELS).map(function (key) {
+        return '<label class="topic-chip"><input type="checkbox" data-newstopic="' + key + '"' +
+          (nTopics[key] ? ' checked' : '') + '>' + NEWS_TOPIC_LABELS[key] + '</label>';
+      }).join('');
+    }
+
+    if (cfg.healthAgent) {
+      personaInput.value = cfg.healthAgent.persona || '';
+      healthToggle.checked = !!cfg.healthAgent.enabled;
+    }
+    if (cfg.globalAgent) {
+      globalPersonaInput.value = cfg.globalAgent.persona || '';
+      globalToggle.checked = !!cfg.globalAgent.enabled;
+    }
+    if (cfg.blogAgent) {
+      var topics = cfg.blogAgent.topics || {};
+      topicGrid.innerHTML = Object.keys(TOPIC_LABELS).map(function (key) {
+        return '<label class="topic-chip"><input type="checkbox" data-topic="' + key + '"' +
+          (topics[key] ? ' checked' : '') + '>' + TOPIC_LABELS[key] + '</label>';
+      }).join('');
+      blogPersonaInput.value = cfg.blogAgent.persona || '';
+      blogToggle.checked = !!cfg.blogAgent.enabled;
+    }
+
+    document.querySelectorAll('.del-source').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        fetch('/api/admin/sources?url=' + btn.dataset.url, { method: 'DELETE' })
+          .then(function (r) { return r.json(); }).then(function (cfg) { render(cfg); say('Kaynak kaldırıldı.'); });
+      });
+    });
+    wordList.querySelectorAll('.del-word').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        fetch('/api/admin/banned-words?word=' + btn.dataset.word, { method: 'DELETE' })
+          .then(function (r) { return r.json(); }).then(function (cfg) { render(cfg); say('Kelime kaldırıldı.'); });
+      });
+    });
+  }
+
+  function load() {
+    fetch('/api/admin/config').then(function (r) { return r.json(); }).then(render);
+  }
+
+  document.getElementById('sourceForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var input = document.getElementById('sourceInput');
+    var region = document.getElementById('sourceRegion').value;
+    fetch('/api/admin/sources', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: input.value.trim(), region: region }),
+    }).then(function (r) { return r.json(); }).then(function (cfg) {
+      render(cfg); input.value = ''; say('Kaynak eklendi.');
+    });
+  });
+
+  document.getElementById('wordForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var input = document.getElementById('wordInput');
+    fetch('/api/admin/banned-words', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ word: input.value.trim() }),
+    }).then(function (r) { return r.json(); }).then(function (cfg) {
+      render(cfg); input.value = ''; say('Kelime eklendi.');
+    });
+  });
+
+  dedupeToggle.addEventListener('change', function () {
+    fetch('/api/admin/dedupe', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ enabled: dedupeToggle.checked }),
+    }).then(function (r) { return r.json(); }).then(function () { say('Kaydedildi.'); });
+  });
+
+  document.getElementById('personaSave').addEventListener('click', function () {
+    fetch('/api/admin/health-agent', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ persona: personaInput.value, enabled: healthToggle.checked }),
+    }).then(function (r) { return r.json(); }).then(function () { say('Ajan ayarları kaydedildi.'); });
+  });
+
+  healthToggle.addEventListener('change', function () {
+    fetch('/api/admin/health-agent', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ enabled: healthToggle.checked }),
+    }).then(function (r) { return r.json(); }).then(function () { say('Kaydedildi.'); });
+  });
+
+  document.getElementById('globalPersonaSave').addEventListener('click', function () {
+    fetch('/api/admin/global-agent', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ persona: globalPersonaInput.value, enabled: globalToggle.checked }),
+    }).then(function (r) { return r.json(); }).then(function () { say('Ajan ayarları kaydedildi.'); });
+  });
+
+  globalToggle.addEventListener('change', function () {
+    fetch('/api/admin/global-agent', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ enabled: globalToggle.checked }),
+    }).then(function (r) { return r.json(); }).then(function () { say('Kaydedildi.'); });
+  });
+
+  function saveBlogTopic(key, value) {
+    var topics = {}; topics[key] = value;
+    fetch('/api/admin/blog-agent', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ topics: topics }),
+    }).then(function (r) { return r.json(); }).then(function () { say('Kaydedildi.'); });
+  }
+
+  topicGrid.addEventListener('change', function (e) {
+    if (e.target.dataset.topic) saveBlogTopic(e.target.dataset.topic, e.target.checked);
+  });
+
+  newsTopicGrid.addEventListener('change', function (e) {
+    if (e.target.dataset.newstopic) {
+      var t = {}; t[e.target.dataset.newstopic] = e.target.checked;
+      fetch('/api/admin/news-topics', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ topics: t }),
+      }).then(function (r) { return r.json(); }).then(function () { say('Kaydedildi.'); });
+    }
+  });
+
+  document.getElementById('blogPersonaSave').addEventListener('click', function () {
+    fetch('/api/admin/blog-agent', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ persona: blogPersonaInput.value, enabled: blogToggle.checked }),
+    }).then(function (r) { return r.json(); }).then(function () { say('Ajan ayarları kaydedildi.'); });
+  });
+
+  blogToggle.addEventListener('change', function () {
+    fetch('/api/admin/blog-agent', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ enabled: blogToggle.checked }),
+    }).then(function (r) { return r.json(); }).then(function () { say('Kaydedildi.'); });
+  });
+
+  load();
+})();
+</script>
+
+<script>if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("/sw.js").catch(function(){});});}</script>
+</body>
+</html>

@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#4E6B3A">
+<link rel="apple-touch-icon" href="/assets/logo-icon.jpg">
+<title>Taze Asma Yaprağı — Köylü Dostu | Köylü Dostu</title>
+<meta name="description" content="Taze Asma Yaprağı: Sabah erken saatlerde toplanan, sararmamış genç asma yaprağı. Yaprak sarma için idealdir, günlük hasat.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="hamburger-btn" onclick="document.getElementById('kdDrawer').classList.add('open');document.getElementById('kdOverlay').classList.add('open');" aria-label="Menü">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+  </button>
+  <a href="/index.html" class="avatar-ring">
+    <div class="avatar">
+      <img src="/assets/logo-icon.jpg" alt="Köylü Dostu" style="width:92%;height:92%;object-fit:contain;">
+    </div>
+  </a>
+  <a href="/index.html" class="brand-info" style="text-decoration:none;">
+    <h1>köylüdostu</h1>
+    <p>Tarladan şehre güvenli alışveriş</p>
+  </a>
+  <div id="authSlot"></div>
+</div>
+<div class="drawer-overlay" id="kdOverlay" onclick="document.getElementById('kdDrawer').classList.remove('open');this.classList.remove('open');"></div>
+<div class="drawer" id="kdDrawer">
+  <div class="drawer-head">
+    <div class="avatar-ring" style="width:40px;height:40px;">
+      <div class="avatar">
+        <img src="/assets/logo-icon.jpg" alt="Köylü Dostu" style="width:92%;height:92%;object-fit:contain;">
+      </div>
+    </div>
+    <div class="brand-info"><h1>köylüdostu</h1></div>
+    <button class="drawer-close" onclick="document.getElementById('kdDrawer').classList.remove('open');document.getElementById('kdOverlay').classList.remove('open');" aria-label="Kapat">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+  </div>
+  <nav class="drawer-nav">
+    <a href="/index.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>Anasayfa</a>
+    <div class="drawer-section-label">Hesabım</div>
+    <a href="/favorilerim.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>Favori İlanlarım</a>
+    <a href="/favori-saticilarim.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>Favori Satıcılarım</a>
+    <a href="/mesajlarim.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Mesajlar</a>
+    <a href="/yorumlarim.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>Yorumlarım</a>
+    <a href="/hesap-ayarlarim.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Hesap Ayarları</a>
+    <!-- <div class="drawer-section-label">Kanallar</div>
+    <a href="/haber/index.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h13v16H4z"/><path d="M17 8h3v10a2 2 0 0 1-2 2H8"/><path d="M8 8h6M8 12h6M8 16h3"/></svg>Haberler</a> -->
+    <div class="drawer-section-label">Diğer</div>
+    <a href="/hakkimizda.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>Hakkımızda</a>
+    <a href="/gizlilik.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z"/></svg>Gizlilik</a>
+
+  </nav>
+  <div class="drawer-foot">
+    <a class="cta-btn outline" href="https://wa.me/905425174860?text=Merhaba%2C%20K%C3%B6yl%C3%BC%20Dostu%27nda%20sat%C4%B1c%C4%B1%20olmak%20istiyorum." target="_blank"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Sen de Satıcı Ol</a>
+    <a class="cta-btn" href="https://wa.me/905425174860?text=Merhaba%2C%20%C3%BCr%C3%BCnleriniz%20hakk%C4%B1nda%20bilgi%20almak%20istiyorum." target="_blank">WhatsApp'tan Yaz</a>
+  </div>
+</div>
+<div class="breadcrumb"><a href="../index.html">Köylü Dostu</a><span>›</span><a href="../kategori/yaprak.html">Asma Yaprağı</a><span>›</span>Taze Asma Yaprağı</div><div class="product-page">
+  <div class="product-grid">
+    <img src="https://images.pexels.com/photos/19702480/pexels-photo-19702480.jpeg?auto=compress&cs=tinysrgb&w=700" alt="Taze Asma Yaprağı">
+    <div class="product-info">
+      <div class="product-cat">Asma Yaprağı</div>
+      <h1>Taze Asma Yaprağı</h1>
+      <div class="producer-box">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>
+        <div>
+          <div class="producer-name">Köylü Dostu (Bu ürünün sahibi)</div>
+          <div class="producer-loc">Manisa, Sarıgöl</div>
+        </div>
+      </div>
+      <button class="fav-seller-cta" data-id="u_4ld4x6dsc0">☆ Satıcıyı Takip Et</button>
+      <p class="product-desc">Sabah erken saatlerde toplanan, sararmamış genç asma yaprağı. Yaprak sarma için idealdir, günlük hasat.</p>
+      <div class="qty-range">Tedarik miktarı: 1 kg – 50 kg</div>
+      <div class="storage-box"><b>Saklama Koşulları:</b> Buzdolabında saklayın, birkaç gün içinde tüketin.</div>
+      <div class="product-footer">
+        <div class="product-price">180₺ <small>/ kg</small></div>
+        <a class="wa-cta" href="https://wa.me/905425174860?text=Merhaba%2C%20%22Taze%20Asma%20Yapra%C4%9F%C4%B1%22%20hakk%C4%B1nda%20bilgi%20almak%20istiyorum." target="_blank">Üreticiye WhatsApp'tan Yaz</a>
+      <button class="fav-cta" data-id="taze-asma-yapragi">🤍</button>
+      <button class="msg-cta" data-slug="taze-asma-yapragi" data-title="Taze Asma Yaprağı">💬 Satıcıya Mesaj Yaz</button>
+</div>
+    </div>
+  </div>
+
+  <div class="reviews-section" data-slug="taze-asma-yapragi" data-title="Taze Asma Yaprağı">
+    <h3>Değerlendirmeler</h3>
+    <div id="avgRating" class="avg-rating"></div>
+    <div id="reviewFormWrap"></div>
+    <div id="reviewList"></div>
+  </div>
+<div class="related"><h3>Benzer Ürünler</h3><div class="related-grid"><a href="salamura-asma-yapragi.html"><img src="https://images.pexels.com/photos/5626933/pexels-photo-5626933.jpeg?auto=compress&cs=tinysrgb&w=700" alt="Salamura Asma Yaprağı"><div class="rt-title">Salamura Asma Yaprağı</div></a></div></div></div><footer class="site-footer">
+  <b>Köylü Dostu</b> · Üreticilerden doğrudan alışveriş · Platform iletişim: Enes Tezcan, 0542 517 4860
+</footer>
+
+<script src="../assets/auth.js"></script>
+<script src="../assets/messages.js"></script>
+<script src="../assets/reviews.js"></script>
+<script src="../assets/favorites.js"></script>
+<script>if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("/sw.js").catch(function(){});});}</script>
+</body>
+</html>

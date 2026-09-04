@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#4E6B3A">
+<link rel="apple-touch-icon" href="/assets/logo-icon.jpg">
+<title>Giriş Yap — Köylü Dostu</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  .auth-wrap{max-width:420px;margin:0 auto;padding:40px 24px 60px;min-height:calc(100dvh - 0px);display:flex;flex-direction:column;justify-content:center;}
+  .auth-logo{width:64px;height:64px;border-radius:50%;background:conic-gradient(from 220deg, var(--ring1), var(--ring2), var(--ring3), var(--ring1));padding:3px;margin:0 auto 18px;}
+  .auth-logo div{width:100%;height:100%;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden;}
+  .auth-logo img{width:92%;height:92%;object-fit:contain;}
+  .auth-wrap h1{font-size:20px;font-weight:800;text-align:center;margin:0 0 6px;}
+  .auth-wrap p.sub{font-size:13px;color:var(--muted);text-align:center;margin:0 0 24px;}
+  .auth-field{margin-bottom:14px;}
+  .auth-field label{font-size:12px;font-weight:700;color:var(--muted);display:block;margin-bottom:6px;}
+  .auth-field input{
+    width:100%;padding:13px 14px;border-radius:12px;border:1.5px solid var(--line);
+    font-family:inherit;font-size:16px;background:var(--card);letter-spacing:.02em;
+  }
+  .auth-field input:focus{outline:none;border-color:var(--ring1);}
+  .code-inputs{display:flex;gap:10px;justify-content:center;margin-bottom:6px;}
+  .code-inputs input{
+    width:52px;height:60px;text-align:center;font-size:24px;font-weight:800;
+    border-radius:12px;border:1.5px solid var(--line);background:var(--card);
+  }
+  .code-inputs input:focus{outline:none;border-color:var(--ring1);}
+  .auth-btn{
+    width:100%;padding:14px;border-radius:14px;background:var(--ink);color:#fff;border:none;
+    font-size:14.5px;font-weight:700;cursor:pointer;margin-top:6px;
+  }
+  .auth-btn:disabled{opacity:.5;cursor:default;}
+  .auth-hint{font-size:12px;color:var(--muted);text-align:center;margin-top:14px;}
+  .auth-hint b{color:var(--ring1);}
+  .auth-error{font-size:12.5px;color:var(--ring3);text-align:center;min-height:18px;margin-top:10px;}
+  .auth-back{display:block;text-align:center;font-size:12.5px;color:var(--muted);margin-top:18px;cursor:pointer;}
+  .dev-badge{
+    position:fixed;top:0;left:0;right:0;background:#C08A2E;color:#fff;font-size:11px;font-weight:700;
+    text-align:center;padding:6px;z-index:50;
+  }
+  .role-row{display:flex;gap:10px;margin-bottom:4px;}
+  .role-opt{
+    flex:1;border:1.5px solid var(--line);border-radius:14px;padding:16px 10px;text-align:center;
+    cursor:pointer;background:var(--card);
+  }
+  .role-opt .role-icon{font-size:24px;margin-bottom:6px;}
+  .role-opt .role-label{font-size:13px;font-weight:700;}
+  .role-opt .role-desc{font-size:11px;color:var(--muted);margin-top:2px;}
+  .role-opt.selected{border-color:var(--ring1);background:#eef2ea;}
+  .auth-tabs{display:flex;gap:8px;background:var(--bg);border-radius:14px;padding:4px;margin-bottom:26px;}
+  .auth-tab{flex:1;padding:11px;border:none;border-radius:11px;background:transparent;color:var(--muted);
+    font-family:inherit;font-size:13.5px;font-weight:700;cursor:pointer;}
+  .auth-tab.active{background:var(--card);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.08);}
+</style>
+</head>
+<body>
+<div class="dev-badge">🚧 Geliştirme modu — SMS onay kodu her zaman 0000</div>
+
+<div class="auth-wrap" style="padding-top:64px;">
+  <div class="auth-logo"><div><img src="/assets/logo-icon.jpg" alt="Köylü Dostu"></div></div>
+
+  <div class="auth-tabs">
+    <button type="button" class="auth-tab active" id="tabLoginBtn">Giriş Yap</button>
+    <button type="button" class="auth-tab" id="tabRegisterBtn">Üye Ol</button>
+  </div>
+
+  <!-- ===== GİRİŞ YAP (dönen üye: telefon + parola) ===== -->
+  <div id="tabLogin">
+    <h1>Tekrar Hoş Geldin</h1>
+    <p class="sub">Telefon numaran ve parolanla giriş yap.</p>
+    <div class="auth-field">
+      <label for="loginPhone">Telefon Numarası</label>
+      <input type="tel" id="loginPhone" placeholder="05XX XXX XX XX" autocomplete="tel" inputmode="numeric">
+    </div>
+    <div class="auth-field">
+      <label for="loginPassword">Parola</label>
+      <input type="password" id="loginPassword" placeholder="Parolan" autocomplete="current-password">
+    </div>
+    <button class="auth-btn" id="loginBtn">Giriş Yap</button>
+    <p class="auth-error" id="loginError"></p>
+    <p class="auth-hint">Hesabın yok mu? <a class="auth-back" id="goRegisterLink" style="display:inline;margin:0;color:var(--ring1);font-weight:700;">Üye Ol</a></p>
+  </div>
+
+  <!-- ===== ÜYE OL — adım 1: ad, şehir, parola, hesap türü ===== -->
+  <div id="stepInfo" hidden>
+    <h1>Üye Ol</h1>
+    <p class="sub">Önce birkaç bilgi alalım, telefon doğrulaması son adımda.</p>
+    <div class="auth-field">
+      <label for="nameInput">Ad Soyad</label>
+      <input type="text" id="nameInput" placeholder="Adın Soyadın" autocomplete="name">
+    </div>
+    <div class="auth-field">
+      <label for="cityInput">Şehir</label>
+      <input type="text" id="cityInput" placeholder="Örn. Manisa" autocomplete="address-level1">
+    </div>
+    <div class="auth-field">
+      <label for="districtInput">İlçe</label>
+      <input type="text" id="districtInput" placeholder="Örn. Alaşehir" autocomplete="address-level2">
+    </div>
+    <div class="auth-field">
+      <label for="neighborhoodInput">Mahalle <span style="font-weight:400;color:var(--muted);">(opsiyonel)</span></label>
+      <input type="text" id="neighborhoodInput" placeholder="Örn. Cumhuriyet Mah." autocomplete="address-level3">
+    </div>
+    <div class="auth-field">
+      <label for="passInput">Parola</label>
+      <input type="password" id="passInput" placeholder="En az 4 karakter" autocomplete="new-password">
+    </div>
+    <div class="auth-field">
+      <label for="passInput2">Parola (Tekrar)</label>
+      <input type="password" id="passInput2" placeholder="Parolanı tekrar gir" autocomplete="new-password">
+    </div>
+    <div class="auth-field">
+      <label>Hesap Türü</label>
+      <div class="role-row">
+        <div class="role-opt selected" data-role="alici">
+          <div class="role-icon">🛒</div>
+          <div class="role-label">Müşteri</div>
+          <div class="role-desc">Ürün alırım</div>
+        </div>
+        <div class="role-opt" data-role="satici">
+          <div class="role-icon">🌾</div>
+          <div class="role-label">Satıcı</div>
+          <div class="role-desc">Ürün satarım</div>
+        </div>
+      </div>
+    </div>
+    <div class="auth-field" id="businessInfoWrap" hidden>
+      <label for="businessInfoInput">Ne / Nasıl Üretim Yapıyorsun?</label>
+      <textarea id="businessInfoInput" rows="3" placeholder="Örn. Manisa'da 5 yıldır zeytin ve zeytinyağı üreticisiyim, kendi bahçemden…" style="width:100%;padding:13px 14px;border-radius:12px;border:1.5px solid var(--line);font-family:inherit;font-size:14px;background:var(--card);resize:vertical;"></textarea>
+      <p style="font-size:11.5px;color:var(--muted);margin:6px 0 0;">Satıcı başvurun admin onayından geçtikten sonra ürün ekleyebilirsin.</p>
+    </div>
+    <div class="terms-row">
+      <input type="checkbox" id="termsCheck">
+      <label for="termsCheck">Köylü Dostu <a id="termsLink">Kullanım Şartları ve Sorumluluk Sözleşmesi'ni</a> okudum, kabul ediyorum.</label>
+    </div>
+    <p class="auth-error" id="infoError"></p>
+    <button class="auth-btn" id="infoNextBtn">Devam Et</button>
+    <a class="auth-back" id="backToLoginBtn">← Zaten üye misin? Giriş yap</a>
+  </div>
+
+  <!-- ===== ÜYE OL — adım 2: telefon ===== -->
+  <div id="stepPhone" hidden>
+    <h1>Telefon Doğrulama</h1>
+    <p class="sub">Son adım: telefon numaranı doğrula.</p>
+    <div class="auth-field">
+      <label for="phoneInput">Telefon Numarası</label>
+      <input type="tel" id="phoneInput" placeholder="05XX XXX XX XX" autocomplete="tel" inputmode="numeric">
+    </div>
+    <button class="auth-btn" id="sendCodeBtn">Kod Gönder</button>
+    <p class="auth-error" id="phoneError"></p>
+    <a class="auth-back" id="backToInfoBtn">← Geri</a>
+  </div>
+
+  <!-- ===== ÜYE OL — adım 3: SMS kodu ===== -->
+  <div id="stepCode" hidden>
+    <h1>Doğrulama Kodu</h1>
+    <p class="sub" id="codeSubText">Telefonuna gelen 4 haneli kodu gir.</p>
+    <div class="code-inputs">
+      <input type="text" maxlength="1" inputmode="numeric" class="digit">
+      <input type="text" maxlength="1" inputmode="numeric" class="digit">
+      <input type="text" maxlength="1" inputmode="numeric" class="digit">
+      <input type="text" maxlength="1" inputmode="numeric" class="digit">
+    </div>
+    <p class="auth-error" id="codeError"></p>
+    <button class="auth-btn" id="verifyBtn">Doğrula ve Hesabı Oluştur</button>
+    <a class="auth-back" id="backBtn">← Numarayı değiştir</a>
+  </div>
+</div>
+
+<div class="terms-modal" id="termsModal" hidden>
+  <div class="terms-box">
+    <div class="terms-box-head"><b>Kullanım Şartları ve Sorumluluk Sözleşmesi</b><button id="termsModalClose" aria-label="Kapat">×</button></div>
+    <div class="terms-box-body">
+      <h3>1. Taraflar ve Kapsam</h3>
+      <p>Köylü Dostu, üreticiler (satıcı) ile alıcıları doğrudan buluşturan bir pazaryeri platformudur. Alım satım sözleşmesi platform ile değil, doğrudan alıcı ve satıcı arasında kurulur.</p>
+      <h3>2. Satıcı Yükümlülükleri</h3>
+      <p>Satıcı; ürün açıklamasını, fiyatını ve stok durumunu doğru girmekle, siparişi zamanında ve tarif edildiği şekilde teslim etmekle yükümlüdür.</p>
+      <h3>3. Alıcı Yükümlülükleri</h3>
+      <p>Alıcı; doğru iletişim bilgisi vermekle, teslimat yöntemini (kendin al, otobüs, kargo) satıcıyla mesaj üzerinden netleştirmekle ve platformu kötüye kullanmamakla yükümlüdür.</p>
+      <h3>4. Ödeme ve Teslimat</h3>
+      <p>Platform şu an ödeme işlemine aracılık etmez. Ödeme ve teslimat yöntemi alıcı ile satıcı arasında uygulama içi mesajlaşma üzerinden kararlaştırılır.</p>
+      <h3>5. Şikayet Süreci</h3>
+      <p>Mesajlaşarak verilen bir siparişte ürün tarif edilenden farklı veya kalitesiz çıkarsa, alıcı uygulama üzerinden şikayet oluşturabilir. Satıcı, kendisine bildirilen şikayetlere yanıt vermekle yükümlüdür. Platform tarafları uzlaştırmaya çalışır, ancak taraflar arasındaki ticari uyuşmazlıklarda hukuki sorumluluk üstlenmez.</p>
+      <h3>6. Hesap Güvenliği</h3>
+      <p>Hesabınız telefon numarası ve parola ile korunur. Parolanızı kimseyle paylaşmayın; hesabınız üzerinden yapılan işlemlerden siz sorumlusunuz.</p>
+      <h3>7. Veri Kullanımı</h3>
+      <p>Ad, şehir, telefon numarası ve mesajlaşma verileriniz yalnızca platformun temel işlevleri (giriş, mesajlaşma, şikayet, değerlendirme) için kullanılır; üçüncü taraflarla paylaşılmaz.</p>
+      <h3>8. Değişiklikler</h3>
+      <p>Platform, bu şartları güncelleyebilir; önemli değişikliklerde kullanıcılar bilgilendirilir.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var tabLoginBtn = document.getElementById('tabLoginBtn');
+  var tabRegisterBtn = document.getElementById('tabRegisterBtn');
+  var tabLogin = document.getElementById('tabLogin');
+  var stepInfo = document.getElementById('stepInfo');
+  var stepPhone = document.getElementById('stepPhone');
+  var stepCode = document.getElementById('stepCode');
+
+  var loginError = document.getElementById('loginError');
+  var infoError = document.getElementById('infoError');
+  var phoneInput = document.getElementById('phoneInput');
+  var phoneError = document.getElementById('phoneError');
+  var codeError = document.getElementById('codeError');
+  var codeSubText = document.getElementById('codeSubText');
+  var digits = Array.prototype.slice.call(document.querySelectorAll('.digit'));
+
+  var currentPhone = '';
+  var selectedRole = 'alici';
+  var regToken = '';
+
+  var params = new URLSearchParams(location.search);
+  var explicitRedirect = params.get('sonra');
+
+  function showRegisterFlow() {
+    tabLoginBtn.classList.remove('active');
+    tabRegisterBtn.classList.add('active');
+    tabLogin.hidden = true;
+    goRegStep('info');
+  }
+  function showLoginFlow() {
+    tabRegisterBtn.classList.remove('active');
+    tabLoginBtn.classList.add('active');
+    tabLogin.hidden = false;
+    stepInfo.hidden = true;
+    stepPhone.hidden = true;
+    stepCode.hidden = true;
+  }
+  function goRegStep(step) {
+    stepInfo.hidden = step !== 'info';
+    stepPhone.hidden = step !== 'phone';
+    stepCode.hidden = step !== 'code';
+  }
+
+  tabRegisterBtn.addEventListener('click', showRegisterFlow);
+  tabLoginBtn.addEventListener('click', showLoginFlow);
+  document.getElementById('goRegisterLink').addEventListener('click', showRegisterFlow);
+  document.getElementById('backToLoginBtn').addEventListener('click', showLoginFlow);
+  document.getElementById('backToInfoBtn').addEventListener('click', function () { goRegStep('info'); });
+  document.getElementById('backBtn').addEventListener('click', function () { goRegStep('phone'); });
+
+  var termsModal = document.getElementById('termsModal');
+  document.getElementById('termsLink').addEventListener('click', function () { termsModal.hidden = false; });
+  document.getElementById('termsModalClose').addEventListener('click', function () { termsModal.hidden = true; });
+  termsModal.addEventListener('click', function (e) { if (e.target === termsModal) termsModal.hidden = true; });
+
+  function finishLogin(data) {
+    localStorage.setItem('kd_auth_token', data.token);
+    localStorage.setItem('kd_auth_phone', data.user.phone);
+    localStorage.setItem('kd_auth_userid', data.user.id || '');
+    localStorage.setItem('kd_auth_name', data.user.name || '');
+    localStorage.setItem('kd_auth_role', data.user.role || 'alici');
+    var isPendingSeller = data.user.role === 'satici' && data.user.sellerStatus !== 'approved';
+    var dest = isPendingSeller
+      ? '/satici-basvurum.html'
+      : explicitRedirect || (data.user.role === 'satici' ? '/admin-mesajlar.html' : '/index.html');
+    location.href = dest;
+  }
+
+  // ---- Giriş Yap (telefon + parola) ----
+  document.getElementById('loginBtn').addEventListener('click', function () {
+    loginError.textContent = '';
+    var phone = document.getElementById('loginPhone').value;
+    var password = document.getElementById('loginPassword').value;
+    if (phone.replace(/\D/g, '').length < 10) { loginError.textContent = 'Lütfen geçerli bir telefon numarası girin.'; return; }
+    if (!password) { loginError.textContent = 'Lütfen parolanı gir.'; return; }
+    fetch('/api/auth/login', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: phone, password: password }),
+    }).then(function (r) { return r.json(); }).then(function (data) {
+      if (data.error) { loginError.textContent = data.error; return; }
+      finishLogin(data);
+    }).catch(function () { loginError.textContent = 'Bağlantı hatası, tekrar deneyin.'; });
+  });
+
+  // ---- Üye Ol adım 1: ad + şehir + parola + rol ----
+  var businessInfoWrap = document.getElementById('businessInfoWrap');
+  document.querySelectorAll('.role-opt').forEach(function (el) {
+    el.addEventListener('click', function () {
+      document.querySelectorAll('.role-opt').forEach(function (o) { o.classList.remove('selected'); });
+      el.classList.add('selected');
+      selectedRole = el.dataset.role;
+      businessInfoWrap.hidden = selectedRole !== 'satici';
+    });
+  });
+
+  document.getElementById('infoNextBtn').addEventListener('click', function () {
+    infoError.textContent = '';
+    var name = document.getElementById('nameInput').value.trim();
+    var city = document.getElementById('cityInput').value.trim();
+    var district = document.getElementById('districtInput').value.trim();
+    var neighborhood = document.getElementById('neighborhoodInput').value.trim();
+    var pass = document.getElementById('passInput').value;
+    var pass2 = document.getElementById('passInput2').value;
+    if (name.length < 2) { infoError.textContent = 'Lütfen adını ve soyadını gir.'; return; }
+    if (city.length < 2) { infoError.textContent = 'Lütfen şehrini gir.'; return; }
+    if (district.length < 2) { infoError.textContent = 'Lütfen ilçeni gir.'; return; }
+    if (pass.length < 4) { infoError.textContent = 'Parola en az 4 karakter olmalı.'; return; }
+    if (pass !== pass2) { infoError.textContent = 'Parolalar eşleşmiyor.'; return; }
+    var businessInfo = document.getElementById('businessInfoInput').value.trim();
+    if (selectedRole === 'satici' && businessInfo.length < 10) {
+      infoError.textContent = 'Ne/nasıl üretim yaptığını en az birkaç cümleyle anlat.'; return;
+    }
+    if (!document.getElementById('termsCheck').checked) { infoError.textContent = 'Devam etmek için şartnameyi kabul etmelisin.'; return; }
+    fetch('/api/auth/register-start', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: name, city: city, district: district, neighborhood: neighborhood,
+        password: pass, role: selectedRole, termsAccepted: true, businessInfo: businessInfo,
+      }),
+    }).then(function (r) { return r.json(); }).then(function (data) {
+      if (data.error) { infoError.textContent = data.error; return; }
+      regToken = data.regToken;
+      goRegStep('phone');
+    }).catch(function () { infoError.textContent = 'Bağlantı hatası, tekrar deneyin.'; });
+  });
+
+  // ---- Üye Ol adım 2: telefon ----
+  document.getElementById('sendCodeBtn').addEventListener('click', function () {
+    phoneError.textContent = '';
+    var digitsOnly = phoneInput.value.replace(/\D/g, '');
+    if (digitsOnly.length < 10) { phoneError.textContent = 'Lütfen geçerli bir telefon numarası girin.'; return; }
+    currentPhone = phoneInput.value;
+    fetch('/api/auth/request-code', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: currentPhone }),
+    }).then(function (r) { return r.json(); }).then(function (data) {
+      if (data.error) { phoneError.textContent = data.error; return; }
+      codeSubText.textContent = currentPhone + ' numarasına gelen 4 haneli kodu gir.';
+      goRegStep('code');
+      digits[0].focus();
+    }).catch(function () { phoneError.textContent = 'Bağlantı hatası, tekrar deneyin.'; });
+  });
+
+  digits.forEach(function (input, i) {
+    input.addEventListener('input', function () {
+      input.value = input.value.replace(/\D/g, '');
+      if (input.value && digits[i + 1]) digits[i + 1].focus();
+    });
+    input.addEventListener('keydown', function (e) {
+      if (e.key === 'Backspace' && !input.value && digits[i - 1]) digits[i - 1].focus();
+    });
+  });
+
+  // ---- Üye Ol adım 3: kod doğrula, hesabı oluştur ----
+  document.getElementById('verifyBtn').addEventListener('click', function () {
+    codeError.textContent = '';
+    var code = digits.map(function (d) { return d.value; }).join('');
+    if (code.length !== 4) { codeError.textContent = 'Lütfen 4 haneli kodu tam girin.'; return; }
+    fetch('/api/auth/verify', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: currentPhone, code: code, regToken: regToken }),
+    }).then(function (r) { return r.json(); }).then(function (data) {
+      if (data.error) {
+        codeError.textContent = data.error;
+        return;
+      }
+      finishLogin(data);
+    }).catch(function () { codeError.textContent = 'Bağlantı hatası, tekrar deneyin.'; });
+  });
+})();
+</script>
+<script>if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("/sw.js").catch(function(){});});}</script>
+</body>
+</html>

@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Geleneksel Domates Salçası — Zehra Şahin | Köylü Dostu</title>
+<meta name="description" content="Geleneksel Domates Salçası: Güneşte kurutularak koyulaştırılmış, katkısız geleneksel salça.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="hamburger-btn" onclick="document.getElementById('kdDrawer').classList.add('open');document.getElementById('kdOverlay').classList.add('open');" aria-label="Menü">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+  </button>
+  <a href="https://koyludostu.com/index.html" class="avatar-ring">
+    <div class="avatar">
+      <svg viewBox="0 0 30 30" fill="none">
+        <circle cx="10" cy="18" r="4" fill="#4E6B3A"/>
+        <circle cx="16" cy="21" r="4" fill="#8E3B46"/>
+        <circle cx="14" cy="13" r="4" fill="#C08A2E"/>
+        <path d="M14 9 C14 5, 18 4, 20 6" stroke="#4E6B3A" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+      </svg>
+    </div>
+  </a>
+  <a href="https://koyludostu.com/index.html" class="brand-info" style="text-decoration:none;">
+    <h1>köylüdostu</h1>
+    <p>Tarladan şehre güvenli alışveriş</p>
+  </a>
+  <a class="cta-btn" href="https://wa.me/905425174860?text=Merhaba%2C%20%22Geleneksel%20Domates%20Sal%C3%A7as%C4%B1%22%20hakk%C4%B1nda%20bilgi%20almak%20istiyorum." target="_blank">
+    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12c0 1.85.5 3.58 1.35 5.07L2 22l5.06-1.33A9.94 9.94 0 0 0 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2zm0 18c-1.6 0-3.1-.44-4.38-1.2l-.31-.19-3 .79.8-2.92-.2-.3A7.94 7.94 0 0 1 4 12c0-4.41 3.59-8 8-8s8 3.59 8 8-3.59 8-8 8z"/></svg>
+    Yaz
+  </a>
+</div>
+<div class="drawer-overlay" id="kdOverlay" onclick="document.getElementById('kdDrawer').classList.remove('open');this.classList.remove('open');"></div>
+<div class="drawer" id="kdDrawer">
+  <div class="drawer-head">
+    <div class="avatar-ring" style="width:40px;height:40px;">
+      <div class="avatar">
+        <svg viewBox="0 0 30 30" fill="none">
+          <circle cx="10" cy="18" r="4" fill="#4E6B3A"/>
+          <circle cx="16" cy="21" r="4" fill="#8E3B46"/>
+          <circle cx="14" cy="13" r="4" fill="#C08A2E"/>
+        </svg>
+      </div>
+    </div>
+    <div class="brand-info"><h1>köylüdostu</h1></div>
+    <button class="drawer-close" onclick="document.getElementById('kdDrawer').classList.remove('open');document.getElementById('kdOverlay').classList.remove('open');" aria-label="Kapat">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+  </div>
+  <nav class="drawer-nav">
+    <a href="https://koyludostu.com/index.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>Anasayfa</a>
+    <a href="https://koyludostu.com/index.html#urunler" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="7" width="18" height="14" rx="2"/><path d="M8 7V5a4 4 0 0 1 8 0v2"/></svg>Ürünler</a>
+    <div class="drawer-section-label">Kanallar</div>
+    <a href="https://blog.koyludostu.com/index.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4z"/><path d="M8 9h8M8 13h8M8 17h4"/></svg>Blog</a>
+    <a href="https://haber.koyludostu.com/index.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h13v16H4z"/><path d="M17 8h3v10a2 2 0 0 1-2 2H8"/><path d="M8 8h6M8 12h6M8 16h3"/></svg>Haberler</a>
+    <a href="https://sosyal.koyludostu.com/index.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="3"/><path d="M5 21c0-4 3-6 7-6s7 2 7 6"/></svg>Sosyal</a>
+  </nav>
+  <div class="drawer-foot">
+    <a class="cta-btn outline" href="https://wa.me/905425174860?text=Merhaba%2C%20K%C3%B6yl%C3%BC%20Dostu%27nda%20sat%C4%B1c%C4%B1%20olmak%20istiyorum." target="_blank"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Sen de Satıcı Ol</a>
+    <a class="cta-btn" href="https://wa.me/905425174860?text=Merhaba%2C%20%C3%BCr%C3%BCnleriniz%20hakk%C4%B1nda%20bilgi%20almak%20istiyorum." target="_blank">WhatsApp'tan Yaz</a>
+  </div>
+</div>
+<div class="breadcrumb"><a href="../index.html">Köylü Dostu</a><span>›</span><a href="../kategori/salca.html">Salça</a><span>›</span>Geleneksel Domates Salçası</div><div class="product-page">
+  <div class="product-grid">
+    <img src="https://images.pexels.com/photos/4361645/pexels-photo-4361645.jpeg?auto=compress&cs=tinysrgb&w=700" alt="Geleneksel Domates Salçası">
+    <div class="product-info">
+      <div class="product-cat">Salça</div>
+      <h1>Geleneksel Domates Salçası</h1>
+      <div class="producer-box">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>
+        <div>
+          <div class="producer-name">Zehra Şahin</div>
+          <div class="producer-loc">Manisa, Turgutlu</div>
+        </div>
+      </div>
+      <p class="product-desc">Güneşte kurutularak koyulaştırılmış, katkısız geleneksel salça.</p>
+      <div class="product-footer">
+        <div class="product-price">140₺ <small>/ kg</small></div>
+        <a class="wa-cta" href="https://wa.me/905000000006?text=Merhaba%2C%20%22Geleneksel%20Domates%20Sal%C3%A7as%C4%B1%22%20hakk%C4%B1nda%20bilgi%20almak%20istiyorum." target="_blank">Üreticiye WhatsApp'tan Yaz</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="reviews-section">
+    <h3>Değerlendirmeler</h3>
+    <div id="avgRating" class="avg-rating"></div>
+    <form id="reviewForm" class="review-form">
+      <label>Adın</label>
+      <input type="text" id="rName" placeholder="Adın Soyadın">
+      <label>Puanın</label>
+      <div class="star-picker" id="starPicker">
+        <span data-v="1">★</span><span data-v="2">★</span><span data-v="3">★</span><span data-v="4">★</span><span data-v="5">★</span>
+      </div>
+      <label>Yorumun</label>
+      <textarea id="rText" rows="3" placeholder="Bu ürün hakkında ne düşünüyorsun?"></textarea>
+      <button type="submit">Yorumu Gönder</button>
+    </form>
+    <div id="reviewList"></div>
+  </div>
+<div class="related"><h3>Benzer Ürünler</h3><div class="related-grid"><a href="taze-asma-yapragi.html"><img src="https://images.pexels.com/photos/19702480/pexels-photo-19702480.jpeg?auto=compress&cs=tinysrgb&w=700" alt="Taze Asma Yaprağı"><div class="rt-title">Taze Asma Yaprağı</div></a><a href="salamura-asma-yapragi.html"><img src="https://images.pexels.com/photos/5626933/pexels-photo-5626933.jpeg?auto=compress&cs=tinysrgb&w=700" alt="Salamura Asma Yaprağı"><div class="rt-title">Salamura Asma Yaprağı</div></a><a href="kara-uzum.html"><img src="https://images.pexels.com/photos/5455081/pexels-photo-5455081.jpeg?auto=compress&cs=tinysrgb&w=700" alt="Kara Üzüm"><div class="rt-title">Kara Üzüm</div></a><a href="sultani-cekirdeksiz.html"><img src="https://images.pexels.com/photos/6844554/pexels-photo-6844554.jpeg?auto=compress&cs=tinysrgb&w=700" alt="Sultani Çekirdeksiz"><div class="rt-title">Sultani Çekirdeksiz</div></a></div></div></div><script>
+(function(){
+  const SLUG = "geleneksel-domates-salcasi";
+  const KEY = "reviews_" + SLUG;
+  function load(){ try{ return JSON.parse(localStorage.getItem(KEY) || "[]"); }catch(e){ return []; } }
+  function save(list){ localStorage.setItem(KEY, JSON.stringify(list)); }
+  let rating = 0;
+  const starPicker = document.getElementById('starPicker');
+  const stars = starPicker.querySelectorAll('span');
+  stars.forEach(s => {
+    s.addEventListener('click', () => {
+      rating = parseInt(s.dataset.v);
+      stars.forEach(x => x.classList.toggle('filled', parseInt(x.dataset.v) <= rating));
+    });
+  });
+  function renderAvg(list){
+    const avgWrap = document.getElementById('avgRating');
+    if(list.length === 0){ avgWrap.innerHTML = '<span class="count">Henüz yorum yok — ilk yorumu sen yaz.</span>'; return; }
+    const avg = (list.reduce((a,b)=>a+b.rating,0) / list.length).toFixed(1);
+    const full = Math.round(avg);
+    let starsHtml = '';
+    for(let i=1;i<=5;i++) starsHtml += i<=full ? '★' : '☆';
+    avgWrap.innerHTML = '<span class="stars">'+starsHtml+'</span><span class="count">'+avg+' / 5 · '+list.length+' değerlendirme</span>';
+  }
+  function renderList(list){
+    const wrap = document.getElementById('reviewList');
+    if(list.length === 0){ wrap.innerHTML = '<p class="review-empty">Bu ürün için henüz yorum yapılmamış.</p>'; return; }
+    wrap.innerHTML = list.slice().reverse().map(r => {
+      let starsHtml = '';
+      for(let i=1;i<=5;i++) starsHtml += i<=r.rating ? '★' : '☆';
+      return '<div class="review-item"><div class="rname">'+escapeHtml(r.name)+'</div><div class="rstars">'+starsHtml+'</div><div class="rtext">'+escapeHtml(r.text)+'</div></div>';
+    }).join('');
+  }
+  function escapeHtml(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+  function refresh(){ const list = load(); renderAvg(list); renderList(list); }
+  document.getElementById('reviewForm').addEventListener('submit', function(e){
+    e.preventDefault();
+    const name = document.getElementById('rName').value.trim();
+    const text = document.getElementById('rText').value.trim();
+    if(!name || !text || rating === 0){ alert('Lütfen adını, puanını ve yorumunu gir.'); return; }
+    const list = load();
+    list.push({name, text, rating});
+    save(list);
+    document.getElementById('reviewForm').reset();
+    rating = 0;
+    stars.forEach(x => x.classList.remove('filled'));
+    refresh();
+  });
+  refresh();
+})();
+</script><footer class="site-footer">
+  <b>Köylü Dostu</b> · Üreticilerden doğrudan alışveriş · Platform iletişim: Enes Tezcan, 0542 517 4860
+</footer>
+</body>
+</html>

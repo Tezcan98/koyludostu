@@ -1,0 +1,158 @@
+{
+  "sources": [
+    {
+      "url": "https://www.aa.com.tr/tr/ekonomi/tarim",
+      "region": "yerel",
+      "addedAt": "2026-09-01T00:00:00.000Z"
+    },
+    {
+      "url": "https://www.dha.com.tr/haberleri/tarim",
+      "region": "yerel",
+      "addedAt": "2026-09-01T00:00:00.000Z"
+    },
+    {
+      "url": "https://www.iha.com.tr/tarim",
+      "region": "yerel",
+      "addedAt": "2026-09-01T00:00:00.000Z"
+    },
+    {
+      "url": "https://www.aljazeera.com.tr/etiket/tarim",
+      "region": "yerel",
+      "addedAt": "2026-09-01T00:00:00.000Z"
+    },
+    {
+      "url": "https://www.cnnturk.com/ekonomi/tarim",
+      "region": "yerel",
+      "addedAt": "2026-09-01T00:00:00.000Z"
+    },
+    {
+      "url": "https://www.alasehirmanset.com/",
+      "region": "yerel",
+      "addedAt": "2026-09-01T18:30:15.214Z"
+    },
+    {
+      "url": "https://www.bloomberght.com",
+      "region": "yerel",
+      "addedAt": "2026-09-01T00:00:00.000Z"
+    },
+    {
+      "url": "https://www.ekonomi.com",
+      "region": "yerel",
+      "addedAt": "2026-09-01T00:00:00.000Z"
+    },
+    {
+      "url": "https://www.ankahaber.net",
+      "region": "yerel",
+      "addedAt": "2026-09-01T00:00:00.000Z"
+    },
+    {
+      "url": "https://www.hibya.com",
+      "region": "yerel",
+      "addedAt": "2026-09-01T00:00:00.000Z"
+    },
+    {
+      "url": "https://www.foreks.com",
+      "region": "yerel",
+      "addedAt": "2026-09-01T00:00:00.000Z"
+    },
+    {
+      "url": "https://www.ilkha.com",
+      "region": "yerel",
+      "addedAt": "2026-09-01T00:00:00.000Z"
+    },
+    {
+      "url": "https://www.aydinlik.com.tr",
+      "region": "yerel",
+      "addedAt": "2026-09-01T00:00:00.000Z"
+    },
+    {
+      "url": "https://www.reuters.com/markets/commodities/",
+      "region": "global",
+      "addedAt": "2026-09-01T00:00:00.000Z"
+    },
+    {
+      "url": "https://www.bloomberg.com/markets/commodities",
+      "region": "global",
+      "addedAt": "2026-09-01T00:00:00.000Z"
+    },
+    {
+      "url": "https://apnews.com/hub/agriculture",
+      "region": "global",
+      "addedAt": "2026-09-01T00:00:00.000Z"
+    },
+    {
+      "url": "https://www.afp.com",
+      "region": "global",
+      "addedAt": "2026-09-01T00:00:00.000Z"
+    },
+    {
+      "url": "https://www.spglobal.com/commodityinsights",
+      "region": "global",
+      "addedAt": "2026-09-01T00:00:00.000Z"
+    },
+    {
+      "url": "https://www.marketwatch.com",
+      "region": "global",
+      "addedAt": "2026-09-01T00:00:00.000Z"
+    },
+    {
+      "url": "https://www.xinhuanet.com",
+      "region": "global",
+      "addedAt": "2026-09-01T00:00:00.000Z"
+    },
+    {
+      "url": "https://www.interfax.com",
+      "region": "global",
+      "addedAt": "2026-09-01T00:00:00.000Z"
+    },
+    {
+      "url": "https://agri-pulse.com",
+      "region": "global",
+      "addedAt": "2026-09-01T00:00:00.000Z"
+    },
+    {
+      "url": "https://www.ukrinform.net",
+      "region": "global",
+      "addedAt": "2026-09-01T00:00:00.000Z"
+    }
+  ],
+  "bannedWords": [
+    "reklam",
+    "kumar",
+    "bahis"
+  ],
+  "newsTopics": {
+    "tarim-haberleri": true,
+    "ekonomi": true,
+    "hava-iklim": true,
+    "girdi-fiyatlari": true,
+    "destekler-subvansiyonlar": true,
+    "uluslararasi-emtia": true,
+    "yerel-uretici": true,
+    "tarim-teknolojisi": false
+  },
+  "dedupeEnabled": true,
+  "processedHashes": [],
+  "healthAgent": {
+    "enabled": true,
+    "persona": "Sen 15 yıllık deneyimli, bilimsel kaynaklara dayanan bilgi veren bir beslenme/sağlık uzmanısın. Aynı zamanda Köylü Dostu adlı üretici pazarı için içerik üretiyorsun; bu yüzden yazının doğal bir yerinde, abartısız şekilde ilgili ürünlere (ör. incir yazısında taze/kuru incir) değinip site içi ürün sayfasına yönlendirebilirsin. Kesinlikle tanı/tedavi iddiası, mucizevi etki veya abartılı sağlık vaadi kullanma; iddialarını 'genel beslenme bilgisi' çerçevesinde tut, gerektiğinde hekime/diyetisyene danışılmasını öner."
+  },
+  "globalAgent": {
+    "enabled": true,
+    "persona": "Sen bir tarım-ekonomi uzmanısın. Reuters, Bloomberg, AP, AFP, S&P Global Commodity Insights, Xinhua, Interfax, Ukrinform gibi global ajanslardan gelen tahıl/emtia/iklim haberlerini yalnızca özetlemekle kalma; bunların Türkiye tarımına, ihracat/ithalat dengesine ve yerel üretici fiyatlarına olası etkileri üzerine kendi uzman yorumunu/çıkarımını da ekle. Spekülasyonu net biçimde ayır (ör. 'bunun olası etkisi...' gibi ifadelerle), kesin öngörü gibi sunma. Her çıkarımın dayandığı kaynağı belirt."
+  },
+  "blogAgent": {
+    "enabled": true,
+    "persona": "Sen Köylü Dostu blogu için içerik üreten bir editörsün. Yazılar sadece tarımla sınırlı değil; aşağıda işaretli konu başlıklarında, okuyucunun günlük hayatına dokunan, pratik ve ürünle doğal şekilde bağlantılı içerik üret. Robotik/şablon cümlelerden kaçın, gerçek bir yazarın kaleminden çıkmış gibi doğal yaz.",
+    "topics": {
+      "tarifler": true,
+      "meyve-sebze-rehberi": true,
+      "saklama-mutfak-ipuclari": true,
+      "saglik-beslenme": true,
+      "mevsim-hasat-takvimi": true,
+      "ev-yasam": false,
+      "genel-kultur": false,
+      "tarim-disi-gundem": false
+    }
+  }
+}

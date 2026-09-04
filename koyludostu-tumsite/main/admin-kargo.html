@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kargo Takip — Köylü Dostu Yönetim</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  body{background:var(--bg);}
+  .adm-wrap{max-width:640px;margin:0 auto;padding:24px 16px 60px;}
+  .adm-wrap h1{font-size:20px;font-weight:800;margin:6px 0 4px;}
+  .adm-wrap p.lead{font-size:12.5px;color:var(--muted);margin:0 0 18px;}
+  .adm-wrap p.lead a{color:var(--ring1);font-weight:700;}
+  .prod-form{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:22px;}
+  .prod-form h2{font-size:14px;font-weight:800;margin:0 0 14px;}
+  .prod-field{margin-bottom:12px;}
+  .prod-field label{font-size:12px;font-weight:700;color:var(--muted);display:block;margin-bottom:6px;}
+  .prod-field input, .prod-field select, .prod-field textarea{
+    width:100%;padding:10px 12px;border-radius:10px;border:1.5px solid var(--line);
+    font-family:inherit;font-size:13.5px;background:var(--bg);
+  }
+  .prod-field textarea{min-height:60px;resize:vertical;}
+  .prod-submit{padding:11px 22px;border-radius:12px;background:var(--ink);color:#fff;border:none;font-size:13.5px;font-weight:700;cursor:pointer;}
+  .prod-submit:disabled{opacity:.5;}
+  .prod-msg{font-size:12.5px;color:var(--ring3);min-height:16px;margin-top:8px;}
+  .sh-item{padding:12px;background:var(--card);border:1px solid var(--line);border-radius:12px;margin-bottom:8px;}
+  .sh-top{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+  .sh-title{font-size:13px;font-weight:700;}
+  .sh-sub{font-size:11.5px;color:var(--muted);margin-top:2px;}
+  .sh-status{font-size:10px;font-weight:800;padding:3px 9px;border-radius:10px;flex-shrink:0;}
+  .sh-status.requested{background:rgba(192,138,46,.15);color:var(--ring2);}
+  .sh-status.shipped, .sh-status.in_transit{background:rgba(46,110,192,.12);color:#2e6ec0;}
+  .sh-status.delivered{background:rgba(78,107,58,.12);color:var(--ring1);}
+  .sh-status.cancelled{background:rgba(200,60,60,.12);color:var(--ring3);}
+  .sh-track{font-size:11.5px;color:var(--muted);margin-top:6px;}
+  .sh-weight{font-size:11px;color:var(--muted);margin-top:2px;}
+  .sh-perishable{font-size:10px;font-weight:800;padding:2px 8px;border-radius:8px;background:rgba(192,138,46,.15);color:var(--ring2);margin-left:6px;}
+  .weight-preview{font-size:12.5px;color:var(--muted);margin:-4px 0 12px;}
+  .perishable-warn{font-size:12.5px;color:var(--ring2);background:rgba(192,138,46,.1);border-radius:9px;padding:10px 12px;margin-bottom:12px;display:none;}
+  .adm-empty{padding:30px;text-align:center;color:var(--muted);font-size:13px;}
+</style>
+</head>
+<body>
+<div class="adm-wrap">
+  <h1>Kargo Takip <span id="sellerName" style="font-weight:500;color:var(--muted);font-size:13px;"></span></h1>
+  <p class="lead">Ödemeyi doğrudan alıcıdan aldığın satışlar için kargolama talebini buradan platforma bildir, durumunu takip et. <a href="/admin-mesajlar.html">Mesaj kutusu</a> · <a href="/admin-urunlerim.html">Ürünlerim</a> · <a href="/admin-ambalaj.html">Ambalaj Satın Al</a></p>
+
+  <div class="prod-form">
+    <h2>Yeni Kargo Talebi</h2>
+    <div class="prod-field">
+      <label>Ürün</label>
+      <select id="fProduct"></select>
+    </div>
+    <p class="perishable-warn" id="perishableWarn">⚠️ Bu ürün çabuk bozulur. Standart kargo yerine kendin teslim ya da otobüsle aynı gün gönderim daha güvenli olur.</p>
+    <div class="prod-field">
+      <label>Miktar</label>
+      <input type="number" id="fQuantity" min="1" value="1">
+      <p class="weight-preview" id="weightPreview"></p>
+    </div>
+    <div class="prod-field">
+      <label>Alıcı Adı</label>
+      <input type="text" id="fBuyerName" maxlength="80" placeholder="Örn. Ahmet Demir">
+    </div>
+    <div class="prod-field">
+      <label>Alıcı Telefon</label>
+      <input type="text" id="fBuyerPhone" maxlength="11" placeholder="5XX XXX XX XX">
+    </div>
+    <div class="prod-field">
+      <label>Teslimat Adresi</label>
+      <textarea id="fAddress" maxlength="400" placeholder="Açık adres yaz"></textarea>
+    </div>
+    <div class="prod-field">
+      <label>Not (opsiyonel)</label>
+      <input type="text" id="fNote" maxlength="300" placeholder="Örn. kırılacak eşya, kavanoz">
+    </div>
+    <button class="prod-submit" id="submitBtn">Kargo Talebi Oluştur</button>
+    <p class="prod-msg" id="formMsg"></p>
+  </div>
+
+  <div id="shList"><div class="adm-empty">Yükleniyor…</div></div>
+</div>
+
+<script src="assets/auth.js"></script>
+<script>
+(function () {
+  if (!window.KDAuth.requireSeller('/admin-kargo.html')) return;
+  document.getElementById('sellerName').textContent = '· ' + window.KDAuth.name();
+
+  var STATUS_LABELS = {
+    requested: 'Talep Alındı', shipped: 'Kargoya Verildi', in_transit: 'Yolda',
+    delivered: 'Teslim Edildi', cancelled: 'İptal Edildi',
+  };
+
+  function timeStr(iso) {
+    var d = new Date(iso);
+    return d.toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+  }
+
+  var myProducts = [];
+  function updateWeightPreview() {
+    var product = myProducts.filter(function (p) { return p.slug === document.getElementById('fProduct').value; })[0];
+    var qty = Math.max(1, parseInt(document.getElementById('fQuantity').value, 10) || 1);
+    var preview = document.getElementById('weightPreview');
+    var warn = document.getElementById('perishableWarn');
+    if (product && product.weightKg) {
+      preview.textContent = 'Tahmini toplam ağırlık: ~' + Math.round(product.weightKg * qty * 100) / 100 + ' kg';
+    } else {
+      preview.textContent = 'Bu ürün için birim ağırlık girilmemiş — Ürünlerim sayfasından ekleyebilirsin.';
+    }
+    warn.style.display = (product && product.perishable) ? 'block' : 'none';
+  }
+
+  window.KDAuth.authedFetch('/api/admin/products/mine').then(function (r) { return r.json(); }).then(function (data) {
+    var sel = document.getElementById('fProduct');
+    myProducts = data.products || [];
+    if (!myProducts.length) { sel.innerHTML = '<option value="">Önce bir ürün eklemelisin</option>'; return; }
+    sel.innerHTML = myProducts.map(function (p) { return '<option value="' + p.slug + '">' + p.title + '</option>'; }).join('');
+    updateWeightPreview();
+  }).catch(function () {});
+
+  document.getElementById('fProduct').addEventListener('change', updateWeightPreview);
+  document.getElementById('fQuantity').addEventListener('input', updateWeightPreview);
+
+  function loadShipments() {
+    window.KDAuth.authedFetch('/api/admin/shipments/mine').then(function (r) { return r.json(); }).then(function (data) {
+      var list = document.getElementById('shList');
+      var items = data.shipments || [];
+      if (!items.length) { list.innerHTML = '<div class="adm-empty">Henüz kargo talebin yok.</div>'; return; }
+      list.innerHTML = items.map(function (s) {
+        var track = s.trackingNo ? '<div class="sh-track">Takip No: ' + s.trackingNo + '</div>' : '';
+        var perishBadge = s.perishable ? '<span class="sh-perishable">❄️ Çabuk Bozulur</span>' : '';
+        var weight = s.totalWeightKg ? '<div class="sh-weight">Miktar: ' + s.quantity + ' · Toplam ~' + s.totalWeightKg + ' kg</div>' : '<div class="sh-weight">Miktar: ' + s.quantity + '</div>';
+        return '<div class="sh-item">' +
+          '<div class="sh-top"><div><div class="sh-title">' + s.productTitle + ' → ' + s.buyerName + perishBadge + '</div>' +
+          '<div class="sh-sub">' + s.address.replace(/[<>]/g, '') + '</div>' + weight + '</div>' +
+          '<span class="sh-status ' + s.status + '">' + STATUS_LABELS[s.status] + '</span></div>' +
+          track +
+          '<div class="sh-track">' + timeStr(s.updatedAt) + '</div>' +
+        '</div>';
+      }).join('');
+    }).catch(function () {
+      document.getElementById('shList').innerHTML = '<div class="adm-empty">Kargo talepleri yüklenemedi.</div>';
+    });
+  }
+
+  document.getElementById('submitBtn').addEventListener('click', function () {
+    var msg = document.getElementById('formMsg');
+    var btn = document.getElementById('submitBtn');
+    var payload = {
+      productSlug: document.getElementById('fProduct').value,
+      quantity: document.getElementById('fQuantity').value,
+      buyerName: document.getElementById('fBuyerName').value.trim(),
+      buyerPhone: document.getElementById('fBuyerPhone').value.trim(),
+      address: document.getElementById('fAddress').value.trim(),
+      note: document.getElementById('fNote').value.trim(),
+    };
+    if (!payload.productSlug) { msg.textContent = 'Bir ürün seç.'; return; }
+    if (!payload.buyerName) { msg.textContent = 'Alıcı adı gerekli.'; return; }
+    if (!payload.buyerPhone) { msg.textContent = 'Alıcı telefonu gerekli.'; return; }
+    if (!payload.address) { msg.textContent = 'Teslimat adresi gerekli.'; return; }
+
+    msg.textContent = '';
+    btn.disabled = true;
+    window.KDAuth.authedFetch('/api/admin/shipments', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    }).then(function (r) { return r.json(); }).then(function (data) {
+      btn.disabled = false;
+      if (data.error) { msg.textContent = data.error; return; }
+      msg.style.color = 'var(--ring1)';
+      msg.textContent = 'Kargo talebi oluşturuldu.';
+      document.getElementById('fBuyerName').value = '';
+      document.getElementById('fBuyerPhone').value = '';
+      document.getElementById('fAddress').value = '';
+      document.getElementById('fNote').value = '';
+      document.getElementById('fQuantity').value = '1';
+      updateWeightPreview();
+      loadShipments();
+    }).catch(function () { btn.disabled = false; });
+  });
+
+  loadShipments();
+})();
+</script>
+</body>
+</html>

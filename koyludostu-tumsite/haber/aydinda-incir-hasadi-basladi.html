@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#4E6B3A">
+<link rel="apple-touch-icon" href="/assets/logo-icon.jpg">
+<title>Aydın'da İncir Hasadı Başladı — Köylü Dostu Haber</title>
+<meta name="description" content="Aydın'da bu yılki incir rekoltesi geçen yılı geride bıraktı; kuraklığın etkili olmadığı sezonda üreticinin yüzü gülüyor.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="hamburger-btn" onclick="document.getElementById('kdDrawer').classList.add('open');document.getElementById('kdOverlay').classList.add('open');" aria-label="Menü">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+  </button>
+  <a href="/index.html" class="avatar-ring">
+    <div class="avatar"><img src="/assets/logo-icon.jpg" alt="Köylü Dostu" style="width:92%;height:92%;object-fit:contain;"></div>
+  </a>
+  <a href="/index.html" class="brand-info" style="text-decoration:none;">
+    <h1>köylüdostu</h1>
+    <p>Tarladan şehre güvenli alışveriş</p>
+  </a>
+  <a class="cta-btn" href="https://wa.me/905425174860?text=Merhaba%2C%20%C3%BCr%C3%BCnleriniz%20hakk%C4%B1nda%20bilgi%20almak%20istiyorum." target="_blank">
+    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12c0 1.85.5 3.58 1.35 5.07L2 22l5.06-1.33A9.94 9.94 0 0 0 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2zm0 18c-1.6 0-3.1-.44-4.38-1.2l-.31-.19-3 .79.8-2.92-.2-.3A7.94 7.94 0 0 1 4 12c0-4.41 3.59-8 8-8s8 3.59 8 8-3.59 8-8 8z"/></svg>
+    Yaz
+  </a>
+</div>
+<div class="drawer-overlay" id="kdOverlay" onclick="document.getElementById('kdDrawer').classList.remove('open');this.classList.remove('open');"></div>
+<div class="drawer" id="kdDrawer">
+  <div class="drawer-head">
+    <div class="avatar-ring" style="width:40px;height:40px;">
+      <div class="avatar"><img src="/assets/logo-icon.jpg" alt="Köylü Dostu" style="width:92%;height:92%;object-fit:contain;"></div>
+    </div>
+    <div class="brand-info"><h1>köylüdostu</h1></div>
+    <button class="drawer-close" onclick="document.getElementById('kdDrawer').classList.remove('open');document.getElementById('kdOverlay').classList.remove('open');" aria-label="Kapat">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+  </div>
+  <nav class="drawer-nav">
+    <a href="/index.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>Anasayfa</a>
+    <a href="/index.html#urunler"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="7" width="18" height="14" rx="2"/><path d="M8 7V5a4 4 0 0 1 8 0v2"/></svg>Ürünler</a>
+    <a href="/vitrin.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 3l14 9-14 9V3z"/></svg>Vitrin</a>
+    <div class="drawer-section-label">Kanallar</div>
+    <a href="/haber/index.html" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h13v16H4z"/><path d="M17 8h3v10a2 2 0 0 1-2 2H8"/><path d="M8 8h6M8 12h6M8 16h3"/></svg>Haberler</a>
+  </nav>
+  <div class="drawer-foot">
+    <a class="cta-btn outline" href="https://wa.me/905425174860?text=Merhaba%2C%20K%C3%B6yl%C3%BC%20Dostu%27nda%20sat%C4%B1c%C4%B1%20olmak%20istiyorum." target="_blank"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Sen de Satıcı Ol</a>
+    <a class="cta-btn" href="https://wa.me/905425174860?text=Merhaba%2C%20%C3%BCr%C3%BCnleriniz%20hakk%C4%B1nda%20bilgi%20almak%20istiyorum." target="_blank">WhatsApp'tan Yaz</a>
+  </div>
+</div>
+<div class="breadcrumb"><a href="/index.html">Köylü Dostu</a><span>›</span><a href="index.html">Haberler</a><span>›</span><a href="index.html#tarim-haberleri">Tarım Gündemi</a><span>›</span>İncir Hasadı</div>
+<div class="blog-page">
+  <div style="margin-bottom:10px;"><span class="nc-cat tag-tarim" style="display:inline-block;">Tarım Haberleri</span></div>
+  <h1>Aydın'da İncir Hasadı Başladı</h1>
+  <div class="blog-meta">Köylü Dostu Haber · Tarım Gündemi · 1 Eylül 2026 · Tahmini okuma: 4 dk</div>
+  <img class="blog-hero-img" src="https://images.pexels.com/photos/5447088/pexels-photo-5447088.jpeg?auto=compress&cs=tinysrgb&w=900" alt="Taze incir hasadı">
+
+  <p>Dünyanın en önemli kuru incir üretim merkezlerinden Aydın'da hasat mevsimi başladı. Bu yıl bölgede rekolte beklentisi geçen yıla kıyasla belirgin şekilde daha olumlu; nedeni ise basit: sezon boyunca kuraklık yaşanmadı. Aydın Adnan Menderes Üniversitesi Ziraat Fakültesi'nden bir akademisyenin de belirttiği gibi, bu yılki üretim geçen seneye göre daha iyi durumda — üstelik geçtiğimiz yıllarda incir üreticilerinin sık sık şikayet ettiği su stresi bu sezon büyük ölçüde yaşanmadı.</p>
+
+  <p>Bölgede hasadın resmi açılışının Tarım ve Orman Bakanı tarafından yapılması bekleniyordu; bu da incirin Aydın ekonomisi ve Türkiye'nin tarımsal ihracatındaki ağırlığının bir göstergesi. İncir, Ege bölgesinin en köklü ihracat ürünlerinden biri olmayı sürdürüyor ve özellikle kurutulmuş haliyle Avrupa ve Amerika pazarlarında talep görüyor.</p>
+
+  <h2>Jeotermal etkisi de gündemde</h2>
+  <p>Bölgedeki bazı incir bahçelerinde jeotermal kaynaklı buharın toprağı etkilediğine dair gözlemler de üreticilerin gündeminde. Bu konu, bölgedeki jeotermal enerji yatırımlarının tarımsal alanlarla bir arada nasıl yönetileceği tartışmasının bir parçası olarak öne çıkıyor; incir üreticileri, uzun vadede toprak ve su kalitesinin korunmasını önemli bir gündem maddesi olarak takip ediyor.</p>
+
+  <h2>Üretici için hasat dönemi ne getiriyor?</h2>
+  <p>Rekoltenin iyi olması, kâğıt üzerinde sevindirici olsa da, üreticinin asıl beklentisi hasat sonrası oluşacak fiyat. Geçmiş sezonlarda görüldüğü gibi, bol rekolte dönemlerinde toptan fiyatların baskı altında kalması, özellikle kurutmalık incir üreticileri için hassas bir denge oluşturuyor. Bu noktada doğrudan satış kanalları — üreticinin ürününü toptancı zincirine bağımlı kalmadan doğrudan tüketiciye ulaştırabildiği modeller — üreticinin eline geçen geliri korumak açısından giderek daha fazla tercih ediliyor.</p>
+
+  <p>Köylü Dostu'nda da Aydın'ın İncirliova ilçesinden bir üreticinin kuru inciri ve Manisa Sarıgöl'den taze incir doğrudan satışa sunuluyor; hasat mevsiminin başlamasıyla birlikte önümüzdeki haftalarda taze incirde arzın artması bekleniyor.</p>
+
+  <div class="agenda-source" style="margin-top:24px;">Kaynak: <a href="https://dokuzeylul.com/egenin-goz-bebegi-incire-kiymayin" target="_blank" rel="noopener">İHA</a></div>
+</div>
+<footer class="site-footer">
+  <b>Köylü Dostu</b> · Üreticilerden doğrudan alışveriş · Platform iletişim: Enes Tezcan, 0542 517 4860
+</footer>
+
+<script>if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("/sw.js").catch(function(){});});}</script>
+</body>
+</html>

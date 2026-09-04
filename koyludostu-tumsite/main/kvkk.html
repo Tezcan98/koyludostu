@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#4E6B3A">
+<link rel="apple-touch-icon" href="/assets/logo-icon.jpg">
+<title>KVKK Aydınlatma Metni — Köylü Dostu</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  .doc-wrap{max-width:640px;margin:0 auto;padding:20px 20px 60px;}
+  .doc-wrap h1{font-size:20px;font-weight:800;margin:6px 0 18px;}
+  .doc-wrap h2{font-size:14.5px;font-weight:800;margin:22px 0 8px;}
+  .doc-wrap p, .doc-wrap li{font-size:13.5px;line-height:1.7;color:#3a352e;margin:0 0 8px;}
+  .doc-wrap ul{margin:0 0 10px;padding-left:20px;}
+  .doc-wrap table{width:100%;border-collapse:collapse;font-size:12.5px;margin:8px 0 14px;}
+  .doc-wrap th, .doc-wrap td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top;}
+  .doc-wrap th{color:var(--muted);font-weight:700;}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <button class="hamburger-btn" onclick="document.getElementById('kdDrawer').classList.add('open');document.getElementById('kdOverlay').classList.add('open');" aria-label="Menü">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+  </button>
+  <a href="/index.html" class="avatar-ring">
+    <div class="avatar"><img src="/assets/logo-icon.jpg" alt="Köylü Dostu" style="width:92%;height:92%;object-fit:contain;"></div>
+  </a>
+  <a href="/index.html" class="brand-info" style="text-decoration:none;">
+    <h1>köylüdostu</h1>
+    <p>KVKK Aydınlatma Metni</p>
+  </a>
+  <div id="authSlot"></div>
+</div>
+<div class="drawer-overlay" id="kdOverlay" onclick="document.getElementById('kdDrawer').classList.remove('open');this.classList.remove('open');"></div>
+<div class="drawer" id="kdDrawer">
+  <div class="drawer-head">
+    <div class="avatar-ring" style="width:40px;height:40px;">
+      <div class="avatar"><img src="/assets/logo-icon.jpg" alt="Köylü Dostu" style="width:92%;height:92%;object-fit:contain;"></div>
+    </div>
+    <div class="brand-info"><h1>köylüdostu</h1></div>
+    <button class="drawer-close" onclick="document.getElementById('kdDrawer').classList.remove('open');document.getElementById('kdOverlay').classList.remove('open');" aria-label="Kapat">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+  </div>
+  <nav class="drawer-nav">
+    <a href="/index.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>Anasayfa</a>
+    <a href="/vitrin.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 3l14 9-14 9V3z"/></svg>Vitrin</a>
+    <div class="drawer-section-label">Hesabım</div>
+    <a href="/favorilerim.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>Favori İlanlarım</a>
+    <a href="/favori-saticilarim.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>Favori Satıcılarım</a>
+    <a href="/mesajlarim.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Mesajlar</a>
+    <a href="/yorumlarim.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>Yorumlarım</a>
+    <a href="/hesap-ayarlarim.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/></svg>Hesap Ayarları</a>
+    <div class="drawer-section-label">Diğer</div>
+    <a href="/hakkimizda.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>Hakkımızda</a>
+    <a href="/gizlilik.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z"/></svg>Gizlilik</a>
+    <a href="/kullanim-sartlari.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h6"/></svg>Kullanım Şartları</a>
+    <a href="/kvkk.html" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z"/><path d="M9 12l2 2 4-4"/></svg>KVKK Aydınlatma Metni</a>
+  </nav>
+</div>
+
+<div class="doc-wrap">
+  <h1>6698 Sayılı KVKK Kapsamında Aydınlatma Metni</h1>
+  <p>Bu metin, 6698 sayılı Kişisel Verilerin Korunması Kanunu ("KVKK") madde 10 uyarınca, Köylü Dostu platformunu kullanırken işlenen kişisel verilerin hangi amaçla, hangi hukuki sebeple işlendiğini ve haklarını açıklamak için hazırlanmıştır.</p>
+
+  <h2>1. Veri Sorumlusu</h2>
+  <p>Köylü Dostu platformunun işleteni olan Enes Tezcan, KVKK kapsamında veri sorumlusudur. İletişim: 0542 517 4860.</p>
+
+  <h2>2. İşlenen Kişisel Veri Kategorileri</h2>
+  <table>
+    <tr><th>Kategori</th><th>Örnek Veriler</th></tr>
+    <tr><td>Kimlik ve İletişim</td><td>Ad soyad, telefon numarası, şehir, (verirsen) e-posta</td></tr>
+    <tr><td>Hesap Güvenliği</td><td>Şifrelenmiş parola, oturum kaydı</td></tr>
+    <tr><td>Satıcı Başvurusu</td><td>İşletme/üretim açıklaması, (yüklersen) kimlik veya işletme belgesi</td></tr>
+    <tr><td>İşlem Güvenliği</td><td>Mesajlaşma içerikleri, değerlendirme/şikayet metinleri, kargo ve ambalaj talepleri</td></tr>
+    <tr><td>Konum</td><td>(İzin verirsen) yaklaşık şehir konumu, sadece namaz vakti gösterimi için</td></tr>
+  </table>
+
+  <h2>3. İşleme Amaçları</h2>
+  <ul>
+    <li>Hesap oluşturma, telefon doğrulama ve oturum yönetimi</li>
+    <li>Alıcı-satıcı mesajlaşmasının ve bildirim tercihlerinin (SMS/e-posta) çalıştırılması</li>
+    <li>Satıcı başvurusunun değerlendirilmesi ve onay süreci</li>
+    <li>Değerlendirme, şikayet, kargo takip ve ambalaj talebi süreçlerinin yürütülmesi</li>
+    <li>Platform güvenliğinin sağlanması ve kötüye kullanımın önlenmesi</li>
+  </ul>
+
+  <h2>4. Hukuki Sebep</h2>
+  <p>Veriler, KVKK madde 5/2 kapsamında "bir sözleşmenin kurulması veya ifasıyla doğrudan ilgili olması" ve "veri sorumlusunun meşru menfaati" hukuki sebeplerine dayanılarak işlenir. Konum verisi gibi isteğe bağlı veriler ise açık rızana dayanılarak işlenir.</p>
+
+  <h2>5. Aktarım</h2>
+  <p>Verilerin reklam amacıyla üçüncü taraflarla paylaşılmaz veya satılmaz. Bir satıcıyla mesajlaşırken telefon numaran karşı tarafla paylaşılmaz. SMS/e-posta bildirimleri için ileride bir sağlayıcı hizmeti kullanılırsa, bu yalnızca bildirim iletimi amacıyla sınırlı olur.</p>
+
+  <h2>6. Saklama Süresi</h2>
+  <p>Veriler, hesabın aktif olduğu süre boyunca ve hesap silindikten sonra yasal yükümlülüklerin gerektirdiği makul süre boyunca saklanır.</p>
+
+  <h2>7. Veri Sahibi Hakların (KVKK m. 11)</h2>
+  <ul>
+    <li>Kişisel verinin işlenip işlenmediğini öğrenme</li>
+    <li>İşlenmişse buna ilişkin bilgi talep etme</li>
+    <li>İşlenme amacını ve amacına uygun kullanılıp kullanılmadığını öğrenme</li>
+    <li>Eksik/yanlış işlenmişse düzeltilmesini isteme</li>
+    <li>Silinmesini veya yok edilmesini isteme</li>
+    <li>İşlenen verilerin üçüncü kişilere bildirilmesini isteme</li>
+    <li>Aleyhine bir sonucun ortaya çıkmasına itiraz etme</li>
+    <li>Kanuna aykırı işleme nedeniyle zarara uğraması hâlinde zararın giderilmesini talep etme</li>
+  </ul>
+
+  <h2>8. Başvuru Yöntemi</h2>
+  <p>Yukarıdaki haklarını kullanmak için Enes Tezcan, 0542 517 4860 üzerinden veya Hesap Ayarları sayfasından bize ulaşabilirsin. Talebin en geç 30 gün içinde sonuçlandırılır.</p>
+</div>
+
+<script src="assets/auth.js"></script>
+<script>if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("/sw.js").catch(function(){});});}</script>
+</body>
+</html>

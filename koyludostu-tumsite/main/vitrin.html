@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#4E6B3A">
+<link rel="apple-touch-icon" href="/assets/logo-icon.jpg">
+<title>Vitrin — Köylü Dostu</title>
+<meta name="description" content="Köylü Dostu ürünlerini kaydırarak keşfedin.">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body class="vitrin-body">
+
+<div class="reel-top-bar">
+  <button class="reel-close" onclick="if(document.referrer && document.referrer.indexOf(location.host)>-1){history.back()}else{location.href='index.html'}" aria-label="Kapat">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+  </button>
+  <div class="reel-progress" id="reelProgress"></div>
+</div>
+
+<button class="reel-nav-btn reel-nav-up" id="navUp" aria-label="Önceki">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 15l-6-6-6 6"/></svg>
+</button>
+<button class="reel-nav-btn reel-nav-down" id="navDown" aria-label="Sonraki">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+</button>
+
+<div class="reel-container" id="reelContainer"></div>
+
+<script>
+var PRODUCTS = [
+  { slug: 'taze-asma-yapragi', title: 'Taze Asma Yaprağı', cat: 'Asma Yaprağı', producer: 'Köylü Dostu', price: '180₺', unit: '/ kg', img: '19702480', desc: "Sabah erken saatlerde toplanan, sararmamış genç asma yaprağı. Yaprak sarma için idealdir, günlük hasat." },
+  { slug: 'salamura-asma-yapragi', title: 'Salamura Asma Yaprağı', cat: 'Asma Yaprağı', producer: 'Köylü Dostu', price: '150₺', unit: '/ kavanoz', img: '5626933', desc: "Kavanozda salamuralanmış, kışlık uzun ömürlü asma yaprağı. Açtıktan sonra buzdolabında saklanabilir." },
+  { slug: 'kara-uzum', title: 'Kara Üzüm', cat: 'Üzüm', producer: 'Hasan Yıldız', price: '90₺', unit: '/ kg', img: '5455081', desc: "Bağdan toplanan yöresel kara üzüm, mevsimlik hasat. İlaçsız, geleneksel bağcılık." },
+  { slug: 'sultani-cekirdeksiz', title: 'Sultani Çekirdeksiz', cat: 'Üzüm', producer: 'Ayşe Kaya Bağları', price: '110₺', unit: '/ kg', img: '6844554', desc: "Taze, çekirdeksiz sofralık üzüm. Günlük toplanır, aynı gün kargoya verilir." },
+  { slug: 'geleneksel-uzum-pekmezi', title: 'Geleneksel Üzüm Pekmezi', cat: 'Pekmez', producer: 'Köylü Dostu', price: '220₺', unit: '/ kg', img: '4480158', desc: "Katkısız, taş bazlı geleneksel kaynatma yöntemiyle hazırlanan koyu pekmez. Cam kavanozda." },
+  { slug: 'pekmez-kucuk-kavanoz', title: 'Pekmez (Küçük Kavanoz)', cat: 'Pekmez', producer: 'Fatma Demir', price: '85₺', unit: '/ adet', img: '302163', desc: "400 gr'lık hediyelik kavanoz, kahvaltılık boy. Ev yapımı." },
+  { slug: 'kuru-incir', title: 'Kuru İncir', cat: 'İncir', producer: 'Mehmet Arslan', price: '260₺', unit: '/ kg', img: '4499221', desc: "Güneşte doğal kurutulmuş, ilaçsız incir. Kükürtsüz, geleneksel kurutma." },
+  { slug: 'taze-incir', title: 'Taze İncir', cat: 'İncir', producer: 'Köylü Dostu', price: '140₺', unit: '/ kg', img: '6310577', desc: "Hasat döneminde günlük toplanan taze incir. Stok kısıtlı, mevsimlik." },
+  { slug: 'salamura-yesil-zeytin', title: 'Salamura Yeşil Zeytin', cat: 'Zeytin', producer: 'Osman Çelik', price: '160₺', unit: '/ kg', img: '16732695', desc: "Kendi zeytinliğinden, geleneksel salamura yöntemiyle hazırlanmış zeytin." },
+  { slug: 'siyah-sele-zeytin', title: 'Siyah Sele Zeytin', cat: 'Zeytin', producer: 'Osman Çelik', price: '180₺', unit: '/ kg', img: '4096837', desc: "Doğal yöntemle olgunlaştırılmış siyah zeytin, tuzda bekletme." },
+  { slug: 'soguk-sikim-zeytinyagi', title: 'Soğuk Sıkım Zeytinyağı', cat: 'Zeytinyağı', producer: 'Osman Çelik', price: '420₺', unit: '/ litre', img: '3737656', desc: "Erken hasat, birinci soğuk sıkım, katkısız zeytinyağı." },
+  { slug: 'geleneksel-domates-salcasi', title: 'Geleneksel Domates Salçası', cat: 'Salça', producer: 'Zehra Şahin', price: '140₺', unit: '/ kg', img: '4361645', desc: "Güneşte kurutularak koyulaştırılmış, katkısız geleneksel salça." },
+  { slug: 'ev-yapimi-tarhana', title: 'Ev Yapımı Tarhana', cat: 'Tarhana', producer: 'Zehra Şahin', price: '130₺', unit: '/ kg', img: '3559899', desc: "Geleneksel tarifle hazırlanmış, güneşte kurutulmuş ev yapımı tarhana." },
+  { slug: 'manisa-kirazi', title: 'Manisa Kirazı', cat: 'Kiraz', producer: 'Kemal Öztürk', price: '220₺', unit: '/ kg', img: '3614942', desc: "Haziran ayında dalından günlük toplanan, iri taneli, çekirdeği kolay ayrılan Manisa kirazı." },
+  { slug: 'kuru-kayisi', title: 'Kuru Kayısı', cat: 'Kuru Meyve', producer: 'Songül Aydın', price: '240₺', unit: '/ kg', img: '10111994', desc: "Güneşte doğal kurutulmuş, kükürtsüz kuru kayısı. Koyu rengi doğallığının göstergesidir." },
+  { slug: 'kabuklu-ceviz', title: 'Kabuklu Ceviz', cat: 'Kuruyemiş', producer: 'Hüseyin Kaya', price: '180₺', unit: '/ kg', img: '1489291', desc: "Bahçeden hasat edilmiş, doğal kurutulmuş kabuklu ceviz. Kırıldığında taze ve dolgun iç verir." },
+  { slug: 'badem-ici', title: 'Badem İçi', cat: 'Kuruyemiş', producer: 'Fatma Yıldırım', price: '320₺', unit: '/ kg', img: '5202282', desc: "Kabuğu çıkarılmış, kavrulmamış çiğ badem içi. Katkısız ve doğal." },
+  { slug: 'suzme-cicek-bali', title: 'Süzme Çiçek Balı', cat: 'Bal', producer: 'Mustafa Demirel', price: '380₺', unit: '/ kg', img: '315420', desc: "Kendi arılıklarından süzülen, ısıtılmamış çiçek balı. Katkısız ve mevsiminde hasat edilir." },
+  { slug: 'ezine-tulum-peyniri', title: 'Ezine Tulum Peyniri', cat: 'Peynir', producer: 'Ayşe Güneş', price: '350₺', unit: '/ kg', img: '6660248', desc: "Koyun ve keçi sütünden, geleneksel yöntemle mağarada olgunlaştırılmış tulum peyniri." },
+  { slug: 'taze-domates', title: 'Taze Domates', cat: 'Sebze', producer: 'İbrahim Şahin', price: '45₺', unit: '/ kg', img: '4022083', desc: "Tarladan günlük toplanan, ilaçsız, doğal olgunlaşmış salkım domates." },
+  { slug: 'taze-yesil-biber', title: 'Taze Yeşil Biber', cat: 'Sebze', producer: 'İbrahim Şahin', price: '40₺', unit: '/ kg', img: '2893635', desc: "Günlük hasat edilen taze, sivri olmayan tatlı yeşil biber." },
+  { slug: 'nar', title: 'Nar', cat: 'Meyve', producer: 'Elif Korkmaz', price: '60₺', unit: '/ kg', img: '12148142', desc: "Ekim-kasım ayında hasat edilen, taneleri iri ve sulu, ilaçsız nar." },
+  { slug: 'amasya-elma', title: 'Amasya Elması', cat: 'Meyve', producer: 'Hüseyin Kaya', price: '50₺', unit: '/ kg', img: '28699587', desc: "Kendine özgü aromasıyla bilinen, doğal yetiştirilmiş Amasya tipi elma." },
+  { slug: 'karadut-receli', title: 'Karadut Reçeli', cat: 'Reçel', producer: 'Songül Aydın', price: '150₺', unit: '/ kavanoz', img: '15209691', desc: "Şeker oranı düşük tutularak, geleneksel yöntemle kaynatılmış ev yapımı karadut reçeli." },
+  { slug: 'gemlik-zeytini', title: 'Gemlik Zeytini', cat: 'Zeytin', producer: 'Osman Çelik', price: '200₺', unit: '/ kg', img: '4109912', desc: "İri taneli, az çekirdekli Gemlik tipi siyah zeytin. Geleneksel salamura yöntemiyle olgunlaştırılır." }
+];
+
+(function () {
+  var container = document.getElementById('reelContainer');
+  var progressEl = document.getElementById('reelProgress');
+  var LIKE_KEY = 'kd_vitrin_begeniler';
+
+  function getLikes() {
+    try { return JSON.parse(localStorage.getItem(LIKE_KEY) || '{}'); } catch (e) { return {}; }
+  }
+  function toggleLike(slug, btn) {
+    var likes = getLikes();
+    likes[slug] = !likes[slug];
+    localStorage.setItem(LIKE_KEY, JSON.stringify(likes));
+    btn.classList.toggle('liked', !!likes[slug]);
+  }
+
+  var likes = getLikes();
+
+  progressEl.innerHTML = PRODUCTS.map(function () { return '<span><i></i></span>'; }).join('');
+  var dots = progressEl.children;
+
+  container.innerHTML = PRODUCTS.map(function (p, i) {
+    var imgUrl = 'https://images.pexels.com/photos/' + p.img + '/pexels-photo-' + p.img + '.jpeg?auto=compress&cs=tinysrgb&w=1080';
+    return (
+      '<section class="reel-slide" id="' + p.slug + '" data-i="' + i + '">' +
+        '<img src="' + imgUrl + '" alt="' + p.title + '" loading="' + (i < 2 ? 'eager' : 'lazy') + '">' +
+        '<div class="reel-gradient"></div>' +
+        '<div class="reel-actions">' +
+          '<button class="reel-action-btn like-btn' + (likes[p.slug] ? ' liked' : '') + '" data-slug="' + p.slug + '" aria-label="Beğen">' +
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>' +
+          '</button>' +
+          '<button class="reel-action-btn wa-btn" aria-label="WhatsApp\'tan sor">' +
+            '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12c0 1.85.5 3.58 1.35 5.07L2 22l5.06-1.33A9.94 9.94 0 0 0 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2zm0 18c-1.6 0-3.1-.44-4.38-1.2l-.31-.19-3 .79.8-2.92-.2-.3A7.94 7.94 0 0 1 4 12c0-4.41 3.59-8 8-8s8 3.59 8 8-3.59 8-8 8z"/></svg>' +
+          '</button>' +
+        '</div>' +
+        '<div class="reel-content">' +
+          '<div class="reel-cat">' + p.cat + ' · ' + p.producer + '</div>' +
+          '<h2 class="reel-title">' + p.title + '</h2>' +
+          '<p class="reel-desc">' + p.desc + '</p>' +
+          '<div class="reel-cta-row">' +
+            '<div class="reel-price">' + p.price + ' <small>' + p.unit + '</small></div>' +
+            '<a class="reel-go" href="urun/' + p.slug + '.html">Ürüne Git →</a>' +
+          '</div>' +
+        '</div>' +
+      '</section>'
+    );
+  }).join('');
+
+  container.querySelectorAll('.like-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () { toggleLike(btn.dataset.slug, btn); });
+  });
+  container.querySelectorAll('.wa-btn').forEach(function (btn, i) {
+    btn.addEventListener('click', function () {
+      var p = PRODUCTS[i];
+      var msg = encodeURIComponent('Merhaba, ' + p.title + ' hakkında bilgi almak istiyorum.');
+      window.open('https://wa.me/905425174860?text=' + msg, '_blank');
+    });
+  });
+
+  var slides = container.querySelectorAll('.reel-slide');
+  var current = 0;
+
+  var wantedSlug = location.hash.replace('#', '');
+  if (wantedSlug) {
+    var idx = PRODUCTS.findIndex(function (p) { return p.slug === wantedSlug; });
+    if (idx > -1) {
+      current = idx;
+      container.style.scrollBehavior = 'auto';
+      var targetTop = slides[idx].getBoundingClientRect().top - container.getBoundingClientRect().top + container.scrollTop;
+      container.scrollTop = targetTop;
+      requestAnimationFrame(function () {
+        container.scrollTop = targetTop;
+        requestAnimationFrame(function () { container.style.scrollBehavior = ''; });
+      });
+      Array.prototype.forEach.call(dots, function (d, di) { d.classList.toggle('done', di <= idx); });
+    }
+  }
+
+  var observer = new IntersectionObserver(function (entries) {
+    entries.forEach(function (entry) {
+      if (entry.isIntersecting && entry.intersectionRatio > 0.6) {
+        var i = Number(entry.target.dataset.i);
+        current = i;
+        Array.prototype.forEach.call(dots, function (d, di) {
+          d.classList.toggle('done', di <= i);
+        });
+      }
+    });
+  }, { root: container, threshold: [0.6] });
+  slides.forEach(function (s) { observer.observe(s); });
+
+  function goTo(i) {
+    i = Math.max(0, Math.min(slides.length - 1, i));
+    slides[i].scrollIntoView({ behavior: 'smooth' });
+  }
+
+  document.getElementById('navUp').addEventListener('click', function () { goTo(current - 1); });
+  document.getElementById('navDown').addEventListener('click', function () { goTo(current + 1); });
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowUp') { e.preventDefault(); goTo(current - 1); }
+    if (e.key === 'ArrowDown') { e.preventDefault(); goTo(current + 1); }
+    if (e.key === 'Escape') { location.href = 'index.html'; }
+  });
+})();
+</script>
+
+<script>if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("/sw.js").catch(function(){});});}</script>
+</body>
+</html>
