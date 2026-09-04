@@ -14,8 +14,10 @@
   .inbox-wrap h1{font-size:20px;font-weight:800;margin:6px 0 18px;}
   .seller-item{
     display:flex;gap:12px;align-items:center;padding:14px;background:var(--card);border:1px solid var(--line);
-    border-radius:12px;margin-bottom:10px;
+    border-radius:12px;margin-bottom:10px;cursor:pointer;
   }
+  .seller-item:hover{border-color:var(--ring1);}
+  .seller-chevron{color:var(--muted);font-size:18px;flex-shrink:0;}
   .seller-icon{width:42px;height:42px;border-radius:50%;background:var(--bg);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--muted);}
   .seller-icon svg{width:20px;height:20px;}
   .seller-body{flex:1;}
@@ -87,10 +89,12 @@
         return;
       }
       list.innerHTML = items.map(function (s) {
-        return '<div class="seller-item">' +
+        var badge = s.verified ? ' <span title="Güvenilir Satıcı">🛡️</span>' : '';
+        return '<a class="seller-item" href="satici/' + s.id + '.html">' +
           '<div class="seller-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg></div>' +
-          '<div class="seller-body"><div class="seller-name">' + s.name + '</div><div class="seller-city">' + s.city + '</div></div>' +
-        '</div>';
+          '<div class="seller-body"><div class="seller-name">' + s.name + badge + '</div><div class="seller-city">' + s.city + '</div></div>' +
+          '<span class="seller-chevron">›</span>' +
+        '</a>';
       }).join('');
     });
 })();

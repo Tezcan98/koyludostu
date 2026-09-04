@@ -304,6 +304,14 @@
           }).then(function () { sellersCache = null; renderSellersTab(content); }).catch(function () {});
         });
       });
+      content.querySelectorAll('[data-seller-badge]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          authedFetch('/api/owner/sellers/badge', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phone: btn.dataset.phone, verified: btn.dataset.sellerBadge === 'true' }),
+          }).then(function () { sellersCache = null; renderSellersTab(content); }).catch(function () {});
+        });
+      });
     };
     if (sellersCache) { go(sellersCache); return; }
     authedFetch('/api/owner/sellers').then(function (r) { return r.json(); }).then(function (d) { go(d.sellers || []); }).catch(function () {});
@@ -318,13 +326,16 @@
         ? '<button class="own-approve-btn" data-seller-decide="approved" data-phone="' + s.phone + '">Onayla</button>' +
           '<button class="own-reject-btn" data-seller-decide="rejected" data-phone="' + s.phone + '">Reddet</button>'
         : '';
+      var verifiedBadge = s.verifiedSeller ? '<span class="own-badge" style="background:rgba(78,107,58,.12);color:#4e6b3a;">🛡️ Rozetli</span>' : '';
+      var badgeBtn = '<button class="own-approve-btn" data-seller-badge="' + (!s.verifiedSeller) + '" data-phone="' + s.phone + '">' +
+        (s.verifiedSeller ? 'Rozeti Kaldır' : 'Rozet Ver') + '</button>';
       return '<div class="own-row">' +
         '<div class="own-body"><div class="own-title">' + s.name + '</div><div class="own-sub">' + s.phone + ' · ' + s.city +
         (s.businessInfo ? ' · ' + s.businessInfo.replace(/[<>]/g, '') : '') + '</div></div>' +
         '<span class="own-badge">' + s.productCount + ' ürün</span>' +
         '<span class="own-badge">' + s.convoCount + ' sohbet</span>' +
         '<span class="own-badge" style="' + (s.openComplaints ? 'background:#f4e3c8;color:#8a5a10;' : '') + '">' + s.openComplaints + ' açık şikayet</span>' +
-        statusBadge + docLink + decideBtns +
+        statusBadge + verifiedBadge + docLink + badgeBtn + decideBtns +
       '</div>';
     }
   }

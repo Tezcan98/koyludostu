@@ -81,6 +81,7 @@ const CAT_SLUG = {
   'Asma Yaprağı': 'yaprak', Üzüm: 'uzum', Pekmez: 'pekmez', İncir: 'incir', Zeytin: 'zeytin',
   Zeytinyağı: 'zeytinyagi', Salça: 'salca', Tarhana: 'tarhana', Kiraz: 'kiraz', 'Kuru Meyve': 'kuru-meyve',
   Kuruyemiş: 'kuruyemis', Bal: 'bal', Peynir: 'peynir', Sebze: 'sebze', Meyve: 'meyve', Reçel: 'recel',
+  Baklava: 'baklava',
 };
 
 // Kategoriye özel ürün özellikleri: hangi kategoride hangi ek alanların (ve
@@ -118,6 +119,9 @@ const CATEGORY_ATTRS = {
   Pekmez: [
     { key: 'anamadde', label: 'Ana Madde', options: ['Üzüm Pekmezi', 'Dut Pekmezi', 'Keçiboynuzu Pekmezi'] },
   ],
+  Baklava: [
+    { key: 'ictur', label: 'İç Malzeme', options: ['Fıstıklı', 'Cevizli', 'Kaymaklı'] },
+  ],
 };
 
 function cleanAttrs(cat, rawAttrs) {
@@ -140,12 +144,13 @@ function esc(s) {
 // statik dosyaları öncelikli kalır (bkz. aşağıdaki yönlendirme), bu sadece yeni
 // ilanlar için bir "eksiksiz çalışsın" alt yapısıdır.
 function renderProductPage(product, allProducts) {
+  const sellerLookup = findUserById(product.sellerId);
+  const sellerVerified = !!(sellerLookup && sellerLookup.user.verifiedSeller);
   const catSlug = CAT_SLUG[product.cat];
   const catLink = catSlug ? `<a href="../kategori/${catSlug}.html">${esc(product.cat)}</a>` : esc(product.cat);
   const related = Object.values(allProducts)
     .filter((p) => p.slug !== product.slug && p.cat === product.cat)[0];
   const relatedHtml = related ? `<div class="related"><h3>Benzer Ürünler</h3><div class="related-grid"><a href="${related.slug}.html"><img src="${esc(productImgUrl(related.img))}" alt="${esc(related.title)}"><div class="rt-title">${esc(related.title)}</div></a></div></div>` : '';
-  const titleUrl = encodeURIComponent(product.title);
   const unitWord = esc(product.unit).replace(/^\/\s*/, '');
   const qtyLine = product.minQty && product.maxQty
     ? `<div class="qty-range">Tedarik miktarı: ${product.minQty} ${unitWord} – ${product.maxQty} ${unitWord}</div>` : '';
@@ -177,8 +182,7 @@ function renderProductPage(product, allProducts) {
     ? `<div class="product-thumbs">${galleryPhotos.map((src) => `<img src="${esc(productImgUrl(src, 150))}" alt="" onclick="document.getElementById('mainProductImg').src=this.src.replace('w=150','w=900')">`).join('')}</div>`
     : '';
   const footerCtas = isActive
-    ? `<a class="wa-cta" href="https://wa.me/90${esc(product.sellerPhone)}?text=Merhaba%2C%20%22${titleUrl}%22%20hakk%C4%B1nda%20bilgi%20almak%20istiyorum." target="_blank">Üreticiye WhatsApp'tan Yaz</a>
-      <button class="fav-cta" data-id="${esc(product.slug)}">🤍</button>
+    ? `<button class="fav-cta" data-id="${esc(product.slug)}">🤍</button>
       <button class="msg-cta" data-slug="${esc(product.slug)}" data-title="${esc(product.title)}">💬 Satıcıya Mesaj Yaz</button>`
     : `<button class="fav-cta" data-id="${esc(product.slug)}">🤍</button>`;
 
@@ -224,6 +228,17 @@ function renderProductPage(product, allProducts) {
   <nav class="drawer-nav">
     <a href="/index.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>Anasayfa</a>
     <a href="/vitrin.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 3l14 9-14 9V3z"/></svg>Vitrin</a>
+    <div class="drawer-section-label">Hesabım</div>
+    <a href="/favorilerim.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>Favori İlanlarım</a>
+    <a href="/favori-saticilarim.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>Favori Satıcılarım</a>
+    <a href="/mesajlarim.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Mesajlar</a>
+    <a href="/yorumlarim.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>Yorumlarım</a>
+    <a href="/hesap-ayarlarim.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/></svg>Hesap Ayarları</a>
+    <div class="drawer-section-label">Diğer</div>
+    <a href="/hakkimizda.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>Hakkımızda</a>
+    <a href="/gizlilik.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z"/></svg>Gizlilik</a>
+    <a href="/kullanim-sartlari.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h6"/></svg>Kullanım Şartları</a>
+    <a href="/kvkk.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z"/><path d="M9 12l2 2 4-4"/></svg>KVKK Aydınlatma Metni</a>
   </nav>
 </div>
 <div class="breadcrumb"><a href="../index.html">Köylü Dostu</a><span>›</span>${catLink}<span>›</span>${esc(product.title)}</div><div class="product-page">
@@ -238,7 +253,7 @@ function renderProductPage(product, allProducts) {
       <div class="producer-box">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>
         <div>
-          <div class="producer-name">${esc(product.sellerName)}</div>
+          <div class="producer-name"><a href="../satici/${esc(product.sellerId)}.html">${esc(product.sellerName)}</a>${sellerVerified ? ' <span class="seller-badge" title="Güvenilir Satıcı">🛡️</span>' : ''}</div>
           <div class="producer-loc">${esc(product.city)}</div>
         </div>
       </div>
@@ -267,12 +282,133 @@ function renderProductPage(product, allProducts) {
     <div id="reviewList"></div>
   </div>
 ${relatedHtml}</div><footer class="site-footer">
-  <b>Köylü Dostu</b> · Üreticilerden doğrudan alışveriş · Platform iletişim: Enes Tezcan, 0542 517 4860
+  <b>Köylü Dostu</b> · Üreticilerden doğrudan alışveriş
 </footer>
 
 <script src="../assets/auth.js"></script>
 <script src="../assets/messages.js"></script>
 <script src="../assets/reviews.js"></script>
+<script src="../assets/favorites.js"></script>
+<script>if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("/sw.js").catch(function(){});});}</script>
+</body>
+</html>
+`;
+}
+
+// Satıcı profil sayfası: /satici/<id>.html — ürün sayfasındaki satıcı adına tıklayınca açılır.
+function renderSellerPage(seller, sellerId, products) {
+  const own = Object.values(products).filter((p) => p.sellerId === sellerId && p.active !== false);
+  const reviewsStore = readJson(REVIEWS_PATH, {});
+  const ownSlugs = new Set(own.map((p) => p.slug));
+  let sum = 0, count = 0;
+  Object.keys(reviewsStore).forEach((slug) => {
+    if (!ownSlugs.has(slug)) return;
+    (reviewsStore[slug] || []).forEach((r) => {
+      if (r.status === 'pending' || r.status === 'rejected') return;
+      sum += r.rating; count++;
+    });
+  });
+  const avg = count ? (sum / count).toFixed(1) : null;
+  const badge = seller.verifiedSeller ? '<span class="seller-badge" title="Güvenilir Satıcı">🛡️</span>' : '';
+  const ratingLine = avg
+    ? `<div class="seller-rating">★ ${avg} / 5 <span>· ${count} değerlendirme</span></div>`
+    : `<div class="seller-rating"><span>Henüz değerlendirme yok</span></div>`;
+  const businessLine = seller.businessInfo
+    ? `<p class="seller-bio">${esc(seller.businessInfo)}</p>` : '';
+  const joinDate = new Date(seller.createdAt).toLocaleDateString('tr-TR', { year: 'numeric', month: 'long' });
+
+  const gridHtml = own.length
+    ? own.map((p) => {
+        const imgSrc = esc(productImgUrl(p.img));
+        return `<a class="pin" href="../urun/${p.slug}.html">
+  <img src="${imgSrc}" alt="${esc(p.title)}" loading="lazy">
+  <div class="pin-overlay">
+    <div class="pin-cat">${esc(p.cat)}</div>
+    <div class="pin-title">${esc(p.title)}</div>
+    <div class="pin-foot"><div class="pin-price">${esc(p.price)}<br><small>${esc(p.unit)}</small></div>
+    <button type="button" class="fav-cta pin-fav" data-id="${esc(p.slug)}">🤍</button></div>
+  </div>
+</a>`;
+      }).join('')
+    : '<div class="seller-empty">Bu satıcının şu an satışta ürünü yok.</div>';
+
+  return `<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#4E6B3A">
+<link rel="apple-touch-icon" href="/assets/logo-icon.jpg">
+<title>${esc(seller.name)} — Köylü Dostu</title>
+<meta name="description" content="${esc(seller.name)}: ${esc(seller.city || '')} · Köylü Dostu satıcı profili.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="hamburger-btn" onclick="document.getElementById('kdDrawer').classList.add('open');document.getElementById('kdOverlay').classList.add('open');" aria-label="Menü">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+  </button>
+  <a href="/index.html" class="avatar-ring">
+    <div class="avatar"><img src="/assets/logo-icon.jpg" alt="Köylü Dostu" style="width:92%;height:92%;object-fit:contain;"></div>
+  </a>
+  <a href="/index.html" class="brand-info" style="text-decoration:none;">
+    <h1>köylüdostu</h1>
+    <p>Satıcı Profili</p>
+  </a>
+  <div id="authSlot"></div>
+</div>
+<div class="drawer-overlay" id="kdOverlay" onclick="document.getElementById('kdDrawer').classList.remove('open');this.classList.remove('open');"></div>
+<div class="drawer" id="kdDrawer">
+  <div class="drawer-head">
+    <div class="avatar-ring" style="width:40px;height:40px;">
+      <div class="avatar"><img src="/assets/logo-icon.jpg" alt="Köylü Dostu" style="width:92%;height:92%;object-fit:contain;"></div>
+    </div>
+    <div class="brand-info"><h1>köylüdostu</h1></div>
+    <button class="drawer-close" onclick="document.getElementById('kdDrawer').classList.remove('open');document.getElementById('kdOverlay').classList.remove('open');" aria-label="Kapat">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+  </div>
+  <nav class="drawer-nav">
+    <a href="/index.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>Anasayfa</a>
+    <a href="/vitrin.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 3l14 9-14 9V3z"/></svg>Vitrin</a>
+    <div class="drawer-section-label">Hesabım</div>
+    <a href="/favorilerim.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>Favori İlanlarım</a>
+    <a href="/favori-saticilarim.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>Favori Satıcılarım</a>
+    <a href="/mesajlarim.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Mesajlar</a>
+    <a href="/yorumlarim.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>Yorumlarım</a>
+    <a href="/hesap-ayarlarim.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/></svg>Hesap Ayarları</a>
+    <div class="drawer-section-label">Diğer</div>
+    <a href="/hakkimizda.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>Hakkımızda</a>
+    <a href="/gizlilik.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z"/></svg>Gizlilik</a>
+    <a href="/kullanim-sartlari.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h6"/></svg>Kullanım Şartları</a>
+    <a href="/kvkk.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z"/><path d="M9 12l2 2 4-4"/></svg>KVKK Aydınlatma Metni</a>
+  </nav>
+</div>
+<div class="breadcrumb"><a href="../index.html">Köylü Dostu</a><span>›</span>${esc(seller.name)}</div>
+<div class="seller-page">
+  <div class="seller-hero">
+    <div class="seller-avatar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg></div>
+    <div>
+      <h1>${esc(seller.name)} ${badge}</h1>
+      <div class="seller-loc">${esc(seller.city || '')}${seller.district ? ' · ' + esc(seller.district) : ''}</div>
+      ${ratingLine}
+      <div class="seller-since">Köylü Dostu'nda ${esc(joinDate)}'den beri</div>
+    </div>
+  </div>
+  ${businessLine}
+  <button class="fav-seller-cta" data-id="${esc(sellerId)}">☆ Satıcıyı Takip Et</button>
+
+  <h2 class="seller-products-title">Ürünleri (${own.length})</h2>
+  <div class="grid">${gridHtml}</div>
+</div>
+<footer class="site-footer">
+  <b>Köylü Dostu</b> · Üreticilerden doğrudan alışveriş
+</footer>
+
+<script src="../assets/auth.js"></script>
 <script src="../assets/favorites.js"></script>
 <script>if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("/sw.js").catch(function(){});});}</script>
 </body>
@@ -573,6 +709,19 @@ function findUserById(id) {
     if (users[phone].id === id) return { phone, user: users[phone] };
   }
   return null;
+}
+
+// Ürün nesneleri satıcı bilgisini (ad/telefon) o an kaydedildiği haliyle taşır ama "rozetli
+// satıcı" durumu sonradan değişebildiği için canlı users.json'dan katılır — id -> boolean.
+function sellerVerifiedMap() {
+  const users = readJson(USERS_PATH, {});
+  const map = {};
+  Object.values(users).forEach((u) => { if (u.role === 'satici') map[u.id] = !!u.verifiedSeller; });
+  return map;
+}
+
+function withSellerBadge(product, verifiedMap) {
+  return Object.assign({}, product, { sellerVerified: !!verifiedMap[product.sellerId] });
 }
 
 function getSession(req) {
@@ -944,7 +1093,7 @@ const server = http.createServer(async (req, res) => {
         createdAt: new Date().toISOString(),
         // Satıcı hesapları admin onayından geçmeden ürün ekleyemez (bkz. requireApprovedSeller).
         ...(pendingReg.role === 'satici'
-          ? { sellerStatus: 'pending', businessInfo: pendingReg.businessInfo || '', sellerDocUrl: null }
+          ? { sellerStatus: 'pending', businessInfo: pendingReg.businessInfo || '', sellerDocUrl: null, verifiedSeller: false }
           : {}),
       };
       writeJson(USERS_PATH, users);
@@ -1343,7 +1492,7 @@ const server = http.createServer(async (req, res) => {
         .map((id) => {
           const found = findUserById(id);
           if (!found) return null;
-          return { id, name: found.user.name, city: found.user.city };
+          return { id, name: found.user.name, city: found.user.city, verified: !!found.user.verifiedSeller };
         })
         .filter(Boolean);
       return jsonResponse(res, 200, { products: favProducts, sellers: favSellers });
@@ -1676,7 +1825,9 @@ const server = http.createServer(async (req, res) => {
 
     if (p === '/api/products' && req.method === 'GET') {
       const products = readJson(PRODUCTS_PATH, {});
-      return jsonResponse(res, 200, { products: Object.values(products).filter((prod) => prod.active !== false) });
+      const verifiedMap = sellerVerifiedMap();
+      const list = Object.values(products).filter((prod) => prod.active !== false).map((prod) => withSellerBadge(prod, verifiedMap));
+      return jsonResponse(res, 200, { products: list });
     }
 
     if (p === '/api/admin/products' && req.method === 'POST') {
@@ -2032,6 +2183,23 @@ const server = http.createServer(async (req, res) => {
       return jsonResponse(res, 200, { user: safeUser });
     }
 
+    // Rozetli satıcı: admin'in elle verdiği bir güven işareti — başvuru onayından (sellerStatus)
+    // ayrı bir kavram. Ürün listelerinde ve satıcı profilinde rozet olarak görünür, filtrelenebilir.
+    if (p === '/api/owner/sellers/badge' && req.method === 'POST') {
+      if (!requireAdmin(req, res)) return;
+      const { phone, verified } = await readBody(req);
+      const users = readJson(USERS_PATH, {});
+      const user = users[phone];
+      if (!user || user.role !== 'satici') return jsonResponse(res, 404, { error: 'Satıcı bulunamadı' });
+      user.verifiedSeller = !!verified;
+      writeJson(USERS_PATH, users);
+      notifyUser(phone, 'seller_badge', user.verifiedSeller
+        ? 'Tebrikler! Artık "Güvenilir Satıcı" rozetine sahipsin.'
+        : 'Güvenilir Satıcı rozetin kaldırıldı.');
+      const { passwordHash, ...safeUser } = user;
+      return jsonResponse(res, 200, { user: safeUser });
+    }
+
     // Bildirimler: kanal başına genel açma/kapama anahtarı (kullanıcı tercihinden ayrı,
     // "sistem geneli SMS'i tamamen kapat" gibi bir acil durum anahtarı) ve gönderim geçmişi.
     if (p === '/api/owner/notification-settings' && req.method === 'GET') {
@@ -2088,6 +2256,19 @@ const server = http.createServer(async (req, res) => {
       const product = products[urunMatch[1]];
       if (product) return sendHtml(res, renderProductPage(product, products));
     }
+  }
+
+  // Satıcı profil sayfası, tamamen dinamik üretilir (statik dosyası yok).
+  const saticiMatch = p.match(/^\/satici\/(u_[a-z0-9]+)\.html$/);
+  if (saticiMatch) {
+    const found = findUserById(saticiMatch[1]);
+    if (found && found.user.role === 'satici') {
+      const products = readJson(PRODUCTS_PATH, {});
+      return sendHtml(res, renderSellerPage(found.user, saticiMatch[1], products));
+    }
+    res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
+    res.end('404 Satıcı bulunamadı');
+    return;
   }
 
   return serveStatic(res, MAIN, p);

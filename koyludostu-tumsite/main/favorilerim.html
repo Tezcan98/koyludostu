@@ -64,6 +64,7 @@
 </div>
 
 <script src="assets/auth.js"></script>
+<script src="assets/favorites.js"></script>
 <script>
 (function () {
   if (!window.KDAuth.requireLogin('/favorilerim.html')) return;
@@ -83,7 +84,8 @@
           '<div class="pin-overlay">' +
             '<div class="pin-cat">' + p.cat + ' · ' + p.sellerName + '</div>' +
             '<div class="pin-title">' + p.title + '</div>' +
-            '<div class="pin-foot"><div class="pin-price">' + p.price + '<br><small>' + p.unit + '</small></div><span class="pin-go">Ürüne Git →</span></div>' +
+            '<div class="pin-foot"><div class="pin-price">' + p.price + '<br><small>' + p.unit + '</small></div>' +
+            '<button type="button" class="fav-cta pin-fav active" data-id="' + p.slug + '">❤️</button></div>' +
           '</div>' +
         '</a>';
       }).join('');

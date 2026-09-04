@@ -87,11 +87,7 @@ var PRODUCTS = [
         '<div class="reel-actions">' +
           '<button class="reel-action-btn like-btn' + (likes[p.slug] ? ' liked' : '') + '" data-slug="' + p.slug + '" aria-label="Beğen">' +
             '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>' +
-          '</button>' +
-          '<button class="reel-action-btn wa-btn" aria-label="WhatsApp\'tan sor">' +
-            '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12c0 1.85.5 3.58 1.35 5.07L2 22l5.06-1.33A9.94 9.94 0 0 0 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2zm0 18c-1.6 0-3.1-.44-4.38-1.2l-.31-.19-3 .79.8-2.92-.2-.3A7.94 7.94 0 0 1 4 12c0-4.41 3.59-8 8-8s8 3.59 8 8-3.59 8-8 8z"/></svg>' +
-          '</button>' +
-        '</div>' +
+          '</button>' +        '</div>' +
         '<div class="reel-content">' +
           '<div class="reel-cat">' + p.cat + ' · ' + p.producer + '</div>' +
           '<h2 class="reel-title">' + p.title + '</h2>' +
@@ -108,14 +104,6 @@ var PRODUCTS = [
   container.querySelectorAll('.like-btn').forEach(function (btn) {
     btn.addEventListener('click', function () { toggleLike(btn.dataset.slug, btn); });
   });
-  container.querySelectorAll('.wa-btn').forEach(function (btn, i) {
-    btn.addEventListener('click', function () {
-      var p = PRODUCTS[i];
-      var msg = encodeURIComponent('Merhaba, ' + p.title + ' hakkında bilgi almak istiyorum.');
-      window.open('https://wa.me/905425174860?text=' + msg, '_blank');
-    });
-  });
-
   var slides = container.querySelectorAll('.reel-slide');
   var current = 0;
 

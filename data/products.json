@@ -1307,5 +1307,112 @@
     "organicDocUrl": null,
     "organicApproved": false,
     "certificateUrl": null
+  },
+  "antep-baklavasi": {
+    "slug": "antep-baklavasi",
+    "title": "Antep Baklavası",
+    "cat": "Baklava",
+    "price": "420₺",
+    "unit": "/ kg",
+    "img": "20183046",
+    "images": [],
+    "city": "Aydın",
+    "delivery": [
+      "pickup",
+      "bus",
+      "kargo"
+    ],
+    "sellerId": "u_a22lxspiap",
+    "sellerName": "Mehmet Arslan",
+    "sellerPhone": "5900000008",
+    "createdAt": "2026-09-01T20:24:18.919Z",
+    "description": "Gaziantep'te geleneksel yöntemle, taze Antep fıstığıyla hazırlanan el açması baklava.",
+    "minQty": 1,
+    "maxQty": 15,
+    "storageConditions": "Oda sıcaklığında, hava almayan kapta 5-7 gün içinde tüketin; buzdolabında daha uzun saklanır.",
+    "stock": 20,
+    "active": true,
+    "attrs": {
+      "ictur": "Fıstıklı"
+    },
+    "weightKg": 1,
+    "perishable": false,
+    "organic": false,
+    "organicDocUrl": null,
+    "organicApproved": false,
+    "certificateUrl": null,
+    "photosEnhanced": false
+  },
+  "antep-fistigi": {
+    "slug": "antep-fistigi",
+    "title": "Antep Fıstığı",
+    "cat": "Kuruyemiş",
+    "price": "650₺",
+    "unit": "/ kg",
+    "img": "1799307",
+    "images": [],
+    "city": "Aydın",
+    "delivery": [
+      "pickup",
+      "bus",
+      "kargo"
+    ],
+    "sellerId": "u_a22lxspiap",
+    "sellerName": "Mehmet Arslan",
+    "sellerPhone": "5900000008",
+    "createdAt": "2026-08-30T20:24:18.919Z",
+    "description": "Gaziantep yöresi iç Antep fıstığı, kavrulmuş ve tuzsuz.",
+    "minQty": 1,
+    "maxQty": 20,
+    "storageConditions": "Serin ve kuru yerde, kapalı kapta saklayın.",
+    "stock": 20,
+    "active": true,
+    "attrs": {
+      "kavrulma": "Kavrulmuş",
+      "tuz": "Tuzsuz"
+    },
+    "weightKg": 1,
+    "perishable": false,
+    "organic": false,
+    "organicDocUrl": null,
+    "organicApproved": false,
+    "certificateUrl": null,
+    "photosEnhanced": false
+  },
+  "ic-ceviz": {
+    "slug": "ic-ceviz",
+    "title": "İç Ceviz",
+    "cat": "Kuruyemiş",
+    "price": "320₺",
+    "unit": "/ kg",
+    "img": "1489291",
+    "images": [],
+    "city": "Aydın",
+    "delivery": [
+      "pickup",
+      "bus",
+      "kargo"
+    ],
+    "sellerId": "u_a22lxspiap",
+    "sellerName": "Mehmet Arslan",
+    "sellerPhone": "5900000008",
+    "createdAt": "2026-08-28T20:24:18.919Z",
+    "description": "Elle kırılmış, kabuğundan ayrılmış taze iç ceviz — doğrudan kullanıma hazır.",
+    "minQty": 1,
+    "maxQty": 20,
+    "storageConditions": "Serin ve kuru yerde, kapalı kapta saklayın.",
+    "stock": 20,
+    "active": true,
+    "attrs": {
+      "kavrulma": "Çiğ",
+      "tuz": "Tuzsuz"
+    },
+    "weightKg": 1,
+    "perishable": false,
+    "organic": false,
+    "organicDocUrl": null,
+    "organicApproved": false,
+    "certificateUrl": null,
+    "photosEnhanced": false
   }
 }

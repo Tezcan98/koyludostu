@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#4E6B3A">
+<link rel="apple-touch-icon" href="/assets/logo-icon.jpg">
+<title>Baklava — Köylü Dostu</title>
+<meta name="description" content="Baklava kategorisinde üreticilerden doğrudan satın alın.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="hamburger-btn" onclick="document.getElementById('kdDrawer').classList.add('open');document.getElementById('kdOverlay').classList.add('open');" aria-label="Menü">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+  </button>
+  <a href="/index.html" class="avatar-ring">
+    <div class="avatar">
+      <img src="/assets/logo-icon.jpg" alt="Köylü Dostu" style="width:92%;height:92%;object-fit:contain;">
+    </div>
+  </a>
+  <a href="/index.html" class="brand-info" style="text-decoration:none;">
+    <h1>köylüdostu</h1>
+    <p>Tarladan şehre güvenli alışveriş</p>
+  </a>
+</div>
+<div class="drawer-overlay" id="kdOverlay" onclick="document.getElementById('kdDrawer').classList.remove('open');this.classList.remove('open');"></div>
+<div class="drawer" id="kdDrawer">
+  <div class="drawer-head">
+    <div class="avatar-ring" style="width:40px;height:40px;">
+      <div class="avatar">
+        <img src="/assets/logo-icon.jpg" alt="Köylü Dostu" style="width:92%;height:92%;object-fit:contain;">
+      </div>
+    </div>
+    <div class="brand-info"><h1>köylüdostu</h1></div>
+    <button class="drawer-close" onclick="document.getElementById('kdDrawer').classList.remove('open');document.getElementById('kdOverlay').classList.remove('open');" aria-label="Kapat">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+  </div>
+  <nav class="drawer-nav">
+    <a href="/index.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>Anasayfa</a>
+    <a href="/vitrin.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 3l14 9-14 9V3z"/></svg>Vitrin</a>
+  </nav>
+  <div class="drawer-foot">  </div>
+</div>
+<div class="navstrip"><a class="navchip" href="../index.html">Tümü</a><a class="navchip" href="yaprak.html">Asma Yaprağı</a><a class="navchip" href="uzum.html">Üzüm</a><a class="navchip" href="pekmez.html">Pekmez</a><a class="navchip" href="incir.html">İncir</a><a class="navchip" href="zeytin.html">Zeytin</a><a class="navchip" href="zeytinyagi.html">Zeytinyağı</a><a class="navchip" href="salca.html">Salça</a><a class="navchip" href="tarhana.html">Tarhana</a><a class="navchip" href="kiraz.html">Kiraz</a><a class="navchip" href="kuru-meyve.html">Kuru Meyve</a><a class="navchip" href="kuruyemis.html">Kuruyemiş</a><a class="navchip" href="bal.html">Bal</a><a class="navchip" href="peynir.html">Peynir</a><a class="navchip" href="sebze.html">Sebze</a><a class="navchip" href="meyve.html">Meyve</a><a class="navchip" href="recel.html">Reçel</a><a class="navchip active" href="baklava.html">Baklava</a></div><div class="breadcrumb"><a href="../index.html">Köylü Dostu</a><span>›</span>Baklava</div><div class="feed"><div class="feed-head"><h2>Baklava</h2><span>1 ürün</span></div><div class="grid"><a class="pin" href="../urun/antep-baklavasi.html">
+  <img src="https://images.pexels.com/photos/20183046/pexels-photo-20183046.jpeg?auto=compress&cs=tinysrgb&w=700" alt="Antep Baklavası" loading="lazy">
+  <div class="pin-overlay">
+    <div class="pin-cat">Baklava · Mehmet Arslan</div>
+    <div class="pin-title">Antep Baklavası</div>
+    <div class="pin-foot">
+      <div class="pin-price">420₺<br><small>/ kg</small></div>
+      <span class="pin-go">Ürüne Git →</span>
+    </div>
+  </div>
+</a></div></div><footer class="site-footer">
+  <b>Köylü Dostu</b> · Üreticilerden doğrudan alışveriş
+</footer>
+
+<script>if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("/sw.js").catch(function(){});});}</script>
+</body>
+</html>

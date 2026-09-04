@@ -1070,3 +1070,85 @@ describe('Bildirim sınıfları ve yönetici kontrolü', () => {
     assert.equal(r2.status, 401);
   });
 });
+
+describe('Rozetli satıcı sistemi ve profil sayfası', () => {
+  test('varsayılan olarak satıcı rozetsizdir, /api/products bunu yansıtır', async () => {
+    const seller = await newSeller('Seller Badge Default');
+    const p = await createProduct(seller.token);
+    const list = await fetch(url('/api/products')).then((r) => r.json());
+    const found = list.products.find((x) => x.slug === p.slug);
+    assert.equal(found.sellerVerified, false);
+  });
+
+  test('admin rozet verir, ürün listesine ve satıcı profiline yansır', async () => {
+    const seller = await newSeller('Seller Badge On');
+    const p = await createProduct(seller.token);
+    const me = await fetch(url('/api/auth/me'), { headers: authHeaders(seller.token) }).then((r) => r.json());
+    const ownerToken = await ownerLogin(server.baseUrl, server.adminPassword);
+
+    const badged = await fetch(url('/api/owner/sellers/badge'), {
+      method: 'POST', headers: authHeaders(ownerToken),
+      body: JSON.stringify({ phone: seller.phone, verified: true }),
+    }).then((r) => r.json());
+    assert.equal(badged.user.verifiedSeller, true);
+
+    const list = await fetch(url('/api/products')).then((r) => r.json());
+    assert.equal(list.products.find((x) => x.slug === p.slug).sellerVerified, true);
+
+    const html = await fetch(url('/urun/' + p.slug + '.html')).then((r) => r.text());
+    assert.match(html, /seller-badge/);
+
+    const profileHtml = await fetch(url('/satici/' + me.user.id + '.html')).then((r) => r.text());
+    assert.match(profileHtml, /seller-badge/);
+    assert.match(profileHtml, new RegExp(p.title));
+
+    // Rozeti kaldırınca da doğru yansımalı.
+    const unbadged = await fetch(url('/api/owner/sellers/badge'), {
+      method: 'POST', headers: authHeaders(ownerToken),
+      body: JSON.stringify({ phone: seller.phone, verified: false }),
+    }).then((r) => r.json());
+    assert.equal(unbadged.user.verifiedSeller, false);
+  });
+
+  test('rozet uç noktası yetkisiz erişime kapalı', async () => {
+    const r = await fetch(url('/api/owner/sellers/badge'), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: '5900000001', verified: true }),
+    });
+    assert.equal(r.status, 401);
+  });
+
+  test('satıcı profil sayfası ürünlerini ve değerlendirme ortalamasını gösterir', async () => {
+    const seller = await newSeller('Seller Profile Page');
+    const buyer = await newBuyer('Buyer Profile Page');
+    const p = await createProduct(seller.token, { cat: 'Kuruyemiş' });
+    const me = await fetch(url('/api/auth/me'), { headers: authHeaders(seller.token) }).then((r) => r.json());
+
+    await fetch(url('/api/reviews'), {
+      method: 'POST', headers: authHeaders(buyer.token),
+      body: JSON.stringify({ productSlug: p.slug, rating: 5, text: 'Harika' }),
+    });
+
+    const html = await fetch(url('/satici/' + me.user.id + '.html')).then((r) => r.text());
+    assert.match(html, new RegExp(p.title));
+    assert.match(html, /5\.0 \/ 5/);
+  });
+
+  test('olmayan veya satıcı olmayan id için satıcı profili 404 döner', async () => {
+    const r1 = await fetch(url('/satici/u_yokbovle.html'));
+    assert.equal(r1.status, 404);
+
+    const buyer = await newBuyer('Buyer Not Seller Profile');
+    const me = await fetch(url('/api/auth/me'), { headers: authHeaders(buyer.token) }).then((r) => r.json());
+    const r2 = await fetch(url('/satici/' + me.user.id + '.html'));
+    assert.equal(r2.status, 404);
+  });
+});
+
+describe('Kategoriye özel filtre: Baklava kategorisi backend desteği', () => {
+  test('Baklava kategorisinde İç Malzeme özelliği kabul edilir', async () => {
+    const seller = await newSeller('Seller Baklava');
+    const p = await createProduct(seller.token, { cat: 'Baklava', attrs: { ictur: 'Fıstıklı' } });
+    assert.deepEqual(p.attrs, { ictur: 'Fıstıklı' });
+  });
+});

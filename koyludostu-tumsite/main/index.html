@@ -74,10 +74,7 @@
     <a href="/kvkk.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z"/><path d="M9 12l2 2 4-4"/></svg>KVKK Aydınlatma Metni</a>
 
   </nav>
-  <div class="drawer-foot">
-    <a class="cta-btn outline" href="https://wa.me/905425174860?text=Merhaba%2C%20K%C3%B6yl%C3%BC%20Dostu%27nda%20sat%C4%B1c%C4%B1%20olmak%20istiyorum." target="_blank"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Sen de Satıcı Ol</a>
-    <a class="cta-btn" href="https://wa.me/905425174860?text=Merhaba%2C%20%C3%BCr%C3%BCnleriniz%20hakk%C4%B1nda%20bilgi%20almak%20istiyorum." target="_blank">WhatsApp'tan Yaz</a>
-  </div>
+  <div class="drawer-foot">  </div>
 </div>
 <div class="story-row" id="storyRow"><div class="story-empty">Yükleniyor…</div></div>
 <div class="story-viewer" id="storyViewer" hidden>
@@ -115,8 +112,15 @@
     <div class="filter-checks" id="cityChecks"></div>
   </div>
   <div class="filter-group" id="attrGroup" hidden>
-    <div class="filter-group-title">Özellikler</div>
+    <div class="filter-group-title">Özellikler <span class="filter-group-hint">önce yukarıdan kategori seç</span></div>
     <div class="filter-checks" id="attrChecks"></div>
+  </div>
+  <div class="filter-group">
+    <div class="filter-group-title">Diğer</div>
+    <div class="filter-checks">
+      <label class="check-chip"><input type="checkbox" id="fOrganicOnly"> 🌱 Sadece Organik</label>
+      <label class="check-chip"><input type="checkbox" id="fVerifiedOnly"> 🛡️ Rozetli Satıcılar</label>
+    </div>
   </div>
   <div class="filter-group">
     <div class="filter-group-title">Teslimat</div>
@@ -129,7 +133,7 @@
   </div>
   <button type="button" id="fReset" class="filter-reset">Filtreleri Temizle</button>
 </div><div class="feed"><div class="feed-head" id="urunler"><h2>Ürünler</h2><span id="urunCount">25 ürün</span></div><div class="grid" id="productGrid"></div></div><footer class="site-footer">
-  <b>Köylü Dostu</b> · Üreticilerden doğrudan alışveriş · Platform iletişim: Enes Tezcan, 0542 517 4860
+  <b>Köylü Dostu</b> · Üreticilerden doğrudan alışveriş
 </footer>
 <a class="vitrin-fab" href="vitrin.html" aria-label="Vitrin - ürünleri kaydırarak keşfet">
   <span class="fab-label">Vitrin'i Keşfet</span>

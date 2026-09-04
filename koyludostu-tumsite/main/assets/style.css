@@ -124,6 +124,7 @@ button{font-family:inherit;}
 }
 .filter-panel[hidden]{display:none;}
 .filter-group-title{font-size:12px;font-weight:800;color:var(--muted);margin-bottom:8px;}
+.filter-group-hint{font-size:10.5px;font-weight:500;text-transform:none;letter-spacing:0;color:var(--muted);opacity:.75;}
 .filter-checks{display:flex;flex-wrap:wrap;gap:8px;}
 .check-chip{
   display:flex;align-items:center;gap:6px;padding:7px 12px;border-radius:16px;
@@ -154,18 +155,6 @@ button{font-family:inherit;}
   box-shadow:0 1px 2px rgba(0,0,0,.04);
 }
 .pin img{width:100%;display:block;object-fit:cover;}
-.dbl-heart{
-  position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) scale(0);
-  font-size:64px;pointer-events:none;z-index:6;filter:drop-shadow(0 2px 8px rgba(0,0,0,.35));
-  animation:dblHeartPop .85s ease forwards;
-}
-@keyframes dblHeartPop{
-  0%{transform:translate(-50%,-50%) scale(0);opacity:0;}
-  18%{transform:translate(-50%,-50%) scale(1.15);opacity:1;}
-  32%{transform:translate(-50%,-50%) scale(.95);opacity:1;}
-  75%{transform:translate(-50%,-50%) scale(1);opacity:1;}
-  100%{transform:translate(-50%,-50%) scale(1);opacity:0;}
-}
 .pin-overlay{
   position:absolute;left:0;right:0;bottom:0;padding:26px 12px 12px;
   background:linear-gradient(to top, rgba(0,0,0,.72), rgba(0,0,0,0));color:#fff;
@@ -179,9 +168,31 @@ button{font-family:inherit;}
   background:#fff;color:var(--ink);font-size:11.5px;font-weight:700;
   padding:6px 12px;border-radius:14px;display:flex;align-items:center;gap:5px;white-space:nowrap;
 }
+.pin-fav{
+  width:32px;height:32px;border-radius:50%;background:#fff;border:none;
+  font-size:15px;display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;padding:0;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.15);
+}
 
 /* Product detail page */
 .product-page{max-width:1000px;margin:0 auto;padding:20px;}
+
+/* Satıcı profil sayfası */
+.seller-page{max-width:1000px;margin:0 auto;padding:20px;}
+.seller-hero{display:flex;gap:18px;align-items:flex-start;margin-bottom:16px;}
+.seller-avatar{
+  width:72px;height:72px;border-radius:50%;background:var(--bg);border:1.5px solid var(--line);
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--muted);
+}
+.seller-avatar svg{width:34px;height:34px;}
+.seller-hero h1{font-size:22px;font-weight:800;margin:0 0 4px;}
+.seller-loc{font-size:13px;color:var(--muted);margin-bottom:6px;}
+.seller-rating{font-size:13.5px;font-weight:700;color:var(--ring2);margin-bottom:4px;}
+.seller-rating span{font-weight:500;color:var(--muted);font-size:12px;}
+.seller-since{font-size:11.5px;color:var(--muted);}
+.seller-bio{font-size:13.5px;line-height:1.6;color:#3a352e;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin:0 0 14px;}
+.seller-products-title{font-size:16px;font-weight:800;margin:26px 0 14px;}
+.seller-empty{padding:30px;text-align:center;color:var(--muted);font-size:13px;}
 .product-grid{display:grid;grid-template-columns:1fr 1fr;gap:32px;}
 @media (max-width:760px){.product-grid{grid-template-columns:1fr;}}
 .product-grid img{width:100%;border-radius:18px;display:block;object-fit:cover;}
@@ -196,6 +207,8 @@ button{font-family:inherit;}
 }
 .producer-box svg{width:30px;height:30px;flex-shrink:0;color:var(--muted);}
 .producer-name{font-weight:700;font-size:14px;}
+.producer-name a:hover{text-decoration:underline;}
+.seller-badge{font-size:12px;}
 .producer-loc{font-size:12.5px;color:var(--muted);}
 .product-desc{font-size:14px;line-height:1.65;color:#3a352e;margin-bottom:10px;}
 .qty-range{font-size:12.5px;color:var(--muted);margin-bottom:10px;}
@@ -215,8 +228,6 @@ button{font-family:inherit;}
 .product-footer{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:10px;}
 .product-price{font-size:22px;font-weight:800;}
 .product-price small{font-size:12px;font-weight:500;color:var(--muted);}
-.wa-cta{background:var(--ink);color:#fff;font-size:13.5px;font-weight:700;padding:12px 20px;border-radius:22px;}
-.wa-cta:hover{background:var(--ring1);}
 .fav-cta{
   width:44px;height:44px;border-radius:50%;border:1.5px solid var(--line);background:var(--card);
   font-size:18px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;

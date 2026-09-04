@@ -8,6 +8,8 @@
     var attrGroup = document.getElementById('attrGroup');
     var attrWrap = document.getElementById('attrChecks');
     var deliveryRadios = Array.prototype.slice.call(document.querySelectorAll('input[name="delivery"]'));
+    var organicCheckbox = document.getElementById('fOrganicOnly');
+    var verifiedCheckbox = document.getElementById('fVerifiedOnly');
     var searchInput = document.getElementById('fSearch');
     var sort = document.getElementById('fSort');
     var resetBtn = document.getElementById('fReset');
@@ -50,14 +52,16 @@
       var priceNum = parseInt(String(p.price).replace(/\D/g, ''), 10) || 0;
       var imgSrc = /^\d+$/.test(String(p.img)) ?
         'https://images.pexels.com/photos/' + p.img + '/pexels-photo-' + p.img + '.jpeg?auto=compress&cs=tinysrgb&w=700' : p.img;
+      var sellerBadge = p.sellerVerified ? ' <span class="seller-badge" title="Güvenilir Satıcı">🛡️</span>' : '';
       return '<a class="pin" href="urun/' + p.slug + '.html" data-cat="' + p.cat + '" data-price="' + priceNum +
         '" data-title="' + p.title.replace(/"/g, '&quot;') + '" data-city="' + p.city + '" data-delivery="' + p.delivery.join(',') +
         '" data-created="' + p.createdAt + '" data-slug="' + p.slug + '">' +
         '<img src="' + imgSrc + '" alt="' + p.title.replace(/"/g, '&quot;') + '" loading="lazy">' +
         '<div class="pin-overlay">' +
-          '<div class="pin-cat">' + p.cat + ' · ' + p.sellerName + '</div>' +
+          '<div class="pin-cat">' + p.cat + ' · ' + p.sellerName + sellerBadge + '</div>' +
           '<div class="pin-title">' + p.title + '</div>' +
-          '<div class="pin-foot"><div class="pin-price">' + p.price + '<br><small>' + p.unit + '</small></div><span class="pin-go">Ürüne Git →</span></div>' +
+          '<div class="pin-foot"><div class="pin-price">' + p.price + '<br><small>' + p.unit + '</small></div>' +
+        '<button type="button" class="fav-cta pin-fav" data-id="' + p.slug + '">🤍</button></div>' +
         '</div>' +
       '</a>';
     }
@@ -70,11 +74,12 @@
       var cats = checkedValues(Array.prototype.slice.call(catWrap.querySelectorAll('input')));
       var cities = checkedValues(Array.prototype.slice.call(cityWrap.querySelectorAll('input')));
       var attrVals = checkedValues(Array.prototype.slice.call(attrWrap.querySelectorAll('.attrCheck')));
-      var onlyOrganic = attrWrap.querySelector('.organicCheck') && attrWrap.querySelector('.organicCheck').checked;
+      var onlyOrganic = organicCheckbox.checked;
+      var onlyVerified = verifiedCheckbox.checked;
       var deliveryEl = deliveryRadios.filter(function (r) { return r.checked; })[0];
       var delivery = deliveryEl ? deliveryEl.value : '__all__';
 
-      var activeCount = cats.length + cities.length + attrVals.length + (onlyOrganic ? 1 : 0) + (delivery !== '__all__' ? 1 : 0);
+      var activeCount = cats.length + cities.length + attrVals.length + (onlyOrganic ? 1 : 0) + (onlyVerified ? 1 : 0) + (delivery !== '__all__' ? 1 : 0);
       badge.hidden = activeCount === 0;
       badge.textContent = activeCount;
 
@@ -87,9 +92,10 @@
         var pAttrVals = p.attrs ? Object.keys(p.attrs).map(function (k) { return p.attrs[k]; }) : [];
         var okAttrs = attrVals.every(function (v) { return pAttrVals.indexOf(v) !== -1; });
         var okOrganic = !onlyOrganic || (p.organic && p.organicApproved);
+        var okVerified = !onlyVerified || p.sellerVerified;
         var okSearch = !query || [p.title, p.cat, p.city, p.sellerName, p.description]
           .join(' ').toLocaleLowerCase('tr').indexOf(query) !== -1;
-        return okCat && okCity && okDelivery && okAttrs && okOrganic && okSearch;
+        return okCat && okCity && okDelivery && okAttrs && okOrganic && okVerified && okSearch;
       });
 
       var sortVal = sort.value;
@@ -111,9 +117,13 @@
       wrap.querySelectorAll('input').forEach(function (c) { c.addEventListener('change', apply); });
     }
 
-    catWrap.addEventListener('change', apply);
+    function onCategoryChange() { renderAttrFilters(); apply(); }
+
+    catWrap.addEventListener('change', onCategoryChange);
     cityWrap.addEventListener('change', apply);
     attrWrap.addEventListener('change', apply);
+    organicCheckbox.addEventListener('change', apply);
+    verifiedCheckbox.addEventListener('change', apply);
     deliveryRadios.forEach(function (r) { r.addEventListener('change', apply); });
     sort.addEventListener('change', apply);
     searchInput.addEventListener('input', apply);
@@ -121,36 +131,39 @@
     resetBtn.addEventListener('click', function () {
       catWrap.querySelectorAll('input').forEach(function (c) { c.checked = false; });
       cityWrap.querySelectorAll('input').forEach(function (c) { c.checked = false; });
-      attrWrap.querySelectorAll('input').forEach(function (c) { c.checked = false; });
+      organicCheckbox.checked = false;
+      verifiedCheckbox.checked = false;
       deliveryRadios.forEach(function (r) { r.checked = r.value === '__all__'; });
       sort.value = 'default';
       searchInput.value = '';
+      renderAttrFilters();
       apply();
     });
 
-    // Kategoriye özel özellikler (ör. zeytinyağında sıkım türü, üzümde çekirdek) ve
-    // "sadece organik" filtresi — hangi ürünlerde bu alanlar doluysa otomatik türer,
-    // sunucudaki CATEGORY_ATTRS ile senkron tutulmalı (bkz. admin-urunlerim.html).
-    function renderAttrFilters(products) {
+    // Kategoriye özel özellikler (ör. zeytinyağında sıkım türü, üzümde çekirdek) — hiçbir
+    // kategori seçili değilken gizli kalır, bir kategori işaretlenince SADECE o kategori(ler)de
+    // görülen değerler listelenir. "Organik" bundan ayrı, her zaman görünen kendi filtresinde
+    // (bkz. #fOrganicOnly) — çünkü tek bir kategoriye bağlı değil.
+    function renderAttrFilters() {
+      var cats = checkedValues(Array.prototype.slice.call(catWrap.querySelectorAll('input')));
+      if (!cats.length) { attrGroup.hidden = true; attrWrap.innerHTML = ''; return; }
+
       var values = [];
-      products.forEach(function (p) {
-        if (!p.attrs) return;
+      allProducts.forEach(function (p) {
+        if (cats.indexOf(p.cat) === -1 || !p.attrs) return;
         Object.keys(p.attrs).forEach(function (k) {
           if (values.indexOf(p.attrs[k]) === -1) values.push(p.attrs[k]);
         });
       });
-      var hasOrganic = products.some(function (p) { return p.organic && p.organicApproved; });
-      if (!values.length && !hasOrganic) { attrGroup.hidden = true; return; }
+      if (!values.length) { attrGroup.hidden = true; attrWrap.innerHTML = ''; return; }
       attrGroup.hidden = false;
-      var html = values.map(function (v) {
+      attrWrap.innerHTML = values.map(function (v) {
         return '<label class="check-chip"><input type="checkbox" class="attrCheck" value="' + v.replace(/"/g, '&quot;') + '"> ' + v + '</label>';
       }).join('');
-      if (hasOrganic) html += '<label class="check-chip"><input type="checkbox" class="organicCheck"> 🌱 Sadece Organik</label>';
-      attrWrap.innerHTML = html;
     }
 
     var PREFERRED_CAT_ORDER = ['Asma Yaprağı', 'Üzüm', 'Pekmez', 'İncir', 'Zeytin', 'Zeytinyağı', 'Salça', 'Tarhana',
-      'Kiraz', 'Kuru Meyve', 'Kuruyemiş', 'Bal', 'Peynir', 'Sebze', 'Meyve', 'Reçel'];
+      'Kiraz', 'Kuru Meyve', 'Kuruyemiş', 'Bal', 'Peynir', 'Sebze', 'Meyve', 'Reçel', 'Baklava'];
 
     Promise.all([
       fetch('/api/products').then(function (r) { return r.json(); }),
@@ -173,7 +186,7 @@
       cities.sort(function (a, b) { return a.localeCompare(b, 'tr'); });
       renderChecks(cityWrap, cities, 'cityCheck');
 
-      renderAttrFilters(allProducts);
+      renderAttrFilters();
 
       apply();
     }).catch(function () {
