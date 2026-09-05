@@ -289,6 +289,7 @@ ${relatedHtml}</div><footer class="site-footer">
 <script src="../assets/messages.js"></script>
 <script src="../assets/reviews.js"></script>
 <script src="../assets/favorites.js"></script>
+<script src="../assets/protect.js"></script>
 <script>if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("/sw.js").catch(function(){});});}</script>
 </body>
 </html>
@@ -410,6 +411,7 @@ function renderSellerPage(seller, sellerId, products) {
 
 <script src="../assets/auth.js"></script>
 <script src="../assets/favorites.js"></script>
+<script src="../assets/protect.js"></script>
 <script>if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("/sw.js").catch(function(){});});}</script>
 </body>
 </html>
@@ -912,11 +914,50 @@ function conversationId(phone, productSlug) {
   return `${phone}__${productSlug}`;
 }
 
+// ---------- basit hız sınırlama (toplu scraping'e karşı caydırıcı) ----------
+// Not: Gerçek bir bot/CAPTCHA koruması değildir; tek IP'den kısa sürede gelen
+// anormal sayıda isteği keser. Yerel (loopback) istekler test/geliştirme
+// amaçlı muaf tutulur.
+
+const RATE_LIMIT_WINDOW_MS = 60 * 1000;
+const RATE_LIMIT_MAX = 300;
+const rateLimitMap = new Map();
+
+function isLoopback(ip) {
+  return ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1';
+}
+
+function isRateLimited(ip) {
+  if (isLoopback(ip)) return false;
+  const now = Date.now();
+  const entry = rateLimitMap.get(ip);
+  if (!entry || now - entry.windowStart > RATE_LIMIT_WINDOW_MS) {
+    rateLimitMap.set(ip, { count: 1, windowStart: now });
+    return false;
+  }
+  entry.count++;
+  return entry.count > RATE_LIMIT_MAX;
+}
+
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, entry] of rateLimitMap) {
+    if (now - entry.windowStart > RATE_LIMIT_WINDOW_MS) rateLimitMap.delete(ip);
+  }
+}, 5 * 60 * 1000).unref();
+
 // ---------- server ----------
 
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://localhost:${PORT}`);
   const p = url.pathname;
+
+  const clientIp = req.socket.remoteAddress || '';
+  if (isRateLimited(clientIp)) {
+    res.writeHead(429, { 'Content-Type': 'application/json; charset=utf-8', 'Retry-After': '60' });
+    res.end(JSON.stringify({ error: 'Çok fazla istek gönderildi, lütfen biraz sonra tekrar dene.' }));
+    return;
+  }
 
   try {
     if (p === '/api/piyasa') {

@@ -775,3 +775,8 @@ body.vitrin-body{margin:0;background:#000;overflow:hidden;}
   width:100%;padding:13px;border-radius:14px;background:var(--ink);color:#fff;border:none;
   font-size:14px;font-weight:700;cursor:pointer;
 }
+
+/* Ürün fotoğraflarını sağ tık/sürüklemeyle indirmeyi zorlaştıran caydırıcı kurallar
+   (DevTools veya ekran görüntüsünü engellemez, sadece kazara/sıradan indirmeyi zorlaştırır) */
+img{-webkit-user-drag:none;user-drag:none;-webkit-touch-callout:none;}
+.pin img, .product-photo-col img, .reel-slide img, .seller-avatar img{-webkit-user-select:none;user-select:none;}
