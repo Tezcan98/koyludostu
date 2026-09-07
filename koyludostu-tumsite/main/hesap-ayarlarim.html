@@ -142,17 +142,25 @@
     }
     var btn = document.getElementById('applySellerBtn');
     btn.disabled = true;
+    msg.textContent = 'Gönderiliyor...';
     window.KDAuth.authedFetch('/api/auth/apply-seller', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ businessInfo: businessInfo }),
-    }).then(function (r) { return r.json(); }).then(function (data) {
+    }).then(function (r) {
+      if (!r.ok && r.status !== 400) throw new Error('http ' + r.status);
+      return r.json();
+    }).then(function (data) {
       btn.disabled = false;
       if (data.error) { msg.className = 'acc-msg err'; msg.textContent = data.error; return; }
       localStorage.setItem('kd_auth_role', 'satici');
       msg.className = 'acc-msg ok';
       msg.textContent = 'Başvurun alındı, yönlendiriliyorsun...';
       setTimeout(function () { location.href = '/satici-basvurum.html'; }, 600);
-    }).catch(function () { btn.disabled = false; });
+    }).catch(function () {
+      btn.disabled = false;
+      msg.className = 'acc-msg err';
+      msg.textContent = 'Bir şeyler ters gitti, tekrar dene. (Sorun devam ederse sunucunun güncel kodla yeniden başlatıldığından emin ol.)';
+    });
   });
 
   window.KDAuth.authedFetch('/api/auth/me').then(function (r) { return r.json(); }).then(function (data) {
