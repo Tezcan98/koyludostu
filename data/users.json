@@ -5,8 +5,12 @@
     "name": "Enes Tezcan",
     "city": "Darıca",
     "passwordHash": "86903c13ecf2c248ea959cb0cdeafe0b:efc7f972e26b13e0a9c763a593c7719a795e92a9c37d63588e9572d94beb8154b5dd0529234544b21e02bc28f1869283ea38c5d057b9f12ff6b9bbbc535d41a2",
-    "role": "alici",
-    "createdAt": "2026-09-03T20:45:33.487Z"
+    "role": "satici",
+    "createdAt": "2026-09-03T20:45:33.487Z",
+    "sellerStatus": "approved",
+    "businessInfo": "üzüm satcen",
+    "sellerDocUrl": "/assets/uploads/d_sql5wqa8r1tk.png",
+    "verifiedSeller": true
   },
   "5900000001": {
     "id": "u_0skm41mqvu",

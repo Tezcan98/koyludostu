@@ -1414,5 +1414,38 @@
     "organicApproved": false,
     "certificateUrl": null,
     "photosEnhanced": false
+  },
+  "manisa-yapraa": {
+    "slug": "manisa-yapraa",
+    "title": "Manisa yapraa",
+    "cat": "Asma Yaprağı",
+    "price": "220₺",
+    "unit": "/ kg",
+    "img": "/assets/uploads/u_whxnprkp9xzb.png",
+    "images": [
+      "/assets/uploads/u_mcysavsezrqu.png"
+    ],
+    "city": "Manisa",
+    "delivery": [
+      "kargo"
+    ],
+    "sellerId": "u_8073pcqszp",
+    "sellerName": "Enes Tezcan",
+    "sellerPhone": "5425174860",
+    "createdAt": "2026-09-07T19:18:02.219Z",
+    "description": "",
+    "minQty": 5,
+    "maxQty": 100,
+    "storageConditions": "",
+    "stock": null,
+    "active": true,
+    "attrs": {},
+    "weightKg": 1,
+    "perishable": false,
+    "organic": false,
+    "organicDocUrl": null,
+    "organicApproved": false,
+    "certificateUrl": null,
+    "photosEnhanced": false
   }
 }

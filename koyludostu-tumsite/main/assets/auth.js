@@ -74,6 +74,7 @@
   // olmadan bir satıcı kendi ürün/kargo/mesaj panelini bulamıyordu.
   function injectSellerNavLink() {
     if (!window.KDAuth.isSeller()) return;
+    if (/^\/admin-/.test(location.pathname)) return;
     var nav = document.querySelector('.drawer-nav');
     if (!nav || nav.querySelector('.seller-panel-link')) return;
     var label = nav.querySelector('.drawer-section-label');
