@@ -69,5 +69,24 @@
     }
   }
 
-  document.addEventListener('DOMContentLoaded', renderAuthSlot);
+  // Satıcı hesapları için sol menüde (kdDrawer) "Satıcı Panelim" bağlantısı ekler —
+  // satıcı sayfaları (admin-*.html) ayrı bir akışta yaşadığından, oraya dönüş yolu
+  // olmadan bir satıcı kendi ürün/kargo/mesaj panelini bulamıyordu.
+  function injectSellerNavLink() {
+    if (!window.KDAuth.isSeller()) return;
+    var nav = document.querySelector('.drawer-nav');
+    if (!nav || nav.querySelector('.seller-panel-link')) return;
+    var label = nav.querySelector('.drawer-section-label');
+    if (!label) return;
+    label.insertAdjacentHTML('afterend',
+      '<a href="/admin-urunlerim.html" class="seller-panel-link">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>Satıcı Panelim' +
+      '</a>'
+    );
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    renderAuthSlot();
+    injectSellerNavLink();
+  });
 })();

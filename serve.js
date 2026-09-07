@@ -1175,6 +1175,32 @@ const server = http.createServer(async (req, res) => {
       return jsonResponse(res, 200, { ok: true });
     }
 
+    // Var olan bir alıcı hesabının kendi isteğiyle satıcıya geçmesi — kayıt anındaki
+    // satıcı başvurusuyla aynı onay akışına (sellerStatus: 'pending') girer, admin onaylar.
+    if (p === '/api/auth/apply-seller' && req.method === 'POST') {
+      const session = requireAuth(req, res);
+      if (!session) return;
+      if (session.user.role === 'satici') {
+        return jsonResponse(res, 400, { error: 'Zaten satıcı hesabısın.' });
+      }
+      const body = await readBody(req);
+      const cleanBusinessInfo = String(body.businessInfo || '').trim().slice(0, 500);
+      if (cleanBusinessInfo.length < 10) {
+        return jsonResponse(res, 400, { error: 'Ne/nasıl üretim yaptığını en az birkaç cümleyle anlat.' });
+      }
+      const users = readJson(USERS_PATH, {});
+      const user = users[session.phone];
+      user.role = 'satici';
+      user.sellerStatus = 'pending';
+      user.businessInfo = cleanBusinessInfo;
+      user.sellerDocUrl = user.sellerDocUrl || null;
+      user.verifiedSeller = false;
+      writeJson(USERS_PATH, users);
+
+      const { passwordHash, ...safeUser } = user;
+      return jsonResponse(res, 200, { user: safeUser });
+    }
+
     // ---------- Mesajlaşma: alıcı <-> satıcı (ürün bazlı) ----------
 
     if (p === '/api/messages/send' && req.method === 'POST') {

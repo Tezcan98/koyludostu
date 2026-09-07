@@ -1152,3 +1152,47 @@ describe('Kategoriye özel filtre: Baklava kategorisi backend desteği', () => {
     assert.deepEqual(p.attrs, { ictur: 'Fıstıklı' });
   });
 });
+
+describe('Var olan alıcı hesabının kendi isteğiyle satıcıya geçmesi', () => {
+  test('alıcı yeterli iş açıklamasıyla başvurunca satıcıya dönüşür ve onay bekler', async () => {
+    const buyer = await newBuyer('Buyer Becomes Seller');
+    const badReq = await fetch(url('/api/auth/apply-seller'), {
+      method: 'POST', headers: authHeaders(buyer.token),
+      body: JSON.stringify({ businessInfo: 'kısa' }),
+    });
+    assert.equal(badReq.status, 400);
+
+    const r = await fetch(url('/api/auth/apply-seller'), {
+      method: 'POST', headers: authHeaders(buyer.token),
+      body: JSON.stringify({ businessInfo: 'Kendi bahçemde zeytin ve zeytinyağı üretiyorum.' }),
+    });
+    const data = await r.json();
+    assert.equal(r.status, 200);
+    assert.equal(data.user.role, 'satici');
+    assert.equal(data.user.sellerStatus, 'pending');
+
+    const me = await fetch(url('/api/auth/me'), { headers: authHeaders(buyer.token) }).then((res) => res.json());
+    assert.equal(me.user.role, 'satici');
+
+    const again = await fetch(url('/api/auth/apply-seller'), {
+      method: 'POST', headers: authHeaders(buyer.token),
+      body: JSON.stringify({ businessInfo: 'Kendi bahçemde zeytin ve zeytinyağı üretiyorum.' }),
+    });
+    assert.equal(again.status, 400);
+
+    const ownerToken = await ownerLogin(server.baseUrl, server.adminPassword);
+    const approved = await fetch(url('/api/owner/sellers/approve'), {
+      method: 'POST', headers: authHeaders(ownerToken),
+      body: JSON.stringify({ phone: buyer.phone, status: 'approved' }),
+    }).then((res) => res.json());
+    assert.equal(approved.user.sellerStatus, 'approved');
+  });
+
+  test('girişsiz istek 401 döner', async () => {
+    const r = await fetch(url('/api/auth/apply-seller'), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ businessInfo: 'Kendi bahçemde zeytin üretiyorum.' }),
+    });
+    assert.equal(r.status, 401);
+  });
+});

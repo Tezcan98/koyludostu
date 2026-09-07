@@ -101,6 +101,14 @@
     <p class="acc-msg" id="notifyMsg"></p>
   </div>
 
+  <div class="acc-card" id="sellerCard" style="display:none;">
+    <h2>Satıcı Ol</h2>
+    <p style="font-size:12.5px;color:var(--muted);margin:0 0 12px;">Kendi ürettiğin ürünleri satmak ister misin? Ne/nasıl üretim yaptığını birkaç cümleyle anlat, admin ekibimiz başvurunu incelesin.</p>
+    <div class="acc-field"><label>İşletme / Üretim Açıklaması</label><textarea id="sellerBusinessInfo" rows="3" style="width:100%;padding:11px 13px;border-radius:10px;border:1.5px solid var(--line);font-family:inherit;font-size:14px;background:var(--bg);resize:vertical;" placeholder="Örn. Aydın'da kendi bahçemde zeytin ve zeytinyağı üretiyorum."></textarea></div>
+    <button class="acc-btn" id="applySellerBtn">Satıcı Başvurusu Yap</button>
+    <p class="acc-msg" id="sellerMsg"></p>
+  </div>
+
   <div class="acc-card">
     <h2>Parola Değiştir</h2>
     <div class="acc-field"><label>Mevcut Parola</label><input type="password" id="curPassField"></div>
@@ -121,6 +129,31 @@
   document.getElementById('phoneField').value = window.KDAuth.fmtPhone(window.KDAuth.phone());
   document.getElementById('nameField').value = window.KDAuth.name();
   document.getElementById('roleBadge').textContent = window.KDAuth.role() === 'satici' ? 'SATICI' : 'ALICI';
+  if (window.KDAuth.role() !== 'satici') {
+    document.getElementById('sellerCard').style.display = 'block';
+  }
+
+  document.getElementById('applySellerBtn').addEventListener('click', function () {
+    var msg = document.getElementById('sellerMsg');
+    var businessInfo = document.getElementById('sellerBusinessInfo').value.trim();
+    msg.className = 'acc-msg';
+    if (businessInfo.length < 10) {
+      msg.className = 'acc-msg err'; msg.textContent = 'Ne/nasıl üretim yaptığını en az birkaç cümleyle anlat.'; return;
+    }
+    var btn = document.getElementById('applySellerBtn');
+    btn.disabled = true;
+    window.KDAuth.authedFetch('/api/auth/apply-seller', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ businessInfo: businessInfo }),
+    }).then(function (r) { return r.json(); }).then(function (data) {
+      btn.disabled = false;
+      if (data.error) { msg.className = 'acc-msg err'; msg.textContent = data.error; return; }
+      localStorage.setItem('kd_auth_role', 'satici');
+      msg.className = 'acc-msg ok';
+      msg.textContent = 'Başvurun alındı, yönlendiriliyorsun...';
+      setTimeout(function () { location.href = '/satici-basvurum.html'; }, 600);
+    }).catch(function () { btn.disabled = false; });
+  });
 
   window.KDAuth.authedFetch('/api/auth/me').then(function (r) { return r.json(); }).then(function (data) {
     if (!data.user) return;
