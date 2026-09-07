@@ -39,6 +39,8 @@
   .weight-preview{font-size:12.5px;color:var(--muted);margin:-4px 0 12px;}
   .perishable-warn{font-size:12.5px;color:var(--ring2);background:rgba(192,138,46,.1);border-radius:9px;padding:10px 12px;margin-bottom:12px;display:none;}
   .adm-empty{padding:30px;text-align:center;color:var(--muted);font-size:13px;}
+  .flow-note{font-size:12px;color:var(--muted);background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:18px;line-height:1.6;}
+  .flow-note b{color:var(--ink);}
 </style>
 </head>
 <body>
@@ -88,7 +90,8 @@
 </div>
 <div class="adm-wrap">
   <h1>Kargo Takip <span id="sellerName" style="font-weight:500;color:var(--muted);font-size:13px;"></span></h1>
-  <p class="lead">Ödemeyi doğrudan alıcıdan aldığın satışlar için kargolama talebini buradan platforma bildir, durumunu takip et. <a href="/admin-mesajlar.html">Mesaj kutusu</a> · <a href="/admin-urunlerim.html">Ürünlerim</a> · <a href="/admin-ambalaj.html">Ambalaj Satın Al</a></p>
+  <p class="lead">Ödemeyi doğrudan alıcıdan aldığın satışlar için kargolama talebini buradan platforma bildir, durumunu takip et.</p>
+  <div class="flow-note"><b>Bu talepten sonra ne oluyor?</b> Platform senin yerine kargoyu çağırmıyor — ürünü paketleyip gerçek bir kargo firmasına (Aras, Yurtiçi, MNG vb.) sen teslim ediyorsun, onlar sana bir takip numarası veriyor. Talebin durumu ("Talep Alındı" → "Kargoya Verildi" → "Yolda" → "Teslim Edildi") ve takip numarası admin panelinden işlenip buraya yansıyor; her durum değişikliğinde bildirim alırsın.</div>
 
   <div class="prod-form">
     <h2>Yeni Kargo Talebi</h2>

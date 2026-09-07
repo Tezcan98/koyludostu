@@ -1,1 +1,17 @@
-{}
+{
+  "po_kny7ypr6m0": {
+    "id": "po_kny7ypr6m0",
+    "itemId": "pk_cw0v7hq1q2",
+    "itemName": "Kilolu Karton Kutu",
+    "itemPrice": "12₺",
+    "itemUnit": "/ adet",
+    "quantity": 1,
+    "note": "",
+    "sellerId": "u_8073pcqszp",
+    "sellerName": "Enes Tezcan",
+    "sellerPhone": "5425174860",
+    "status": "requested",
+    "createdAt": "2026-09-07T19:28:04.748Z",
+    "updatedAt": "2026-09-07T19:28:04.748Z"
+  }
+}

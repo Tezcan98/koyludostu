@@ -1,1 +1,21 @@
-{}
+{
+  "sh_znmt5ji2yz": {
+    "id": "sh_znmt5ji2yz",
+    "productSlug": "manisa-yapraa",
+    "productTitle": "Manisa yapraa",
+    "sellerId": "u_8073pcqszp",
+    "sellerName": "Enes Tezcan",
+    "sellerPhone": "5425174860",
+    "buyerName": "enes tezcan",
+    "buyerPhone": "5425174860",
+    "address": "aafdsfdsf",
+    "note": "sdf",
+    "quantity": 1,
+    "totalWeightKg": 1,
+    "perishable": false,
+    "status": "requested",
+    "trackingNo": null,
+    "createdAt": "2026-09-07T19:28:48.483Z",
+    "updatedAt": "2026-09-07T19:28:48.483Z"
+  }
+}
