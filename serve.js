@@ -4,6 +4,7 @@ const path = require('path');
 const crypto = require('crypto');
 
 const PORT = process.env.PORT || 3010;
+const HOST = process.env.HOST || '0.0.0.0';
 const ROOT = __dirname;
 const BASE = path.join(ROOT, 'koyludostu-tumsite');
 // Testler DATA_DIR'ı geçici bir klasöre yönlendirerek gerçek data/*.json dosyalarına
@@ -927,6 +928,19 @@ function isLoopback(ip) {
   return ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1';
 }
 
+// nginx gibi bir ters proxy'nin arkasındaysak socket IP'si her zaman loopback olur;
+// bu durumda gerçek istemci IP'sini nginx'in eklediği X-Forwarded-For'dan alıyoruz.
+// Sadece loopback'ten gelen istekte bu başlığa güveniyoruz (yoksa dışarıdan biri
+// başlığı sahteleyip hız sınırlamasını atlatabilirdi).
+function getClientIp(req) {
+  const remote = req.socket.remoteAddress || '';
+  if (isLoopback(remote)) {
+    const xff = req.headers['x-forwarded-for'];
+    if (xff) return String(xff).split(',')[0].trim();
+  }
+  return remote;
+}
+
 function isRateLimited(ip) {
   if (isLoopback(ip)) return false;
   const now = Date.now();
@@ -952,7 +966,7 @@ const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://localhost:${PORT}`);
   const p = url.pathname;
 
-  const clientIp = req.socket.remoteAddress || '';
+  const clientIp = getClientIp(req);
   if (isRateLimited(clientIp)) {
     res.writeHead(429, { 'Content-Type': 'application/json; charset=utf-8', 'Retry-After': '60' });
     res.end(JSON.stringify({ error: 'Çok fazla istek gönderildi, lütfen biraz sonra tekrar dene.' }));
@@ -2341,7 +2355,7 @@ const server = http.createServer(async (req, res) => {
   return serveStatic(res, MAIN, p);
 });
 
-server.listen(PORT, () => {
+server.listen(PORT, HOST, () => {
   console.log(`köylüdostu  http://localhost:${PORT}         (main)`);
   console.log(`            http://localhost:${PORT}/blog     (blog)`);
   console.log(`            http://localhost:${PORT}/haber    (haber)`);
