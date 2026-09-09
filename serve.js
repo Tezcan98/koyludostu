@@ -184,7 +184,8 @@ function renderProductPage(product, allProducts) {
     : '';
   const footerCtas = isActive
     ? `<button class="fav-cta" data-id="${esc(product.slug)}">🤍</button>
-      <button class="msg-cta" data-slug="${esc(product.slug)}" data-title="${esc(product.title)}">💬 Satıcıya Mesaj Yaz</button>`
+      <button class="msg-cta" data-slug="${esc(product.slug)}" data-title="${esc(product.title)}">💬 Satıcıya Mesaj Yaz</button>
+      <button class="order-cta" data-slug="${esc(product.slug)}" data-title="${esc(product.title)}">📦 Sipariş Talebi Gönder</button>`
     : `<button class="fav-cta" data-id="${esc(product.slug)}">🤍</button>`;
 
   return `<!DOCTYPE html>
@@ -288,6 +289,7 @@ ${relatedHtml}</div><footer class="site-footer">
 
 <script src="../assets/auth.js"></script>
 <script src="../assets/messages.js"></script>
+<script src="../assets/order.js"></script>
 <script src="../assets/reviews.js"></script>
 <script src="../assets/favorites.js"></script>
 <script src="../assets/protect.js"></script>
