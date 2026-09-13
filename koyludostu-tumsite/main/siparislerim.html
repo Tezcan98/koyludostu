@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#4E6B3A">
+<link rel="apple-touch-icon" href="/assets/logo-icon.jpg">
+<title>Siparişlerim — Köylü Dostu</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  .inbox-wrap{max-width:640px;margin:0 auto;padding:20px 16px 60px;}
+  .inbox-wrap h1{font-size:20px;font-weight:800;margin:6px 0 6px;}
+  .inbox-lead{font-size:12.5px;color:var(--muted);margin:0 0 18px;line-height:1.5;}
+  .po-item{padding:14px;background:var(--card);border:1px solid var(--line);border-radius:12px;margin-bottom:10px;}
+  .po-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:6px;}
+  .po-title a{font-size:13.5px;font-weight:700;}
+  .po-seller{font-size:11.5px;color:var(--muted);margin-top:2px;}
+  .po-seller a{color:var(--muted);text-decoration:underline;}
+  .po-status{font-size:10.5px;font-weight:800;padding:3px 9px;border-radius:10px;flex-shrink:0;white-space:nowrap;}
+  .po-status.requested{background:rgba(192,138,46,.15);color:var(--ring2);}
+  .po-status.confirmed{background:rgba(46,110,192,.12);color:#2e6ec0;}
+  .po-status.rejected{background:rgba(200,60,60,.12);color:var(--ring3);}
+  .po-status.completed{background:rgba(78,107,58,.12);color:var(--ring1);}
+  .po-meta{font-size:12px;color:var(--ink);line-height:1.6;margin:8px 0;}
+  .po-meta b{color:var(--muted);font-weight:600;}
+  .po-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;}
+  .po-actions button{
+    background:transparent;border:1.5px solid var(--line);color:var(--muted);font-size:12px;font-weight:700;
+    padding:7px 14px;border-radius:16px;cursor:pointer;font-family:inherit;
+  }
+  .qr-form{margin-top:10px;padding:12px;background:var(--bg);border-radius:10px;display:none;}
+  .qr-form.open{display:block;}
+  .qr-stars{display:flex;gap:4px;margin-bottom:8px;}
+  .qr-star{font-size:22px;cursor:pointer;color:var(--line);}
+  .qr-star.active{color:#c08a2e;}
+  .qr-form textarea{
+    width:100%;padding:9px 11px;border-radius:9px;border:1.5px solid var(--line);font-family:inherit;
+    font-size:12.5px;background:var(--card);resize:vertical;min-height:56px;margin-bottom:8px;
+  }
+  .qr-form button{
+    background:var(--ink);color:#fff;border:none;padding:8px 16px;border-radius:9px;font-size:12px;
+    font-weight:700;cursor:pointer;font-family:inherit;
+  }
+  .qr-msg{font-size:11.5px;color:var(--ring3);margin-top:6px;}
+  .inbox-empty{text-align:center;padding:60px 20px;color:var(--muted);font-size:13.5px;}
+  .inbox-empty a{color:var(--ring1);font-weight:700;}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <button class="hamburger-btn" onclick="document.getElementById('kdDrawer').classList.add('open');document.getElementById('kdOverlay').classList.add('open');" aria-label="Menü">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+  </button>
+  <a href="/index.html" class="avatar-ring">
+    <div class="avatar"><img src="/assets/logo-icon.jpg" alt="Köylü Dostu" style="width:92%;height:92%;object-fit:contain;"></div>
+  </a>
+  <a href="/index.html" class="brand-info" style="text-decoration:none;">
+    <h1>köylüdostu</h1>
+    <p>Siparişlerim</p>
+  </a>
+  <div id="authSlot"></div>
+</div>
+<div class="drawer-overlay" id="kdOverlay" onclick="document.getElementById('kdDrawer').classList.remove('open');this.classList.remove('open');"></div>
+<div class="drawer" id="kdDrawer">
+  <div class="drawer-head">
+    <div class="avatar-ring" style="width:40px;height:40px;">
+      <div class="avatar"><img src="/assets/logo-icon.jpg" alt="Köylü Dostu" style="width:92%;height:92%;object-fit:contain;"></div>
+    </div>
+    <div class="brand-info"><h1>köylüdostu</h1></div>
+    <button class="drawer-close" onclick="document.getElementById('kdDrawer').classList.remove('open');document.getElementById('kdOverlay').classList.remove('open');" aria-label="Kapat">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+  </div>
+  <nav class="drawer-nav">
+    <a href="/index.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>Anasayfa</a>
+    <div class="drawer-section-label">Hesabım</div>
+    <a href="/favorilerim.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>Favori İlanlarım</a>
+    <a href="/favori-saticilarim.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>Favori Satıcılarım</a>
+    <a href="/siparislerim.html" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h2l2.4 12.4a2 2 0 0 0 2 1.6h9.2a2 2 0 0 0 2-1.6L22 6H6"/><circle cx="9" cy="21" r="1"/><circle cx="18" cy="21" r="1"/></svg>Siparişlerim</a>
+    <a href="/mesajlarim.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Mesajlar</a>
+    <a href="/yorumlarim.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>Yorumlarım</a>
+    <a href="/sikayetlerim.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 1 21h22z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>Şikayetlerim</a>
+    <a href="/hesap-ayarlarim.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/></svg>Hesap Ayarları</a>
+    <div class="drawer-section-label">Diğer</div>
+    <a href="/hakkimizda.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>Hakkımızda</a>
+    <a href="/gizlilik.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z"/></svg>Gizlilik</a>
+    <a href="/kullanim-sartlari.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h6"/></svg>Kullanım Şartları</a>
+    <a href="/kvkk.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z"/><path d="M9 12l2 2 4-4"/></svg>KVKK Aydınlatma Metni</a>
+  </nav>
+</div>
+
+<div class="inbox-wrap">
+  <h1>Siparişlerim</h1>
+  <p class="inbox-lead">Ürün sayfalarından gönderdiğin sipariş taleplerinin durumu. Bu bir ödeme/sepet sistemi değildir — onay ve teslimat detayları satıcıyla doğrudan görüşülür.</p>
+  <div id="poList"></div>
+</div>
+
+<script src="assets/auth.js"></script>
+<script src="assets/complaints.js"></script>
+<script>
+(function () {
+  if (!window.KDAuth.requireLogin('/siparislerim.html')) return;
+
+  var STATUS_LABELS = { requested: 'Talep Alındı', confirmed: 'Onaylandı', rejected: 'Reddedildi', completed: 'Tamamlandı' };
+
+  function timeAgo(iso) {
+    var diff = Date.now() - new Date(iso).getTime();
+    var min = Math.floor(diff / 60000);
+    if (min < 1) return 'az önce';
+    if (min < 60) return min + ' dk önce';
+    var h = Math.floor(min / 60);
+    if (h < 24) return h + ' sa önce';
+    return Math.floor(h / 24) + ' gün önce';
+  }
+
+  function loadOrders() {
+    window.KDAuth.authedFetch('/api/product-orders/mine').then(function (r) { return r.json(); }).then(function (data) {
+      var list = document.getElementById('poList');
+      var items = data.orders || [];
+      if (!items.length) {
+        list.innerHTML = '<div class="inbox-empty">Henüz gönderdiğin bir sipariş talebi yok.<br><a href="/index.html">Ürünlere göz at →</a></div>';
+        return;
+      }
+      list.innerHTML = items.map(function (o) {
+        var metaLines = [
+          '<b>Adet:</b> ' + o.quantity,
+          '<b>Teslimat:</b> ' + o.district + ' / ' + o.city,
+        ];
+        if (o.address) metaLines.push('<b>Adres/Not:</b> ' + o.address.replace(/[<>]/g, ''));
+        if (o.deadline) metaLines.push('<b>Aciliyet:</b> ' + o.deadline.replace(/[<>]/g, ''));
+        if (o.note) metaLines.push('<b>Özel İstek:</b> ' + o.note.replace(/[<>]/g, ''));
+        var actions = '<button type="button" class="qr-toggle" data-id="' + o.id + '" data-slug="' + o.productSlug + '">Yorum Yap</button>' +
+          '<button type="button" class="complaint-cta" data-slug="' + o.productSlug + '" data-title="' + o.productTitle.replace(/"/g, '&quot;') + '">Şikayet Et</button>';
+        return '<div class="po-item" data-id="' + o.id + '">' +
+          '<div class="po-head">' +
+            '<div class="po-title"><a href="urun/' + o.productSlug + '.html">' + o.productTitle + '</a>' +
+              '<div class="po-seller">Satıcı: <a href="satici/' + o.sellerId + '.html">' + o.sellerName + '</a> · ' + timeAgo(o.createdAt) + '</div>' +
+            '</div>' +
+            '<span class="po-status ' + o.status + '">' + STATUS_LABELS[o.status] + '</span>' +
+          '</div>' +
+          '<div class="po-meta">' + metaLines.join('<br>') + '</div>' +
+          '<div class="po-actions">' + actions + '</div>' +
+          '<div class="qr-form" id="qr-' + o.id + '">' +
+            '<div class="qr-stars">' + [1, 2, 3, 4, 5].map(function (n) { return '<span class="qr-star" data-star="' + n + '">★</span>'; }).join('') + '</div>' +
+            '<textarea placeholder="Ürün hakkında ne düşünüyorsun?" maxlength="1000"></textarea>' +
+            '<button type="button" class="qr-submit">Puanı Gönder</button>' +
+            '<p class="qr-msg"></p>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+
+      list.querySelectorAll('.qr-toggle').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          document.getElementById('qr-' + btn.dataset.id).classList.toggle('open');
+        });
+      });
+      list.querySelectorAll('.qr-form').forEach(function (form) {
+        var stars = form.querySelectorAll('.qr-star');
+        var picked = 0;
+        stars.forEach(function (star) {
+          star.addEventListener('click', function () {
+            picked = Number(star.dataset.star);
+            stars.forEach(function (s) { s.classList.toggle('active', Number(s.dataset.star) <= picked); });
+          });
+        });
+        form.querySelector('.qr-submit').addEventListener('click', function () {
+          var item = form.closest('.po-item');
+          var slug = item.querySelector('.qr-toggle').dataset.slug;
+          var text = form.querySelector('textarea').value.trim();
+          var msgEl = form.querySelector('.qr-msg');
+          if (!picked) { msgEl.textContent = 'Önce yıldızla puanla.'; return; }
+          if (!text) { msgEl.textContent = 'Kısa bir yorum yaz.'; return; }
+          msgEl.textContent = '';
+          window.KDAuth.authedFetch('/api/reviews', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ productSlug: slug, rating: picked, text: text }),
+          }).then(function (r) { return r.json(); }).then(function (data) {
+            if (data.error) { msgEl.textContent = data.error; return; }
+            msgEl.style.color = 'var(--ring1)';
+            msgEl.textContent = 'Yorumun kaydedildi, teşekkürler!';
+          }).catch(function () { msgEl.textContent = 'Bağlantı hatası, tekrar dene.'; });
+        });
+      });
+    }).catch(function () {
+      document.getElementById('poList').innerHTML = '<div class="inbox-empty">Siparişler yüklenemedi.</div>';
+    });
+  }
+
+  loadOrders();
+})();
+</script>
+<script>if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("/sw.js").catch(function(){});});}</script>
+</body>
+</html>

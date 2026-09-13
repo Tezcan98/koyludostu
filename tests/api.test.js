@@ -1250,3 +1250,79 @@ describe('Var olan alıcı hesabının kendi isteğiyle satıcıya geçmesi', ()
     assert.equal(r.status, 401);
   });
 });
+
+describe('Ürün siparişleri (Siparişlerim): oluşturma, takip, durum güncelleme', () => {
+  test('alıcı sipariş talebi oluşturur, kendi listesinde ve satıcının gelen kutusunda görür', async () => {
+    const seller = await newSeller('Sipariş Satıcı');
+    const product = await createProduct(seller.token, { title: 'Sipariş Testi Ürünü' });
+    const buyer = await newBuyer('Sipariş Alıcı');
+
+    const missingCity = await fetch(url('/api/product-orders'), {
+      method: 'POST', headers: authHeaders(buyer.token),
+      body: JSON.stringify({ productSlug: product.slug, quantity: 2, district: 'Konak' }),
+    });
+    assert.equal(missingCity.status, 400);
+
+    const order = await fetch(url('/api/product-orders'), {
+      method: 'POST', headers: authHeaders(buyer.token),
+      body: JSON.stringify({
+        productSlug: product.slug, quantity: 3, city: 'İzmir', district: 'Konak',
+        address: 'Test mahallesi', deadline: 'Bu hafta içinde', note: 'Az şekerli olsun',
+      }),
+    }).then((r) => r.json());
+    assert.equal(order.status, 'requested');
+    assert.equal(order.quantity, 3);
+    assert.equal(order.sellerId, seller.user.id);
+
+    const mine = await fetch(url('/api/product-orders/mine'), { headers: authHeaders(buyer.token) }).then((r) => r.json());
+    assert.equal(mine.orders.length, 1);
+    assert.equal(mine.orders[0].id, order.id);
+
+    const incoming = await fetch(url('/api/admin/product-orders/mine'), { headers: authHeaders(seller.token) }).then((r) => r.json());
+    assert.equal(incoming.orders.length, 1);
+    assert.equal(incoming.orders[0].buyerName, 'Sipariş Alıcı');
+  });
+
+  test('satıcı sipariş durumunu günceller, başka satıcı güncelleyemez', async () => {
+    const seller = await newSeller('Durum Satıcı');
+    const otherSeller = await newSeller('Başka Satıcı');
+    const product = await createProduct(seller.token, { title: 'Durum Testi Ürünü' });
+    const buyer = await newBuyer('Durum Alıcı');
+
+    const order = await fetch(url('/api/product-orders'), {
+      method: 'POST', headers: authHeaders(buyer.token),
+      body: JSON.stringify({ productSlug: product.slug, quantity: 1, city: 'Manisa', district: 'Şehzadeler' }),
+    }).then((r) => r.json());
+
+    const wrongSeller = await fetch(url('/api/admin/product-orders/update'), {
+      method: 'POST', headers: authHeaders(otherSeller.token),
+      body: JSON.stringify({ id: order.id, status: 'confirmed' }),
+    });
+    assert.equal(wrongSeller.status, 404);
+
+    const badStatus = await fetch(url('/api/admin/product-orders/update'), {
+      method: 'POST', headers: authHeaders(seller.token),
+      body: JSON.stringify({ id: order.id, status: 'gecersiz' }),
+    });
+    assert.equal(badStatus.status, 400);
+
+    const updated = await fetch(url('/api/admin/product-orders/update'), {
+      method: 'POST', headers: authHeaders(seller.token),
+      body: JSON.stringify({ id: order.id, status: 'confirmed' }),
+    }).then((r) => r.json());
+    assert.equal(updated.status, 'confirmed');
+
+    const mine = await fetch(url('/api/product-orders/mine'), { headers: authHeaders(buyer.token) }).then((r) => r.json());
+    assert.equal(mine.orders[0].status, 'confirmed');
+  });
+
+  test('girişsiz istekler 401 döner', async () => {
+    const r1 = await fetch(url('/api/product-orders'), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ productSlug: 'x', quantity: 1, city: 'X', district: 'Y' }),
+    });
+    assert.equal(r1.status, 401);
+    const r2 = await fetch(url('/api/product-orders/mine'));
+    assert.equal(r2.status, 401);
+  });
+});

@@ -1,8 +1,8 @@
 (function () {
-  // "Sipariş Talebi" — gerçek bir sipariş/ödeme akışı DEĞİL, satıcıya gönderilen
-  // yapılandırılmış bir mesajdır. Mevcut mesajlaşma API'sini (/api/messages/send)
-  // kullanır, ayrı bir "order" veri modeli yoktur — onay/ödeme satıcı ile alıcı
-  // arasında platform dışında görüşülür.
+  // "Sipariş Talebi" — gerçek bir ödeme/sepet akışı DEĞİL, sadece durumu takip
+  // edilebilen hafif bir kayıt (/api/product-orders). Onay/ödeme/teslimat satıcı
+  // ile alıcı arasında platform dışında görüşülür; durumu "Siparişlerim" sayfasından
+  // takip edilir.
 
   function ensureOrderPanel() {
     var panel = document.getElementById('orderPanel');
@@ -65,26 +65,20 @@
       if (!city) { msgEl.textContent = 'Teslimat ili gerekli.'; return; }
       if (!district) { msgEl.textContent = 'Teslimat ilçesi gerekli.'; return; }
 
-      var lines = [
-        '📦 Sipariş Talebi — ' + title,
-        'Adet: ' + qty,
-        'Teslimat: ' + district + ' / ' + city,
-      ];
-      if (address) lines.push('Adres/Not: ' + address);
-      if (deadline) lines.push('Aciliyet: ' + deadline);
-      if (note) lines.push('Özel İstek: ' + note);
-      var text = lines.join('\n');
-
       msgEl.textContent = '';
       sendBtn.disabled = true;
-      window.KDAuth.authedFetch('/api/messages/send', {
+      window.KDAuth.authedFetch('/api/product-orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ productSlug: slug, productTitle: title, text: text }),
-      }).then(function (r) { return r.json(); }).then(function () {
+        body: JSON.stringify({
+          productSlug: slug, quantity: qty, city: city, district: district,
+          address: address, deadline: deadline, note: note,
+        }),
+      }).then(function (r) { return r.json(); }).then(function (data) {
         sendBtn.disabled = false;
+        if (data.error) { msgEl.textContent = data.error; return; }
         panel.hidden = true;
-        if (window.KDMessages) window.KDMessages.open(slug, title);
+        window.location.href = '/siparislerim.html';
       }).catch(function () {
         sendBtn.disabled = false;
         msgEl.textContent = 'Bir şeyler ters gitti, tekrar dene.';

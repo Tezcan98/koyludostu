@@ -23,6 +23,7 @@ const SHIPMENTS_PATH = path.join(DATA_DIR, 'shipments.json');
 const NOTIFICATIONS_PATH = path.join(DATA_DIR, 'notifications.json');
 const PACKAGING_PATH = path.join(DATA_DIR, 'packaging.json');
 const PACKAGING_ORDERS_PATH = path.join(DATA_DIR, 'packaging_orders.json');
+const PRODUCT_ORDERS_PATH = path.join(DATA_DIR, 'product_orders.json');
 const NOTIFICATION_SETTINGS_PATH = path.join(DATA_DIR, 'notification-settings.json');
 const POST_TTL_MS = 24 * 60 * 60 * 1000;
 
@@ -233,6 +234,7 @@ function renderProductPage(product, allProducts) {
     <div class="drawer-section-label">Hesabım</div>
     <a href="/favorilerim.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>Favori İlanlarım</a>
     <a href="/favori-saticilarim.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>Favori Satıcılarım</a>
+    <a href="/siparislerim.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h2l2.4 12.4a2 2 0 0 0 2 1.6h9.2a2 2 0 0 0 2-1.6L22 6H6"/><circle cx="9" cy="21" r="1"/><circle cx="18" cy="21" r="1"/></svg>Siparişlerim</a>
     <a href="/mesajlarim.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Mesajlar</a>
     <a href="/yorumlarim.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>Yorumlarım</a>
     <a href="/hesap-ayarlarim.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/></svg>Hesap Ayarları</a>
@@ -382,6 +384,7 @@ function renderSellerPage(seller, sellerId, products) {
     <div class="drawer-section-label">Hesabım</div>
     <a href="/favorilerim.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>Favori İlanlarım</a>
     <a href="/favori-saticilarim.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>Favori Satıcılarım</a>
+    <a href="/siparislerim.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h2l2.4 12.4a2 2 0 0 0 2 1.6h9.2a2 2 0 0 0 2-1.6L22 6H6"/><circle cx="9" cy="21" r="1"/><circle cx="18" cy="21" r="1"/></svg>Siparişlerim</a>
     <a href="/mesajlarim.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Mesajlar</a>
     <a href="/yorumlarim.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>Yorumlarım</a>
     <a href="/hesap-ayarlarim.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/></svg>Hesap Ayarları</a>
@@ -1288,6 +1291,87 @@ const server = http.createServer(async (req, res) => {
       const store = readJson(MESSAGES_PATH, { conversations: {} });
       const cid = conversationId(session.phone, productSlug);
       return jsonResponse(res, 200, store.conversations[cid] || { id: cid, messages: [] });
+    }
+
+    // ---------- Ürün Siparişleri: alıcının "Sipariş Talebi Gönder" ile açtığı, durumu takip
+    // edilebilen hafif bir kayıt. Gerçek bir ödeme/sepet sistemi değil — sadece alıcının kendi
+    // "Siparişlerim" ekranından durumu görmesini ve satıcının onaylayıp/reddedip ilerletmesini
+    // sağlar (bkz. Kargo Takip / Ambalaj ile aynı desen). Yorum ve şikayet zaten productSlug
+    // bazlı olduğundan bu kayıt sadece takip amaçlıdır, ayrıca bir bağlantı gerektirmez.
+
+    const PRODUCT_ORDER_STATUSES = ['requested', 'confirmed', 'rejected', 'completed'];
+
+    if (p === '/api/product-orders' && req.method === 'POST') {
+      const session = requireAuth(req, res);
+      if (!session) return;
+      const body = await readBody(req);
+      const products = readJson(PRODUCTS_PATH, {});
+      const product = products[body.productSlug];
+      if (!product) return jsonResponse(res, 400, { error: 'Ürün bulunamadı' });
+
+      const quantity = Math.max(1, Math.floor(Number(body.quantity)) || 1);
+      const city = String(body.city || '').trim().slice(0, 60);
+      const district = String(body.district || '').trim().slice(0, 60);
+      const address = String(body.address || '').trim().slice(0, 300);
+      const deadline = String(body.deadline || '').trim().slice(0, 80);
+      const note = String(body.note || '').trim().slice(0, 300);
+      if (!city) return jsonResponse(res, 400, { error: 'Teslimat ili gerekli.' });
+      if (!district) return jsonResponse(res, 400, { error: 'Teslimat ilçesi gerekli.' });
+
+      const orders = readJson(PRODUCT_ORDERS_PATH, {});
+      const id = 'po_' + randomToken().slice(0, 10);
+      const now = new Date().toISOString();
+      orders[id] = {
+        id, productSlug: product.slug, productTitle: product.title,
+        buyerId: session.user.id, buyerName: session.user.name, buyerPhone: session.phone,
+        sellerId: product.sellerId, sellerName: product.sellerName, sellerPhone: product.sellerPhone,
+        quantity, city, district, address, deadline, note,
+        status: 'requested', createdAt: now, updatedAt: now,
+      };
+      writeJson(PRODUCT_ORDERS_PATH, orders);
+      notifyUser(product.sellerPhone, 'new_product_order',
+        `"${product.title}" için yeni bir sipariş talebin var (${quantity} adet, ${district}/${city}).`);
+      return jsonResponse(res, 200, orders[id]);
+    }
+
+    if (p === '/api/product-orders/mine' && req.method === 'GET') {
+      const session = requireAuth(req, res);
+      if (!session) return;
+      const orders = readJson(PRODUCT_ORDERS_PATH, {});
+      const mine = Object.values(orders)
+        .filter((o) => o.buyerId === session.user.id)
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      return jsonResponse(res, 200, { orders: mine });
+    }
+
+    if (p === '/api/admin/product-orders/mine' && req.method === 'GET') {
+      const session = requireRole(req, res, 'satici');
+      if (!session) return;
+      const orders = readJson(PRODUCT_ORDERS_PATH, {});
+      const mine = Object.values(orders)
+        .filter((o) => o.sellerId === session.user.id)
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      return jsonResponse(res, 200, { orders: mine });
+    }
+
+    if (p === '/api/admin/product-orders/update' && req.method === 'POST') {
+      const session = requireRole(req, res, 'satici');
+      if (!session) return;
+      const { id, status } = await readBody(req);
+      const orders = readJson(PRODUCT_ORDERS_PATH, {});
+      const order = orders[id];
+      if (!order || order.sellerId !== session.user.id) return jsonResponse(res, 404, { error: 'Sipariş bulunamadı' });
+      if (!PRODUCT_ORDER_STATUSES.includes(status)) return jsonResponse(res, 400, { error: 'Geçersiz durum.' });
+      order.status = status;
+      order.updatedAt = new Date().toISOString();
+      writeJson(PRODUCT_ORDERS_PATH, orders);
+
+      const STATUS_LABELS = {
+        requested: 'Talep Alındı', confirmed: 'Onaylandı', rejected: 'Reddedildi', completed: 'Tamamlandı',
+      };
+      notifyUser(order.buyerPhone, 'product_order_update',
+        `"${order.productTitle}" siparişinin durumu güncellendi: ${STATUS_LABELS[order.status]}.`);
+      return jsonResponse(res, 200, order);
     }
 
     // ---------- Satıcı tarafı: kendi ürünlerinin sohbetleri + yanıt (satıcı hesabı girişi gerekir) ----------
