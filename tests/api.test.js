@@ -1326,3 +1326,78 @@ describe('Ürün siparişleri (Siparişlerim): oluşturma, takip, durum güncell
     assert.equal(r2.status, 401);
   });
 });
+
+describe('Sipariş fotoğraf doğrulaması (opsiyonel): gönderim ve teslim alma fotoğrafı', () => {
+  test('satıcı durum güncellerken opsiyonel gönderim fotoğrafı ekleyebilir', async () => {
+    const seller = await newSeller('Fotoğraflı Satıcı');
+    const product = await createProduct(seller.token, { title: 'Fotoğraf Testi Ürünü' });
+    const buyer = await newBuyer('Fotoğraflı Alıcı');
+
+    const order = await fetch(url('/api/product-orders'), {
+      method: 'POST', headers: authHeaders(buyer.token),
+      body: JSON.stringify({ productSlug: product.slug, quantity: 1, city: 'Bursa', district: 'Nilüfer' }),
+    }).then((r) => r.json());
+
+    // fotoğrafsız güncelleme hâlâ çalışmalı (opsiyonel olduğu için zorunlu değil)
+    const noPhoto = await fetch(url('/api/admin/product-orders/update'), {
+      method: 'POST', headers: authHeaders(seller.token),
+      body: JSON.stringify({ id: order.id, status: 'confirmed' }),
+    }).then((r) => r.json());
+    assert.equal(noPhoto.sellerProofPhotoUrl, null);
+
+    const img = await uploadImage(seller.token);
+    const withPhoto = await fetch(url('/api/admin/product-orders/update'), {
+      method: 'POST', headers: authHeaders(seller.token),
+      body: JSON.stringify({ id: order.id, status: 'completed', proofPhotoUrl: img }),
+    }).then((r) => r.json());
+    assert.equal(withPhoto.sellerProofPhotoUrl, img);
+
+    const mine = await fetch(url('/api/product-orders/mine'), { headers: authHeaders(buyer.token) }).then((r) => r.json());
+    assert.equal(mine.orders[0].sellerProofPhotoUrl, img);
+  });
+
+  test('alıcı teslim aldığını fotoğrafsız ya da fotoğrafla onaylayabilir, başkasının siparişini onaylayamaz', async () => {
+    const seller = await newSeller('Teslim Satıcı');
+    const product = await createProduct(seller.token, { title: 'Teslim Testi Ürünü' });
+    const buyer = await newBuyer('Teslim Alıcı');
+    const otherBuyer = await newBuyer('Başka Alıcı');
+
+    const order = await fetch(url('/api/product-orders'), {
+      method: 'POST', headers: authHeaders(buyer.token),
+      body: JSON.stringify({ productSlug: product.slug, quantity: 1, city: 'Konya', district: 'Selçuklu' }),
+    }).then((r) => r.json());
+
+    const wrongBuyer = await fetch(url('/api/product-orders/confirm-receipt'), {
+      method: 'POST', headers: authHeaders(otherBuyer.token),
+      body: JSON.stringify({ id: order.id }),
+    });
+    assert.equal(wrongBuyer.status, 404);
+
+    const img = await uploadImage(buyer.token);
+    const confirmed = await fetch(url('/api/product-orders/confirm-receipt'), {
+      method: 'POST', headers: authHeaders(buyer.token),
+      body: JSON.stringify({ id: order.id, proofPhotoUrl: img }),
+    }).then((r) => r.json());
+    assert.ok(confirmed.buyerConfirmedAt);
+    assert.equal(confirmed.buyerProofPhotoUrl, img);
+
+    const incoming = await fetch(url('/api/admin/product-orders/mine'), { headers: authHeaders(seller.token) }).then((r) => r.json());
+    assert.equal(incoming.orders[0].buyerProofPhotoUrl, img);
+  });
+
+  test('geçersiz fotoğraf url\'i reddedilir', async () => {
+    const seller = await newSeller('Geçersiz Foto Satıcı');
+    const product = await createProduct(seller.token, { title: 'Geçersiz Foto Ürünü' });
+    const buyer = await newBuyer('Geçersiz Foto Alıcı');
+    const order = await fetch(url('/api/product-orders'), {
+      method: 'POST', headers: authHeaders(buyer.token),
+      body: JSON.stringify({ productSlug: product.slug, quantity: 1, city: 'Trabzon', district: 'Ortahisar' }),
+    }).then((r) => r.json());
+
+    const bad = await fetch(url('/api/admin/product-orders/update'), {
+      method: 'POST', headers: authHeaders(seller.token),
+      body: JSON.stringify({ id: order.id, status: 'confirmed', proofPhotoUrl: 'https://evil.example/x.png' }),
+    });
+    assert.equal(bad.status, 400);
+  });
+});

@@ -1327,6 +1327,9 @@ const server = http.createServer(async (req, res) => {
         sellerId: product.sellerId, sellerName: product.sellerName, sellerPhone: product.sellerPhone,
         quantity, city, district, address, deadline, note,
         status: 'requested', createdAt: now, updatedAt: now,
+        // Fotoğraf doğrulaması opsiyoneldir — ne satıcı gönderirken ne alıcı teslim
+        // alırken fotoğraf eklemek zorunda değildir, isteyen ekler.
+        sellerProofPhotoUrl: null, buyerProofPhotoUrl: null, buyerConfirmedAt: null,
       };
       writeJson(PRODUCT_ORDERS_PATH, orders);
       notifyUser(product.sellerPhone, 'new_product_order',
@@ -1357,12 +1360,20 @@ const server = http.createServer(async (req, res) => {
     if (p === '/api/admin/product-orders/update' && req.method === 'POST') {
       const session = requireRole(req, res, 'satici');
       if (!session) return;
-      const { id, status } = await readBody(req);
+      const { id, status, proofPhotoUrl } = await readBody(req);
       const orders = readJson(PRODUCT_ORDERS_PATH, {});
       const order = orders[id];
       if (!order || order.sellerId !== session.user.id) return jsonResponse(res, 404, { error: 'Sipariş bulunamadı' });
       if (!PRODUCT_ORDER_STATUSES.includes(status)) return jsonResponse(res, 400, { error: 'Geçersiz durum.' });
       order.status = status;
+      // Satıcının ürünü gönderirken/teslim ederken eklediği fotoğraf — opsiyonel.
+      if (proofPhotoUrl !== undefined) {
+        const clean = String(proofPhotoUrl || '').trim();
+        if (clean) {
+          if (!isValidProductImg(clean)) return jsonResponse(res, 400, { error: 'Geçersiz fotoğraf. Önce /api/admin/upload-image ile yükle.' });
+          order.sellerProofPhotoUrl = clean;
+        }
+      }
       order.updatedAt = new Date().toISOString();
       writeJson(PRODUCT_ORDERS_PATH, orders);
 
@@ -1371,6 +1382,29 @@ const server = http.createServer(async (req, res) => {
       };
       notifyUser(order.buyerPhone, 'product_order_update',
         `"${order.productTitle}" siparişinin durumu güncellendi: ${STATUS_LABELS[order.status]}.`);
+      return jsonResponse(res, 200, order);
+    }
+
+    // Alıcının "teslim aldım" onayı — durum makinesinden bağımsız, opsiyonel bir
+    // fotoğrafla birlikte kaydedilir. Satıcının durumu ne olursa olsun alıcı istediği
+    // an teslim aldığını işaretleyebilir (isteyen ekler, zorunlu değil).
+    if (p === '/api/product-orders/confirm-receipt' && req.method === 'POST') {
+      const session = requireAuth(req, res);
+      if (!session) return;
+      const { id, proofPhotoUrl } = await readBody(req);
+      const orders = readJson(PRODUCT_ORDERS_PATH, {});
+      const order = orders[id];
+      if (!order || order.buyerId !== session.user.id) return jsonResponse(res, 404, { error: 'Sipariş bulunamadı' });
+      const clean = String(proofPhotoUrl || '').trim();
+      if (clean) {
+        if (!isValidProductImg(clean)) return jsonResponse(res, 400, { error: 'Geçersiz fotoğraf. Önce /api/admin/upload-image ile yükle.' });
+        order.buyerProofPhotoUrl = clean;
+      }
+      order.buyerConfirmedAt = new Date().toISOString();
+      order.updatedAt = order.buyerConfirmedAt;
+      writeJson(PRODUCT_ORDERS_PATH, orders);
+      notifyUser(order.sellerPhone, 'product_order_receipt_confirmed',
+        `"${order.productTitle}" siparişini alıcı teslim aldığını onayladı.`);
       return jsonResponse(res, 200, order);
     }
 
@@ -1978,7 +2012,10 @@ const server = http.createServer(async (req, res) => {
     // ---------- Ürün fotoğrafı yükleme: base64 data URL -> statik dosya ----------
 
     if (p === '/api/admin/upload-image' && req.method === 'POST') {
-      const session = requireRole(req, res, 'satici');
+      // Not: sadece satıcı ürün/organik belgesi değil, alıcı da sipariş teslim alma
+      // fotoğrafı (bkz. /api/product-orders/confirm-receipt) için bunu kullanır —
+      // bu yüzden herhangi bir giriş yapmış kullanıcıya açık, sadece satıcıya değil.
+      const session = requireAuth(req, res);
       if (!session) return;
       const { dataUrl } = await readBody(req);
       const m = /^data:image\/(png|jpe?g|webp);base64,(.+)$/.exec(String(dataUrl || ''));

@@ -30,6 +30,16 @@
     background:transparent;border:1.5px solid var(--line);color:var(--muted);font-size:12px;font-weight:700;
     padding:7px 14px;border-radius:16px;cursor:pointer;font-family:inherit;
   }
+  .po-proof{font-size:11.5px;color:var(--muted);margin-top:8px;line-height:1.6;}
+  .po-proof-thumb{width:72px;height:72px;object-fit:cover;border-radius:9px;margin-top:4px;display:block;}
+  .po-confirmed{font-size:11.5px;color:var(--ring1);padding:7px 14px;line-height:1.5;}
+  .rc-form{margin-top:10px;padding:12px;background:var(--bg);border-radius:10px;display:none;}
+  .rc-form.open{display:block;}
+  .rc-label{font-size:11.5px;font-weight:700;color:var(--muted);display:block;margin-bottom:6px;}
+  .rc-photo-input{font-size:11.5px;width:100%;margin-bottom:8px;}
+  .rc-submit{background:var(--ink);color:#fff;border:none;padding:8px 16px;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;}
+  .rc-submit:disabled{opacity:.5;}
+  .rc-msg{font-size:11.5px;color:var(--ring3);margin-top:6px;}
   .qr-form{margin-top:10px;padding:12px;background:var(--bg);border-radius:10px;display:none;}
   .qr-form.open{display:block;}
   .qr-stars{display:flex;gap:4px;margin-bottom:8px;}
@@ -131,7 +141,14 @@
         if (o.address) metaLines.push('<b>Adres/Not:</b> ' + o.address.replace(/[<>]/g, ''));
         if (o.deadline) metaLines.push('<b>Aciliyet:</b> ' + o.deadline.replace(/[<>]/g, ''));
         if (o.note) metaLines.push('<b>Özel İstek:</b> ' + o.note.replace(/[<>]/g, ''));
-        var actions = '<button type="button" class="qr-toggle" data-id="' + o.id + '" data-slug="' + o.productSlug + '">Yorum Yap</button>' +
+        var sellerProof = o.sellerProofPhotoUrl
+          ? '<div class="po-proof"><b>Satıcının gönderim fotoğrafı:</b><br><img class="po-proof-thumb" src="' + o.sellerProofPhotoUrl + '" alt="Gönderim fotoğrafı"></div>' : '';
+        var receiptAction = o.buyerConfirmedAt
+          ? '<div class="po-confirmed">✅ Teslim aldığını onayladın (' + new Date(o.buyerConfirmedAt).toLocaleDateString('tr-TR') + ')' +
+            (o.buyerProofPhotoUrl ? '<br><img class="po-proof-thumb" src="' + o.buyerProofPhotoUrl + '" alt="Teslim fotoğrafın">' : '') + '</div>'
+          : '<button type="button" class="receipt-toggle" data-id="' + o.id + '">Teslim Aldım</button>';
+        var actions = receiptAction +
+          '<button type="button" class="qr-toggle" data-id="' + o.id + '" data-slug="' + o.productSlug + '">Yorum Yap</button>' +
           '<button type="button" class="complaint-cta" data-slug="' + o.productSlug + '" data-title="' + o.productTitle.replace(/"/g, '&quot;') + '">Şikayet Et</button>';
         return '<div class="po-item" data-id="' + o.id + '">' +
           '<div class="po-head">' +
@@ -141,7 +158,14 @@
             '<span class="po-status ' + o.status + '">' + STATUS_LABELS[o.status] + '</span>' +
           '</div>' +
           '<div class="po-meta">' + metaLines.join('<br>') + '</div>' +
+          sellerProof +
           '<div class="po-actions">' + actions + '</div>' +
+          '<div class="rc-form" id="rc-' + o.id + '">' +
+            '<label class="rc-label">Teslim aldığına dair fotoğraf eklemek ister misin? (opsiyonel)</label>' +
+            '<input type="file" class="rc-photo-input" accept="image/png,image/jpeg,image/webp">' +
+            '<button type="button" class="rc-submit">Teslim Aldığımı Onayla</button>' +
+            '<p class="rc-msg"></p>' +
+          '</div>' +
           '<div class="qr-form" id="qr-' + o.id + '">' +
             '<div class="qr-stars">' + [1, 2, 3, 4, 5].map(function (n) { return '<span class="qr-star" data-star="' + n + '">★</span>'; }).join('') + '</div>' +
             '<textarea placeholder="Ürün hakkında ne düşünüyorsun?" maxlength="1000"></textarea>' +
@@ -150,6 +174,47 @@
           '</div>' +
         '</div>';
       }).join('');
+
+      list.querySelectorAll('.receipt-toggle').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          document.getElementById('rc-' + btn.dataset.id).classList.toggle('open');
+        });
+      });
+      list.querySelectorAll('.rc-form').forEach(function (form) {
+        form.querySelector('.rc-submit').addEventListener('click', function () {
+          var item = form.closest('.po-item');
+          var id = item.dataset.id;
+          var file = form.querySelector('.rc-photo-input').files[0];
+          var msgEl = form.querySelector('.rc-msg');
+          var btn = form.querySelector('.rc-submit');
+          btn.disabled = true;
+          msgEl.textContent = '';
+
+          function sendConfirm(proofPhotoUrl) {
+            window.KDAuth.authedFetch('/api/product-orders/confirm-receipt', {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ id: id, proofPhotoUrl: proofPhotoUrl }),
+            }).then(function (r) { return r.json(); }).then(function (data) {
+              btn.disabled = false;
+              if (data.error) { msgEl.textContent = data.error; return; }
+              loadOrders();
+            }).catch(function () { btn.disabled = false; msgEl.textContent = 'Bağlantı hatası, tekrar dene.'; });
+          }
+
+          if (!file) { sendConfirm(undefined); return; }
+          var reader = new FileReader();
+          reader.onload = function () {
+            window.KDAuth.authedFetch('/api/admin/upload-image', {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ dataUrl: reader.result }),
+            }).then(function (r) { return r.json(); }).then(function (d) {
+              if (d.error) { btn.disabled = false; msgEl.textContent = d.error; return; }
+              sendConfirm(d.url);
+            }).catch(function () { btn.disabled = false; msgEl.textContent = 'Fotoğraf yüklenemedi.'; });
+          };
+          reader.readAsDataURL(file);
+        });
+      });
 
       list.querySelectorAll('.qr-toggle').forEach(function (btn) {
         btn.addEventListener('click', function () {

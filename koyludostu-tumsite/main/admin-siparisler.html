@@ -18,6 +18,13 @@
   .po-title{font-size:13px;font-weight:700;}
   .po-sub{font-size:11.5px;color:var(--muted);margin-top:2px;line-height:1.5;}
   .po-sel{margin-top:10px;padding:8px 10px;border-radius:9px;border:1.5px solid var(--line);font-family:inherit;font-size:12.5px;background:var(--bg);width:100%;}
+  .po-proof-thumb{width:56px;height:56px;object-fit:cover;border-radius:9px;margin-top:8px;display:block;}
+  .po-buyer-confirm{font-size:11.5px;color:var(--ring1);margin-top:8px;line-height:1.5;}
+  .po-photo-label{font-size:11px;font-weight:700;color:var(--muted);display:block;margin-top:10px;margin-bottom:4px;}
+  .po-photo-input{font-size:11.5px;width:100%;}
+  .po-save-btn{margin-top:8px;padding:7px 16px;border-radius:9px;background:var(--ink);color:#fff;border:none;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;}
+  .po-save-btn:disabled{opacity:.5;}
+  .po-save-msg{font-size:11.5px;color:var(--ring3);margin-top:6px;min-height:14px;}
   .po-status-tag{font-size:10px;font-weight:800;padding:3px 9px;border-radius:10px;flex-shrink:0;white-space:nowrap;}
   .po-status-tag.requested{background:rgba(192,138,46,.15);color:var(--ring2);}
   .po-status-tag.confirmed{background:rgba(46,110,192,.12);color:#2e6ec0;}
@@ -103,22 +110,60 @@
         if (o.address) metaBits.push('Adres: ' + o.address.replace(/[<>]/g, ''));
         if (o.deadline) metaBits.push('Aciliyet: ' + o.deadline.replace(/[<>]/g, ''));
         if (o.note) metaBits.push('Not: ' + o.note.replace(/[<>]/g, ''));
+        var proofThumb = o.sellerProofPhotoUrl
+          ? '<img class="po-proof-thumb" src="' + o.sellerProofPhotoUrl + '" alt="Gönderim fotoğrafı">' : '';
+        var buyerConfirm = o.buyerConfirmedAt
+          ? '<div class="po-buyer-confirm">✅ Alıcı teslim aldığını onayladı (' + timeStr(o.buyerConfirmedAt) + ')' +
+            (o.buyerProofPhotoUrl ? '<img class="po-proof-thumb" src="' + o.buyerProofPhotoUrl + '" alt="Teslim fotoğrafı">' : '') + '</div>'
+          : '';
         return '<div class="po-item" data-id="' + o.id + '">' +
           '<div class="po-top">' +
             '<div><div class="po-title">' + o.productTitle + '</div><div class="po-sub">' + metaBits.join(' · ') + '</div></div>' +
             '<span class="po-status-tag ' + o.status + '">' + STATUS_LABELS[o.status] + '</span>' +
           '</div>' +
+          proofThumb + buyerConfirm +
           '<select class="po-sel" data-id="' + o.id + '">' +
             opts.replace('value="' + o.status + '"', 'value="' + o.status + '" selected') +
           '</select>' +
+          '<label class="po-photo-label">Gönderim fotoğrafı (opsiyonel)</label>' +
+          '<input type="file" class="po-photo-input" accept="image/png,image/jpeg,image/webp">' +
+          '<button type="button" class="po-save-btn" data-id="' + o.id + '">Güncelle</button>' +
+          '<p class="po-save-msg"></p>' +
         '</div>';
       }).join('');
-      list.querySelectorAll('.po-sel').forEach(function (sel) {
-        sel.addEventListener('change', function () {
-          window.KDAuth.authedFetch('/api/admin/product-orders/update', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id: sel.dataset.id, status: sel.value }),
-          }).then(function () { loadOrders(); }).catch(function () {});
+      list.querySelectorAll('.po-save-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var item = btn.closest('.po-item');
+          var status = item.querySelector('.po-sel').value;
+          var fileInput = item.querySelector('.po-photo-input');
+          var msgEl = item.querySelector('.po-save-msg');
+          var file = fileInput.files[0];
+          btn.disabled = true;
+          msgEl.textContent = '';
+
+          function sendUpdate(proofPhotoUrl) {
+            window.KDAuth.authedFetch('/api/admin/product-orders/update', {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ id: btn.dataset.id, status: status, proofPhotoUrl: proofPhotoUrl }),
+            }).then(function (r) { return r.json(); }).then(function (data) {
+              btn.disabled = false;
+              if (data.error) { msgEl.textContent = data.error; return; }
+              loadOrders();
+            }).catch(function () { btn.disabled = false; msgEl.textContent = 'Bağlantı hatası, tekrar dene.'; });
+          }
+
+          if (!file) { sendUpdate(undefined); return; }
+          var reader = new FileReader();
+          reader.onload = function () {
+            window.KDAuth.authedFetch('/api/admin/upload-image', {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ dataUrl: reader.result }),
+            }).then(function (r) { return r.json(); }).then(function (d) {
+              if (d.error) { btn.disabled = false; msgEl.textContent = d.error; return; }
+              sendUpdate(d.url);
+            }).catch(function () { btn.disabled = false; msgEl.textContent = 'Fotoğraf yüklenemedi.'; });
+          };
+          reader.readAsDataURL(file);
         });
       });
     }).catch(function () {
