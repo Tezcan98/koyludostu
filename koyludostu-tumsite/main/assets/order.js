@@ -18,8 +18,10 @@
           '<p class="order-note">Bu bir sipariş onayı değildir — satıcıya gönderilen detaylı bir talep mesajıdır. Satıcı uygun görürse seninle iletişime geçer; ödeme ve teslimat detayları doğrudan aranızda görüşülür.</p>' +
           '<label>Kaç adet/parça istiyorsun?</label>' +
           '<input type="number" id="orderQty" min="1" value="1">' +
-          '<label>Teslimat şehri</label>' +
-          '<input type="text" id="orderCity" placeholder="Örn. İzmir" maxlength="60">' +
+          '<label>Teslimat İli</label>' +
+          '<select id="orderCity"><option value="">Yükleniyor…</option></select>' +
+          '<label>Teslimat İlçesi</label>' +
+          '<select id="orderDistrict" disabled><option value="">Önce il seç</option></select>' +
           '<label>Adres / teslimat notu (opsiyonel)</label>' +
           '<textarea id="orderAddress" placeholder="Açık adres ya da nasıl teslim almak istediğin" maxlength="300"></textarea>' +
           '<label>Ne zamana kadar istiyorsun? (opsiyonel)</label>' +
@@ -42,7 +44,7 @@
     document.getElementById('orderSheetTitle').textContent = title + ' — Sipariş Talebi';
     panel.hidden = false;
     document.getElementById('orderQty').value = 1;
-    document.getElementById('orderCity').value = '';
+    window.KDAddress.bindCascade(document.getElementById('orderCity'), document.getElementById('orderDistrict'));
     document.getElementById('orderAddress').value = '';
     document.getElementById('orderDeadline').value = '';
     document.getElementById('orderNote').value = '';
@@ -54,17 +56,19 @@
     sendBtn.onclick = function () {
       var qty = parseInt(document.getElementById('orderQty').value, 10) || 0;
       var city = document.getElementById('orderCity').value.trim();
+      var district = document.getElementById('orderDistrict').value.trim();
       var address = document.getElementById('orderAddress').value.trim();
       var deadline = document.getElementById('orderDeadline').value.trim();
       var note = document.getElementById('orderNote').value.trim();
 
       if (qty < 1) { msgEl.textContent = 'Geçerli bir adet gir.'; return; }
-      if (!city) { msgEl.textContent = 'Teslimat şehri gerekli.'; return; }
+      if (!city) { msgEl.textContent = 'Teslimat ili gerekli.'; return; }
+      if (!district) { msgEl.textContent = 'Teslimat ilçesi gerekli.'; return; }
 
       var lines = [
         '📦 Sipariş Talebi — ' + title,
         'Adet: ' + qty,
-        'Teslimat Şehri: ' + city,
+        'Teslimat: ' + district + ' / ' + city,
       ];
       if (address) lines.push('Adres/Not: ' + address);
       if (deadline) lines.push('Aciliyet: ' + deadline);

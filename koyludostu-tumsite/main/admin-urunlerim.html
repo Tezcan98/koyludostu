@@ -127,8 +127,8 @@
         </select>
       </div>
       <div class="prod-field">
-        <label>Şehir</label>
-        <input type="text" id="fCity" placeholder="Örn. Manisa" maxlength="40">
+        <label>İl</label>
+        <select id="fCity"><option value="">Yükleniyor…</option></select>
       </div>
     </div>
     <div class="prod-row" id="catAttrsWrap"></div>
@@ -226,10 +226,12 @@
 </div>
 
 <script src="assets/auth.js"></script>
+<script src="assets/address.js"></script>
 <script>
 (function () {
   if (!window.KDAuth.requireSeller('/admin-urunlerim.html')) return;
   document.getElementById('sellerName').textContent = '· ' + window.KDAuth.name();
+  window.KDAddress.fillIlSelect(document.getElementById('fCity'));
 
   var photoDataUrl = '';
   var editingSlug = null;

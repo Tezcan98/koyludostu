@@ -18,11 +18,12 @@
   .auth-wrap p.sub{font-size:13px;color:var(--muted);text-align:center;margin:0 0 24px;}
   .auth-field{margin-bottom:14px;}
   .auth-field label{font-size:12px;font-weight:700;color:var(--muted);display:block;margin-bottom:6px;}
-  .auth-field input{
+  .auth-field input, .auth-field select{
     width:100%;padding:13px 14px;border-radius:12px;border:1.5px solid var(--line);
     font-family:inherit;font-size:16px;background:var(--card);letter-spacing:.02em;
   }
-  .auth-field input:focus{outline:none;border-color:var(--ring1);}
+  .auth-field input:focus, .auth-field select:focus{outline:none;border-color:var(--ring1);}
+  .auth-field select:disabled{opacity:.6;}
   .code-inputs{display:flex;gap:10px;justify-content:center;margin-bottom:6px;}
   .code-inputs input{
     width:52px;height:60px;text-align:center;font-size:24px;font-weight:800;
@@ -94,12 +95,12 @@
       <input type="text" id="nameInput" autocomplete="name">
     </div>
     <div class="auth-field">
-      <label for="cityInput">Şehir</label>
-      <input type="text" id="cityInput" autocomplete="address-level1">
+      <label for="cityInput">İl</label>
+      <select id="cityInput" autocomplete="address-level1"><option value="">Yükleniyor…</option></select>
     </div>
     <div class="auth-field">
       <label for="districtInput">İlçe</label>
-      <input type="text" id="districtInput" autocomplete="address-level2">
+      <select id="districtInput" autocomplete="address-level2" disabled><option value="">Önce il seç</option></select>
     </div>
     <div class="auth-field">
       <label for="neighborhoodInput">Mahalle <span style="font-weight:400;color:var(--muted);">(opsiyonel)</span></label>
@@ -199,8 +200,11 @@
   </div>
 </div>
 
+<script src="assets/address.js"></script>
 <script>
 (function () {
+  window.KDAddress.bindCascade(document.getElementById('cityInput'), document.getElementById('districtInput'));
+
   var tabLoginBtn = document.getElementById('tabLoginBtn');
   var tabRegisterBtn = document.getElementById('tabRegisterBtn');
   var tabLogin = document.getElementById('tabLogin');

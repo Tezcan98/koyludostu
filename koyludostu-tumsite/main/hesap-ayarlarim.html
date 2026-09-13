@@ -16,11 +16,11 @@
   .acc-card h2{font-size:13.5px;font-weight:800;margin:0 0 14px;}
   .acc-field{margin-bottom:12px;}
   .acc-field label{font-size:12px;font-weight:700;color:var(--muted);display:block;margin-bottom:6px;}
-  .acc-field input{
+  .acc-field input, .acc-field select{
     width:100%;padding:11px 13px;border-radius:10px;border:1.5px solid var(--line);
     font-family:inherit;font-size:14px;background:var(--bg);
   }
-  .acc-field input:disabled{color:var(--muted);}
+  .acc-field input:disabled, .acc-field select:disabled{color:var(--muted);}
   .acc-btn{
     padding:11px 20px;border-radius:12px;background:var(--ink);color:#fff;border:none;
     font-size:13.5px;font-weight:700;cursor:pointer;
@@ -85,8 +85,8 @@
     <h2>Profil Bilgileri <span class="acc-role-badge" id="roleBadge"></span></h2>
     <div class="acc-field"><label>Telefon</label><input type="text" id="phoneField" disabled></div>
     <div class="acc-field"><label>Ad Soyad</label><input type="text" id="nameField"></div>
-    <div class="acc-field"><label>Şehir</label><input type="text" id="cityField"></div>
-    <div class="acc-field"><label>İlçe</label><input type="text" id="districtField"></div>
+    <div class="acc-field"><label>İl</label><select id="cityField"><option value="">Yükleniyor…</option></select></div>
+    <div class="acc-field"><label>İlçe</label><select id="districtField" disabled><option value="">Önce il seç</option></select></div>
     <div class="acc-field"><label>Mahalle (opsiyonel)</label><input type="text" id="neighborhoodField"></div>
     <div class="acc-field"><label>E-posta (bildirimler için)</label><input type="email" id="emailField" placeholder="ornek@eposta.com"></div>
     <button class="acc-btn" id="saveProfileBtn">Kaydet</button>
@@ -123,6 +123,7 @@
 </div>
 
 <script src="assets/auth.js"></script>
+<script src="assets/address.js"></script>
 <script>
 (function () {
   if (!window.KDAuth.requireLogin('/hesap-ayarlarim.html')) return;
@@ -170,8 +171,7 @@
 
   window.KDAuth.authedFetch('/api/auth/me').then(function (r) { return r.json(); }).then(function (data) {
     if (!data.user) return;
-    document.getElementById('cityField').value = data.user.city || '';
-    document.getElementById('districtField').value = data.user.district || '';
+    window.KDAddress.bindCascade(document.getElementById('cityField'), document.getElementById('districtField'), data.user.city, data.user.district);
     document.getElementById('neighborhoodField').value = data.user.neighborhood || '';
     document.getElementById('emailField').value = data.user.email || '';
     var prefs = data.user.notifyPrefs || {};

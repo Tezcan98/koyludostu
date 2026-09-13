@@ -289,6 +289,7 @@ ${relatedHtml}</div><footer class="site-footer">
 
 <script src="../assets/auth.js"></script>
 <script src="../assets/messages.js"></script>
+<script src="../assets/address.js"></script>
 <script src="../assets/order.js"></script>
 <script src="../assets/reviews.js"></script>
 <script src="../assets/favorites.js"></script>
