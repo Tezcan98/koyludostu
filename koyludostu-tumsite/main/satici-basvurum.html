@@ -53,8 +53,8 @@
   </div>
 
   <div class="info-card" id="docCard">
-    <h2>Destekleyici Belge (opsiyonel)</h2>
-    <p style="margin-bottom:10px;">Vergi levhası ya da çiftçi kayıt belgesi gibi bir belge eklemek başvurunun daha hızlı onaylanmasına yardımcı olur.</p>
+    <h2 id="docCardTitle">Destekleyici Belge (opsiyonel)</h2>
+    <p id="docCardDesc" style="margin-bottom:10px;">Vergi levhası ya da çiftçi kayıt belgesi gibi bir belge eklemek başvurunun daha hızlı onaylanmasına yardımcı olur.</p>
     <div class="doc-field">
       <input type="file" id="docInput" accept="image/png,image/jpeg,image/webp,application/pdf">
     </div>
@@ -206,6 +206,12 @@
     localStorage.setItem('kd_auth_seller_status', status);
     var card = document.getElementById('statusCard');
     document.getElementById('businessInfoText').textContent = user.businessInfo || '—';
+
+    if (user.sellerType === 'sirket') {
+      document.getElementById('docCardTitle').textContent = 'Vergi Levhası (zorunlu)';
+      document.getElementById('docCardDesc').textContent = 'Şirket/vergi mükellefi olarak başvurduğun için vergi levhanı yüklemen gerekir — bu belge kişisel kimlik belgesi yerine geçer, başvurun onaylanmadan önce mutlaka yükle.';
+      document.getElementById('idDocCard').style.display = 'none';
+    }
 
     if (user.idDocUrl) {
       document.getElementById('idDocCard').querySelector('p').textContent = '✅ Kimlik belgeni zaten yükledin.';

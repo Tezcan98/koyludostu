@@ -349,14 +349,24 @@
       var verifiedBadge = s.verifiedSeller ? '<span class="own-badge" style="background:rgba(78,107,58,.12);color:#4e6b3a;">✅ Rozetli</span>' : '';
       var badgeBtn = '<button class="own-approve-btn" data-seller-badge="' + (!s.verifiedSeller) + '" data-phone="' + s.phone + '">' +
         (s.verifiedSeller ? 'Rozeti Kaldır' : 'Rozet Ver') + '</button>';
+      var isCompany = s.sellerType === 'sirket';
+      var typeBadge = '<span class="own-badge">' + (isCompany ? '🏢 Şirket' : '👤 Bireysel') + '</span>';
+      var missingDocWarning = (isCompany && !s.sellerDocUrl && !s.idDocUrl)
+        ? '<span class="own-badge" style="background:rgba(200,60,60,.12);color:#8e3b46;">⚠️ Vergi levhası eksik</span>' : '';
+      // OCR ile belgeden okunan numara, satıcının beyan ettiği TC/VN ile uyuşmuyorsa
+      // (yazım hatası ya da başkasının belgesinin yüklenmiş olabileceğine dair bir
+      // işaret) — kimliği kesin doğrulamaz, sadece admin'e görsel karşılaştırma imkânı verir.
+      var ocrMismatchWarning = (s.idDocOcrTaxId && s.taxId && s.idDocOcrTaxId !== s.taxId)
+        ? '<span class="own-badge" title="Beyan: ' + s.taxId + ' · Belgeden okunan: ' + s.idDocOcrTaxId + '" style="background:rgba(200,60,60,.12);color:#8e3b46;">⚠️ Beyan/Belge Uyuşmazlığı</span>' : '';
       return '<div class="own-row">' +
         '<div class="own-body"><div class="own-title">' + s.name + '</div><div class="own-sub">' + s.phone + ' · ' + s.city +
         (s.taxId ? ' · TC/VN: ' + s.taxId : '') + (s.iban ? ' · ' + s.iban : '') +
         (s.businessInfo ? ' · ' + s.businessInfo.replace(/[<>]/g, '') : '') + '</div></div>' +
+        typeBadge +
         '<span class="own-badge">' + s.productCount + ' ürün</span>' +
         '<span class="own-badge">' + s.convoCount + ' sohbet</span>' +
         '<span class="own-badge" style="' + (s.openComplaints ? 'background:#f4e3c8;color:#8a5a10;' : '') + '">' + s.openComplaints + ' açık şikayet</span>' +
-        statusBadge + verifiedBadge + docLink + idDocLink + badgeBtn + decideBtns +
+        statusBadge + verifiedBadge + missingDocWarning + ocrMismatchWarning + docLink + idDocLink + badgeBtn + decideBtns +
       '</div>';
     }
   }

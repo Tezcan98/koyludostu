@@ -700,9 +700,12 @@ function isValidPassword(pw) {
   return typeof pw === 'string' && pw.length >= 8 && /[a-zA-Z]/.test(pw) && /[0-9]/.test(pw);
 }
 
-function isValidTaxId(id) {
+const VALID_SELLER_TYPES = ['bireysel', 'sirket'];
+// Bireysel satıcı: T.C. Kimlik No (11 hane). Şirket: Vergi Numarası (10 hane).
+function isValidTaxIdForType(id, sellerType) {
   const digits = String(id || '').trim();
-  return /^\d{10,11}$/.test(digits);
+  if (sellerType === 'sirket') return /^\d{10}$/.test(digits);
+  return /^\d{11}$/.test(digits);
 }
 
 // Türkiye IBAN'ı: TR + 24 hane (toplam 26 karakter). Gerçek IBAN checksum
@@ -1253,7 +1256,7 @@ const server = http.createServer(async (req, res) => {
     // ---------- Auth: önce üyelik bilgileri (ad+şehir+parola), sonra telefon SMS onayı ----------
 
     if (p === '/api/auth/register-start' && req.method === 'POST') {
-      const { name, city, district, neighborhood, password, role, termsAccepted, businessInfo, taxId, iban, idDocDataUrl, idDocConsent } = await readBody(req);
+      const { name, city, district, neighborhood, password, role, termsAccepted, businessInfo, taxId, iban, idDocDataUrl, idDocConsent, sellerType, idDocOcrTaxId } = await readBody(req);
       const cleanName = String(name || '').trim().slice(0, 60);
       const cleanCity = String(city || '').trim().slice(0, 60);
       const cleanDistrict = String(district || '').trim().slice(0, 60);
@@ -1269,37 +1272,57 @@ const server = http.createServer(async (req, res) => {
       const cleanBusinessInfo = String(businessInfo || '').trim().slice(0, 500);
       const cleanTaxId = String(taxId || '').trim();
       const cleanIban = normalizeIban(iban);
+      // Bireysel üretici (T.C. Kimlik No) mı, şirket/vergi mükellefi (Vergi No) mı —
+      // belirtilmemişse geriye dönük uyumluluk için bireysel kabul edilir.
+      const cleanSellerType = VALID_SELLER_TYPES.includes(sellerType) ? sellerType : 'bireysel';
       if (role === 'satici' && cleanBusinessInfo.length < 10) {
         return jsonResponse(res, 400, { error: 'Satıcı başvurusu için ne/nasıl üretim yaptığını en az birkaç cümleyle anlat.' });
       }
-      if (role === 'satici' && !isValidTaxId(cleanTaxId)) {
-        return jsonResponse(res, 400, { error: 'Geçerli bir T.C. Kimlik No (11 hane) veya Vergi Numarası (10 hane) gir.' });
+      if (role === 'satici' && !isValidTaxIdForType(cleanTaxId, cleanSellerType)) {
+        return jsonResponse(res, 400, {
+          error: cleanSellerType === 'sirket'
+            ? 'Geçerli bir Vergi Numarası gir (10 hane).'
+            : 'Geçerli bir T.C. Kimlik No gir (11 hane).',
+        });
       }
       if (role === 'satici' && !isValidIban(cleanIban)) {
         return jsonResponse(res, 400, { error: 'Geçerli bir IBAN gir (TR ile başlayan 26 karakter).' });
       }
 
-      // Kimlik belgesi tamamen opsiyoneldir (satıcı başvurusunu hızlandırmak için
-      // önerilir, zorunlu değil) — ama verilmişse KVKK kapsamında ayrı ve açık bir
-      // rıza şart. Genel "Kullanım Şartları" onayı bunun yerine geçmez.
+      // Kimlik/vergi levhası belgesi bireysel satıcı için opsiyoneldir (başvuruyu
+      // hızlandırmak için önerilir) — ama şirket/vergi mükellefi için vergi levhası
+      // olmadan kişisel kimlik yeterli sayılmaz, bu yüzden zorunludur. Belge
+      // verilmişse KVKK kapsamında ayrı ve açık bir rıza şart; genel "Kullanım
+      // Şartları" onayı bunun yerine geçmez.
       const cleanIdDocDataUrl = String(idDocDataUrl || '').trim();
+      if (role === 'satici' && cleanSellerType === 'sirket' && !cleanIdDocDataUrl) {
+        return jsonResponse(res, 400, { error: 'Şirket/vergi mükellefi olarak başvurmak için vergi levhanı yükle.' });
+      }
       if (cleanIdDocDataUrl) {
         if (!idDocConsent) {
-          return jsonResponse(res, 400, { error: 'Kimlik belgeni yüklemek için ayrıca açık rıza vermelisin (ya da belgeyi kaldırıp devam et).' });
+          return jsonResponse(res, 400, { error: 'Belgeni yüklemek için ayrıca açık rıza vermelisin (ya da belgeyi kaldırıp devam et).' });
         }
         if (!/^data:(image\/(?:png|jpe?g|webp)|application\/pdf);base64,/.test(cleanIdDocDataUrl)) {
-          return jsonResponse(res, 400, { error: 'Geçersiz kimlik belgesi. PNG, JPEG, WEBP ya da PDF yükle.' });
+          return jsonResponse(res, 400, { error: 'Geçersiz belge. PNG, JPEG, WEBP ya da PDF yükle.' });
         }
       }
+
+      // Tarayıcı-içi OCR ile belgeden okunan T.C. Kimlik/Vergi No (varsa) — kimliğin
+      // gerçekten doğrulanması değil, admin'e "yazılan" ile "belgeden okunan" numarayı
+      // yan yana gösterip başkasının belgesinin yüklenmesi ihtimaline karşı bir
+      // çapraz kontrol imkânı sağlar. Sadece bilgi amaçlıdır, formatı uymuyorsa yok sayılır.
+      const cleanOcrTaxId = /^\d{10,11}$/.test(String(idDocOcrTaxId || '').trim()) ? String(idDocOcrTaxId).trim() : '';
 
       const regToken = randomToken();
       pendingRegs.set(regToken, {
         name: cleanName, city: cleanCity, district: cleanDistrict, neighborhood: cleanNeighborhood,
         passwordHash: hashPassword(pass), role,
         businessInfo: cleanBusinessInfo, taxId: role === 'satici' ? cleanTaxId : '',
+        sellerType: role === 'satici' ? cleanSellerType : '',
         iban: role === 'satici' ? cleanIban : '',
         idDocDataUrl: role === 'satici' ? cleanIdDocDataUrl : '',
         idDocConsent: role === 'satici' ? !!idDocConsent : false,
+        idDocOcrTaxId: role === 'satici' ? cleanOcrTaxId : '',
         termsAcceptedAt: new Date().toISOString(), at: Date.now(),
       });
       return jsonResponse(res, 200, { regToken });
@@ -1357,10 +1380,14 @@ const server = http.createServer(async (req, res) => {
         ...(pendingReg.role === 'satici'
           ? {
               sellerStatus: 'pending', businessInfo: pendingReg.businessInfo || '', taxId: pendingReg.taxId || '', iban: pendingReg.iban || '',
+              sellerType: pendingReg.sellerType || 'bireysel',
               sellerDocUrl: null, verifiedSeller: false,
               // Kimlik belgesi: KVKK md.5 kapsamında açık rıza ile işlenir, sadece
               // satıcı doğrulama amaçlıdır, sadece admin görebilir (bkz. owner-admin.html).
               idDocUrl, idDocConsentAt,
+              // Admin'in yazılan T.C./Vergi No ile belgeden OCR ile okunan numarayı
+              // karşılaştırabilmesi için (bkz. isValidTaxIdForType çağrısındaki not).
+              idDocOcrTaxId: pendingReg.idDocOcrTaxId || '',
             }
           : {}),
       };
@@ -1414,11 +1441,16 @@ const server = http.createServer(async (req, res) => {
       const cleanBusinessInfo = String(body.businessInfo || '').trim().slice(0, 500);
       const cleanTaxId = String(body.taxId || '').trim();
       const cleanIban = normalizeIban(body.iban);
+      const cleanSellerType = VALID_SELLER_TYPES.includes(body.sellerType) ? body.sellerType : 'bireysel';
       if (cleanBusinessInfo.length < 10) {
         return jsonResponse(res, 400, { error: 'Ne/nasıl üretim yaptığını en az birkaç cümleyle anlat.' });
       }
-      if (!isValidTaxId(cleanTaxId)) {
-        return jsonResponse(res, 400, { error: 'Geçerli bir T.C. Kimlik No (11 hane) veya Vergi Numarası (10 hane) gir.' });
+      if (!isValidTaxIdForType(cleanTaxId, cleanSellerType)) {
+        return jsonResponse(res, 400, {
+          error: cleanSellerType === 'sirket'
+            ? 'Geçerli bir Vergi Numarası gir (10 hane).'
+            : 'Geçerli bir T.C. Kimlik No gir (11 hane).',
+        });
       }
       if (!isValidIban(cleanIban)) {
         return jsonResponse(res, 400, { error: 'Geçerli bir IBAN gir (TR ile başlayan 26 karakter).' });
@@ -1429,6 +1461,7 @@ const server = http.createServer(async (req, res) => {
       user.sellerStatus = 'pending';
       user.businessInfo = cleanBusinessInfo;
       user.taxId = cleanTaxId;
+      user.sellerType = cleanSellerType;
       user.iban = cleanIban;
       user.sellerDocUrl = user.sellerDocUrl || null;
       user.verifiedSeller = false;

@@ -1568,7 +1568,6 @@ describe('Kimlik belgesi (opsiyonel, KVKK açık rıza gerekli)', () => {
     }).then((r) => r.json());
     assert.ok(ver.user.idDocUrl);
     assert.ok(ver.user.idDocConsentAt);
-    uploadedFiles.push(ver.user.idDocUrl);
   });
 
   test('kaydolduktan sonra da kimlik belgesi rıza olmadan eklenemez', async () => {
@@ -1592,5 +1591,82 @@ describe('Kimlik belgesi (opsiyonel, KVKK açık rıza gerekli)', () => {
   test('kimlik belgesi olmadan kayıt normal şekilde çalışmaya devam eder', async () => {
     const buyer = await newBuyer('İdDocsuz Test');
     assert.equal(buyer.user.idDocUrl, undefined);
+  });
+});
+
+describe('Şirket/Bireysel satıcı türü', () => {
+  test('bireysel satıcı 11 haneli TC Kimlik No, şirket satıcı 10 haneli Vergi No ister', async () => {
+    const base = {
+      name: 'Tip Test', city: 'Test Şehir', district: 'Test İlçe', password: 'test1234',
+      role: 'satici', termsAccepted: true,
+      businessInfo: 'Bahçemden zeytin ve zeytinyağı üretip satıyorum, on yıldır bu işteyim.',
+      iban: 'TR330006100519786457841326',
+    };
+
+    const bireyselTooShort = await fetch(url('/api/auth/register-start'), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...base, sellerType: 'bireysel', taxId: '1234567890' }),
+    });
+    assert.equal(bireyselTooShort.status, 400);
+
+    const bireyselOk = await fetch(url('/api/auth/register-start'), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...base, sellerType: 'bireysel', taxId: '12345678901' }),
+    });
+    assert.equal(bireyselOk.status, 200);
+
+    const sirketElevenDigits = await fetch(url('/api/auth/register-start'), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...base, sellerType: 'sirket', taxId: '12345678901', idDocDataUrl: TINY_PNG_DATA_URL, idDocConsent: true }),
+    });
+    assert.equal(sirketElevenDigits.status, 400);
+
+    const sirketOk = await fetch(url('/api/auth/register-start'), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...base, sellerType: 'sirket', taxId: '1234567890', idDocDataUrl: TINY_PNG_DATA_URL, idDocConsent: true }),
+    });
+    assert.equal(sirketOk.status, 200);
+  });
+
+  test('şirket satıcı vergi levhası yüklemeden kayıt olamaz', async () => {
+    const base = {
+      name: 'Belgesiz Şirket', city: 'Test Şehir', district: 'Test İlçe', password: 'test1234',
+      role: 'satici', termsAccepted: true, sellerType: 'sirket',
+      businessInfo: 'Şirket olarak sebze meyve üretip satıyoruz.',
+      taxId: '1234567890', iban: 'TR330006100519786457841326',
+    };
+    const noDoc = await fetch(url('/api/auth/register-start'), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(base),
+    });
+    assert.equal(noDoc.status, 400);
+  });
+
+  test('satıcı türü belirtilmezse bireysel kabul edilir (geriye dönük uyum)', async () => {
+    const seller = await newSeller('Tip Belirtilmemis');
+    assert.equal(seller.user.sellerType, 'bireysel');
+  });
+
+  test('OCR ile okunan numara beyan edilenle uyuşmuyorsa admin karşılaştırması için saklanır', async () => {
+    const phone = nextTestPhone();
+    const base = {
+      name: 'OCR Test', city: 'Test Şehir', district: 'Test İlçe', password: 'test1234',
+      role: 'satici', termsAccepted: true, sellerType: 'bireysel',
+      businessInfo: 'Bahçemden zeytin ve zeytinyağı üretip satıyorum, on yıldır bu işteyim.',
+      taxId: '12345678901', iban: 'TR330006100519786457841326',
+      idDocDataUrl: TINY_PNG_DATA_URL, idDocConsent: true, idDocOcrTaxId: '99999999999',
+    };
+    const reg = await fetch(url('/api/auth/register-start'), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(base),
+    }).then((r) => r.json());
+    await fetch(url('/api/auth/request-code'), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone }),
+    });
+    const ver = await fetch(url('/api/auth/verify'), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone, code: '0000', regToken: reg.regToken }),
+    }).then((r) => r.json());
+    assert.equal(ver.user.idDocOcrTaxId, '99999999999');
+    assert.notEqual(ver.user.idDocOcrTaxId, ver.user.taxId);
   });
 });

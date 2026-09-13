@@ -117,7 +117,7 @@
     </div>
     <div class="auth-field">
       <label>Hesap Türü</label>
-      <div class="role-row">
+      <div class="role-row" id="roleRow">
         <div class="role-opt selected" data-role="alici">
           <div class="role-icon">🛒</div>
           <div class="role-label">Müşteri</div>
@@ -131,9 +131,23 @@
       </div>
     </div>
     <div class="auth-field" id="businessInfoWrap" hidden>
-      <label for="taxIdInput">T.C. Kimlik No veya Vergi Numarası</label>
+      <label>Satıcı Türü</label>
+      <div class="role-row" id="sellerTypeRow">
+        <div class="role-opt selected" data-seller-type="bireysel">
+          <div class="role-icon">👤</div>
+          <div class="role-label">Bireysel</div>
+          <div class="role-desc">Kendi adıma satarım</div>
+        </div>
+        <div class="role-opt" data-seller-type="sirket">
+          <div class="role-icon">🏢</div>
+          <div class="role-label">Şirket</div>
+          <div class="role-desc">Vergi mükellefiyim</div>
+        </div>
+      </div>
+      <label for="taxIdInput" id="taxIdLabel" style="margin-top:14px;display:block;">T.C. Kimlik No</label>
       <input type="text" id="taxIdInput" inputmode="numeric" maxlength="11" autocomplete="off">
-      <p style="font-size:11.5px;color:var(--muted);margin:6px 0 14px;">Bireysel üreticiysen T.C. Kimlik No (11 hane), vergi mükellefiysen Vergi Numarası (10 hane) gir.</p>
+      <p id="taxIdHint" style="font-size:11.5px;color:var(--muted);margin:6px 0 14px;">T.C. Kimlik No'nu gir (11 hane).</p>
+      <p id="taxIdMismatchWarning" style="display:none;font-size:11.5px;color:#b23b3b;margin:-8px 0 14px;">⚠️ Girdiğin numara, belgeden okunan numarayla uyuşmuyor. Kontrol et.</p>
       <label for="businessInfoInput">Ne / Nasıl Üretim Yapıyorsun?</label>
       <textarea id="businessInfoInput" rows="3" style="width:100%;padding:13px 14px;border-radius:12px;border:1.5px solid var(--line);font-family:inherit;font-size:14px;background:var(--card);resize:vertical;"></textarea>
       <p style="font-size:11.5px;color:var(--muted);margin:6px 0 14px;">Satıcı başvurun admin onayından geçtikten sonra ürün ekleyebilirsin.</p>
@@ -141,20 +155,20 @@
       <input type="text" id="ibanInput" placeholder="TR__ ____ ____ ____ ____ ____ __" autocomplete="off">
       <p style="font-size:11.5px;color:var(--muted);margin:6px 0 14px;">Alıcılar siparişin karşılığını doğrudan bu hesaba gönderir. Platform ödemeye aracılık etmez.</p>
 
-      <label for="idDocInput">Kimlik Belgesi (opsiyonel)</label>
+      <label for="idDocInput" id="idDocLabel">Kimlik Belgesi (opsiyonel)</label>
       <input type="file" id="idDocInput" accept="image/png,image/jpeg,image/webp">
-      <p style="font-size:11.5px;color:var(--muted);margin:6px 0 8px;">Ön yüzünü yüklersen başvurun daha hızlı onaylanır. Yüklemek zorunda değilsin.</p>
+      <p id="idDocHint" style="font-size:11.5px;color:var(--muted);margin:6px 0 8px;">Ön yüzünü yüklersen başvurun daha hızlı onaylanır. Yüklemek zorunda değilsin.</p>
       <img id="idDocPreview" alt="" style="display:none;max-width:220px;border-radius:10px;margin-bottom:8px;">
-      <button type="button" id="idDocOcrBtn" style="display:none;padding:9px 16px;border-radius:9px;background:var(--bg);border:1.5px solid var(--line);font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;">🔍 Kimlikten Bilgileri Okumayı Dene (deneysel)</button>
+      <button type="button" id="idDocOcrBtn" style="display:none;padding:9px 16px;border-radius:9px;background:var(--bg);border:1.5px solid var(--line);font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;">🔍 Belgeden Bilgileri Okumayı Dene (deneysel)</button>
       <p id="idDocOcrStatus" style="font-size:11.5px;color:var(--muted);margin:6px 0 0;"></p>
       <div id="idDocOcrResult" style="display:none;margin-top:8px;">
         <label style="font-size:11.5px;">Okunan metin (doğruluğu garanti edilmez, kontrol et)</label>
         <textarea id="idDocOcrText" readonly rows="3" style="width:100%;padding:9px 11px;border-radius:9px;border:1.5px solid var(--line);font-family:inherit;font-size:12px;background:var(--bg);resize:vertical;"></textarea>
-        <button type="button" id="idDocFillTaxIdBtn" style="margin-top:6px;padding:7px 14px;border-radius:8px;background:var(--ink);color:#fff;border:none;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">T.C. Kimlik No'yu Bul ve Doldur</button>
+        <button type="button" id="idDocFillTaxIdBtn" style="margin-top:6px;padding:7px 14px;border-radius:8px;background:var(--ink);color:#fff;border:none;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Numarayı Bul ve Doldur</button>
       </div>
       <label class="order-terms-row" id="idDocConsentRow" style="display:none;">
         <input type="checkbox" id="idDocConsentCheck">
-        <span>Kimlik belgemin, satıcı hesabımı doğrulamak amacıyla işlenmesine ve saklanmasına (bkz. <a href="/kvkk.html" target="_blank">KVKK Aydınlatma Metni</a>) açık rıza veriyorum.</span>
+        <span id="idDocConsentText">Kimlik belgemin, satıcı hesabımı doğrulamak amacıyla işlenmesine ve saklanmasına (bkz. <a href="/kvkk.html" target="_blank">KVKK Aydınlatma Metni</a>) açık rıza veriyorum.</span>
       </label>
     </div>
     <div class="terms-row">
@@ -368,8 +382,13 @@
     }).then(function (result) {
       btn.disabled = false;
       statusEl.textContent = 'Bitti — sonucu kontrol et, bu sadece bir tahmindir.';
-      document.getElementById('idDocOcrText').value = (result.data && result.data.text || '').trim();
+      var text = (result.data && result.data.text || '').trim();
+      document.getElementById('idDocOcrText').value = text;
       document.getElementById('idDocOcrResult').style.display = 'block';
+      var digitCount = selectedSellerType === 'sirket' ? 10 : 11;
+      var found = text.match(new RegExp('\\b\\d{' + digitCount + '}\\b'));
+      idDocOcrTaxId = found ? found[0] : '';
+      checkTaxIdOcrMismatch();
     }).catch(function (err) {
       btn.disabled = false;
       statusEl.textContent = 'Okunamadı (' + (err && err.message || 'bilinmeyen hata') + '). Bilgileri elle girebilirsin.';
@@ -378,26 +397,79 @@
 
   document.getElementById('idDocFillTaxIdBtn').addEventListener('click', function () {
     var text = document.getElementById('idDocOcrText').value;
-    var m = text.match(/\b\d{11}\b/);
+    var digitCount = selectedSellerType === 'sirket' ? 10 : 11;
+    var m = text.match(new RegExp('\\b\\d{' + digitCount + '}\\b'));
     var statusEl = document.getElementById('idDocOcrStatus');
     if (m) {
       document.getElementById('taxIdInput').value = m[0];
-      statusEl.textContent = 'T.C. Kimlik No dolduruldu, lütfen doğruluğunu kontrol et.';
+      statusEl.textContent = 'Numara dolduruldu, lütfen doğruluğunu kontrol et.';
+      checkTaxIdOcrMismatch();
     } else {
-      statusEl.textContent = '11 haneli bir numara bulunamadı, elle girmen gerekebilir.';
+      statusEl.textContent = digitCount + ' haneli bir numara bulunamadı, elle girmen gerekebilir.';
     }
   });
 
   // ---- Üye Ol adım 1: ad + şehir + parola + rol ----
   var businessInfoWrap = document.getElementById('businessInfoWrap');
-  document.querySelectorAll('.role-opt').forEach(function (el) {
+  document.querySelectorAll('#roleRow .role-opt').forEach(function (el) {
     el.addEventListener('click', function () {
-      document.querySelectorAll('.role-opt').forEach(function (o) { o.classList.remove('selected'); });
+      document.querySelectorAll('#roleRow .role-opt').forEach(function (o) { o.classList.remove('selected'); });
       el.classList.add('selected');
       selectedRole = el.dataset.role;
       businessInfoWrap.hidden = selectedRole !== 'satici';
     });
   });
+
+  // ---- Satıcı türü: bireysel (T.C. Kimlik No) ya da şirket (Vergi No) ----
+  var selectedSellerType = 'bireysel';
+  var taxIdLabel = document.getElementById('taxIdLabel');
+  var taxIdHint = document.getElementById('taxIdHint');
+  var taxIdInput = document.getElementById('taxIdInput');
+  var idDocLabel = document.getElementById('idDocLabel');
+  var idDocHint = document.getElementById('idDocHint');
+  var idDocConsentText = document.getElementById('idDocConsentText');
+  function applySellerTypeLabels() {
+    if (selectedSellerType === 'sirket') {
+      taxIdLabel.textContent = 'Vergi Numarası';
+      taxIdHint.textContent = 'Vergi Numarası\'nı gir (10 hane).';
+      taxIdInput.maxLength = 10;
+      idDocLabel.textContent = 'Vergi Levhası (zorunlu)';
+      idDocHint.textContent = 'Şirket/vergi mükellefi olarak başvurmak için vergi levhanı yükle — kişisel kimlik belgesi yerine geçer.';
+      idDocConsentText.textContent = "Vergi levhamın, satıcı hesabımı doğrulamak amacıyla işlenmesine ve saklanmasına (bkz. KVKK Aydınlatma Metni) açık rıza veriyorum.";
+    } else {
+      taxIdLabel.textContent = 'T.C. Kimlik No';
+      taxIdHint.textContent = "T.C. Kimlik No'nu gir (11 hane).";
+      taxIdInput.maxLength = 11;
+      idDocLabel.textContent = 'Kimlik Belgesi (opsiyonel)';
+      idDocHint.textContent = 'Ön yüzünü yüklersen başvurun daha hızlı onaylanır. Yüklemek zorunda değilsin.';
+      idDocConsentText.textContent = 'Kimlik belgemin, satıcı hesabımı doğrulamak amacıyla işlenmesine ve saklanmasına (bkz. KVKK Aydınlatma Metni) açık rıza veriyorum.';
+    }
+  }
+  document.querySelectorAll('#sellerTypeRow .role-opt').forEach(function (el) {
+    el.addEventListener('click', function () {
+      document.querySelectorAll('#sellerTypeRow .role-opt').forEach(function (o) { o.classList.remove('selected'); });
+      el.classList.add('selected');
+      selectedSellerType = el.dataset.sellerType;
+      applySellerTypeLabels();
+      checkTaxIdOcrMismatch();
+    });
+  });
+
+  // Belgeden OCR ile okunan T.C./Vergi No'yu yazılanla karşılaştırır — kimliği
+  // gerçekten doğrulamaz (öyle bir ücretsiz devlet servisi artık yok), ama
+  // başkasının belgesinin yanlışlıkla ya da kasıtlı yüklenmesi ihtimaline karşı
+  // görünür bir uyarı ve admin'e karşılaştırma imkânı sağlar.
+  var idDocOcrTaxId = '';
+  function checkTaxIdOcrMismatch() {
+    var warn = document.getElementById('taxIdMismatchWarning');
+    var typed = taxIdInput.value.trim();
+    if (idDocOcrTaxId && typed && idDocOcrTaxId !== typed) {
+      warn.style.display = 'block';
+    } else {
+      warn.style.display = 'none';
+    }
+  }
+  taxIdInput.addEventListener('input', checkTaxIdOcrMismatch);
 
   document.getElementById('infoNextBtn').addEventListener('click', function () {
     infoError.textContent = '';
@@ -419,15 +491,21 @@
     if (selectedRole === 'satici' && businessInfo.length < 10) {
       infoError.textContent = 'Ne/nasıl üretim yaptığını en az birkaç cümleyle anlat.'; return;
     }
-    if (selectedRole === 'satici' && !/^\d{10,11}$/.test(taxId)) {
-      infoError.textContent = 'Geçerli bir T.C. Kimlik No (11 hane) veya Vergi Numarası (10 hane) gir.'; return;
+    var taxIdDigitCount = selectedSellerType === 'sirket' ? 10 : 11;
+    if (selectedRole === 'satici' && !new RegExp('^\\d{' + taxIdDigitCount + '}$').test(taxId)) {
+      infoError.textContent = selectedSellerType === 'sirket'
+        ? 'Geçerli bir Vergi Numarası gir (10 hane).'
+        : "Geçerli bir T.C. Kimlik No gir (11 hane)."; return;
     }
     if (selectedRole === 'satici' && !/^TR\d{24}$/.test(iban)) {
       infoError.textContent = 'Geçerli bir IBAN gir (TR ile başlayan 26 karakter).'; return;
     }
+    if (selectedRole === 'satici' && selectedSellerType === 'sirket' && !idDocDataUrl) {
+      infoError.textContent = 'Şirket/vergi mükellefi olarak başvurmak için vergi levhanı yükle.'; return;
+    }
     var idDocConsent = document.getElementById('idDocConsentCheck').checked;
     if (selectedRole === 'satici' && idDocDataUrl && !idDocConsent) {
-      infoError.textContent = 'Kimlik belgeni yüklemek için ayrıca açık rıza vermelisin (ya da dosyayı kaldırıp boş bırak).'; return;
+      infoError.textContent = 'Belgeni yüklemek için ayrıca açık rıza vermelisin (ya da dosyayı kaldırıp boş bırak).'; return;
     }
     if (!document.getElementById('termsCheck').checked) { infoError.textContent = 'Devam etmek için şartnameyi kabul etmelisin.'; return; }
     fetch('/api/auth/register-start', {
@@ -435,7 +513,9 @@
       body: JSON.stringify({
         name: name, city: city, district: district, neighborhood: neighborhood,
         password: pass, role: selectedRole, termsAccepted: true, businessInfo: businessInfo, taxId: taxId, iban: iban,
+        sellerType: selectedRole === 'satici' ? selectedSellerType : '',
         idDocDataUrl: selectedRole === 'satici' ? idDocDataUrl : '', idDocConsent: idDocConsent,
+        idDocOcrTaxId: selectedRole === 'satici' ? idDocOcrTaxId : '',
       }),
     }).then(function (r) { return r.json(); }).then(function (data) {
       if (data.error) { infoError.textContent = data.error; return; }
