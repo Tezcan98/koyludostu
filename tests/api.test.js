@@ -588,6 +588,60 @@ describe('Satıcı başvurusu ve onay süreci', () => {
     assert.equal(r.status, 400);
   });
 
+  test('zayıf parolayla kayıt reddedilir (en az 8 karakter, harf+rakam şart)', async () => {
+    const base = { name: 'Test İsim', city: 'Test Şehir', district: 'Test İlçe', role: 'alici', termsAccepted: true };
+    const tooShort = await fetch(url('/api/auth/register-start'), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...base, password: 'ab12345' }),
+    });
+    assert.equal(tooShort.status, 400);
+
+    const onlyLetters = await fetch(url('/api/auth/register-start'), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...base, password: 'abcdefgh' }),
+    });
+    assert.equal(onlyLetters.status, 400);
+
+    const onlyDigits = await fetch(url('/api/auth/register-start'), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...base, password: '12345678' }),
+    });
+    assert.equal(onlyDigits.status, 400);
+
+    const ok = await fetch(url('/api/auth/register-start'), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...base, password: 'abcd1234' }),
+    });
+    assert.equal(ok.status, 200);
+  });
+
+  test('satıcı kaydında T.C. Kimlik/Vergi No zorunlu ve formatı doğrulanır', async () => {
+    const phone = nextTestPhone();
+    const base = {
+      name: 'TaxId Test', city: 'Test Şehir', district: 'Test İlçe', password: 'test1234',
+      role: 'satici', termsAccepted: true,
+      businessInfo: 'Bahçemden zeytin ve zeytinyağı üretip satıyorum, on yıldır bu işteyim.',
+    };
+    const missing = await fetch(url('/api/auth/register-start'), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(base),
+    });
+    assert.equal(missing.status, 400);
+
+    const tooShort = await fetch(url('/api/auth/register-start'), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...base, taxId: '123' }),
+    });
+    assert.equal(tooShort.status, 400);
+
+    const reg = await registerUser(server.baseUrl, {
+      name: base.name, city: base.city, district: base.district, password: base.password,
+      role: 'satici', phone, businessInfo: base.businessInfo, taxId: '12345678901',
+    });
+    assert.equal(reg.user.sellerStatus, 'pending');
+    assert.equal(reg.user.taxId, '12345678901');
+  });
+
   test('onaylanmamış satıcı ürün ekleyemez, onaylanınca ekleyebilir', async () => {
     const phone = nextTestPhone();
     const reg = await registerUser(server.baseUrl, {
@@ -1164,7 +1218,7 @@ describe('Var olan alıcı hesabının kendi isteğiyle satıcıya geçmesi', ()
 
     const r = await fetch(url('/api/auth/apply-seller'), {
       method: 'POST', headers: authHeaders(buyer.token),
-      body: JSON.stringify({ businessInfo: 'Kendi bahçemde zeytin ve zeytinyağı üretiyorum.' }),
+      body: JSON.stringify({ businessInfo: 'Kendi bahçemde zeytin ve zeytinyağı üretiyorum.', taxId: '12345678901' }),
     });
     const data = await r.json();
     assert.equal(r.status, 200);

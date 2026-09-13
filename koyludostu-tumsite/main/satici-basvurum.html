@@ -113,10 +113,16 @@
       card.innerHTML = '<div class="status-icon">✕</div><h1>Başvurun Reddedildi</h1>' +
         '<p>Daha fazla bilgi için bize ulaşabilir ya da belge ekleyip tekrar değerlendirilmesini isteyebilirsin.</p>' +
         '<span class="status-badge rejected">REDDEDİLDİ</span>';
+      document.getElementById('goBtn').textContent = '← Ana Sayfaya Dön';
+      document.getElementById('goBtn').href = '/index.html';
+      document.getElementById('goBtn').style.display = 'block';
     } else {
       card.innerHTML = '<div class="status-icon">⏳</div><h1>Başvurun İnceleniyor</h1>' +
-        '<p>Admin ekibimiz en kısa sürede başvurunu değerlendirecek. Onaylanınca buradan ve (tercih ettiysen) SMS/e-posta ile haber alırsın.</p>' +
+        '<p>Admin ekibimiz en kısa sürede başvurunu değerlendirecek. Onaylanınca buradan ve (tercih ettiysen) SMS/e-posta ile haber alırsın. Bu sırada alıcı olarak siteyi kullanmaya devam edebilirsin.</p>' +
         '<span class="status-badge pending">İNCELENİYOR</span>';
+      document.getElementById('goBtn').textContent = '← Ana Sayfaya Dön';
+      document.getElementById('goBtn').href = '/index.html';
+      document.getElementById('goBtn').style.display = 'block';
     }
   }
 

@@ -681,6 +681,15 @@ function randomToken() {
   return [...Array(32)].map(() => Math.floor(Math.random() * 36).toString(36)).join('');
 }
 
+function isValidPassword(pw) {
+  return typeof pw === 'string' && pw.length >= 8 && /[a-zA-Z]/.test(pw) && /[0-9]/.test(pw);
+}
+
+function isValidTaxId(id) {
+  const digits = String(id || '').trim();
+  return /^\d{10,11}$/.test(digits);
+}
+
 function hashPassword(password) {
   const salt = crypto.randomBytes(16).toString('hex');
   const hash = crypto.scryptSync(password, salt, 64).toString('hex');
@@ -1085,7 +1094,7 @@ const server = http.createServer(async (req, res) => {
     // ---------- Auth: önce üyelik bilgileri (ad+şehir+parola), sonra telefon SMS onayı ----------
 
     if (p === '/api/auth/register-start' && req.method === 'POST') {
-      const { name, city, district, neighborhood, password, role, termsAccepted, businessInfo } = await readBody(req);
+      const { name, city, district, neighborhood, password, role, termsAccepted, businessInfo, taxId } = await readBody(req);
       const cleanName = String(name || '').trim().slice(0, 60);
       const cleanCity = String(city || '').trim().slice(0, 60);
       const cleanDistrict = String(district || '').trim().slice(0, 60);
@@ -1094,20 +1103,24 @@ const server = http.createServer(async (req, res) => {
       if (cleanName.length < 2) return jsonResponse(res, 400, { error: 'Lütfen adını gir.' });
       if (cleanCity.length < 2) return jsonResponse(res, 400, { error: 'Lütfen şehrini gir.' });
       if (cleanDistrict.length < 2) return jsonResponse(res, 400, { error: 'Lütfen ilçeni gir.' });
-      if (pass.length < 4) return jsonResponse(res, 400, { error: 'Parola en az 4 karakter olmalı.' });
+      if (!isValidPassword(pass)) return jsonResponse(res, 400, { error: 'Parola en az 8 karakter olmalı, en az bir harf ve bir rakam içermeli.' });
       if (!VALID_ROLES.includes(role)) return jsonResponse(res, 400, { error: 'Hesap türünü seç.' });
       if (!termsAccepted) return jsonResponse(res, 400, { error: 'Devam etmek için şartnameyi kabul etmelisin.' });
 
       const cleanBusinessInfo = String(businessInfo || '').trim().slice(0, 500);
+      const cleanTaxId = String(taxId || '').trim();
       if (role === 'satici' && cleanBusinessInfo.length < 10) {
         return jsonResponse(res, 400, { error: 'Satıcı başvurusu için ne/nasıl üretim yaptığını en az birkaç cümleyle anlat.' });
+      }
+      if (role === 'satici' && !isValidTaxId(cleanTaxId)) {
+        return jsonResponse(res, 400, { error: 'Geçerli bir T.C. Kimlik No (11 hane) veya Vergi Numarası (10 hane) gir.' });
       }
 
       const regToken = randomToken();
       pendingRegs.set(regToken, {
         name: cleanName, city: cleanCity, district: cleanDistrict, neighborhood: cleanNeighborhood,
         passwordHash: hashPassword(pass), role,
-        businessInfo: cleanBusinessInfo,
+        businessInfo: cleanBusinessInfo, taxId: role === 'satici' ? cleanTaxId : '',
         termsAcceptedAt: new Date().toISOString(), at: Date.now(),
       });
       return jsonResponse(res, 200, { regToken });
@@ -1150,7 +1163,7 @@ const server = http.createServer(async (req, res) => {
         createdAt: new Date().toISOString(),
         // Satıcı hesapları admin onayından geçmeden ürün ekleyemez (bkz. requireApprovedSeller).
         ...(pendingReg.role === 'satici'
-          ? { sellerStatus: 'pending', businessInfo: pendingReg.businessInfo || '', sellerDocUrl: null, verifiedSeller: false }
+          ? { sellerStatus: 'pending', businessInfo: pendingReg.businessInfo || '', taxId: pendingReg.taxId || '', sellerDocUrl: null, verifiedSeller: false }
           : {}),
       };
       writeJson(USERS_PATH, users);
@@ -1201,14 +1214,19 @@ const server = http.createServer(async (req, res) => {
       }
       const body = await readBody(req);
       const cleanBusinessInfo = String(body.businessInfo || '').trim().slice(0, 500);
+      const cleanTaxId = String(body.taxId || '').trim();
       if (cleanBusinessInfo.length < 10) {
         return jsonResponse(res, 400, { error: 'Ne/nasıl üretim yaptığını en az birkaç cümleyle anlat.' });
+      }
+      if (!isValidTaxId(cleanTaxId)) {
+        return jsonResponse(res, 400, { error: 'Geçerli bir T.C. Kimlik No (11 hane) veya Vergi Numarası (10 hane) gir.' });
       }
       const users = readJson(USERS_PATH, {});
       const user = users[session.phone];
       user.role = 'satici';
       user.sellerStatus = 'pending';
       user.businessInfo = cleanBusinessInfo;
+      user.taxId = cleanTaxId;
       user.sellerDocUrl = user.sellerDocUrl || null;
       user.verifiedSeller = false;
       writeJson(USERS_PATH, users);
@@ -1522,7 +1540,7 @@ const server = http.createServer(async (req, res) => {
         return jsonResponse(res, 401, { error: 'Mevcut parola hatalı.' });
       }
       const next = String(newPassword || '');
-      if (next.length < 4) return jsonResponse(res, 400, { error: 'Yeni parola en az 4 karakter olmalı.' });
+      if (!isValidPassword(next)) return jsonResponse(res, 400, { error: 'Yeni parola en az 8 karakter olmalı, en az bir harf ve bir rakam içermeli.' });
       user.passwordHash = hashPassword(next);
       writeJson(USERS_PATH, users);
       return jsonResponse(res, 200, { ok: true });

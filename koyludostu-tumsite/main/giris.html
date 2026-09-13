@@ -78,7 +78,7 @@
     </div>
     <div class="auth-field">
       <label for="loginPassword">Parola</label>
-      <input type="password" id="loginPassword" placeholder="Parolan" autocomplete="current-password">
+      <input type="password" id="loginPassword" autocomplete="current-password">
     </div>
     <button class="auth-btn" id="loginBtn">Giriş Yap</button>
     <p class="auth-error" id="loginError"></p>
@@ -91,27 +91,28 @@
     <p class="sub">Önce birkaç bilgi alalım, telefon doğrulaması son adımda.</p>
     <div class="auth-field">
       <label for="nameInput">Ad Soyad</label>
-      <input type="text" id="nameInput" placeholder="Adın Soyadın" autocomplete="name">
+      <input type="text" id="nameInput" autocomplete="name">
     </div>
     <div class="auth-field">
       <label for="cityInput">Şehir</label>
-      <input type="text" id="cityInput" placeholder="Örn. Manisa" autocomplete="address-level1">
+      <input type="text" id="cityInput" autocomplete="address-level1">
     </div>
     <div class="auth-field">
       <label for="districtInput">İlçe</label>
-      <input type="text" id="districtInput" placeholder="Örn. Alaşehir" autocomplete="address-level2">
+      <input type="text" id="districtInput" autocomplete="address-level2">
     </div>
     <div class="auth-field">
       <label for="neighborhoodInput">Mahalle <span style="font-weight:400;color:var(--muted);">(opsiyonel)</span></label>
-      <input type="text" id="neighborhoodInput" placeholder="Örn. Cumhuriyet Mah." autocomplete="address-level3">
+      <input type="text" id="neighborhoodInput" autocomplete="address-level3">
     </div>
     <div class="auth-field">
       <label for="passInput">Parola</label>
-      <input type="password" id="passInput" placeholder="En az 4 karakter" autocomplete="new-password">
+      <input type="password" id="passInput" autocomplete="new-password">
+      <p style="font-size:11.5px;color:var(--muted);margin:6px 0 0;">En az 8 karakter, en az bir harf ve bir rakam içermeli.</p>
     </div>
     <div class="auth-field">
       <label for="passInput2">Parola (Tekrar)</label>
-      <input type="password" id="passInput2" placeholder="Parolanı tekrar gir" autocomplete="new-password">
+      <input type="password" id="passInput2" autocomplete="new-password">
     </div>
     <div class="auth-field">
       <label>Hesap Türü</label>
@@ -129,8 +130,11 @@
       </div>
     </div>
     <div class="auth-field" id="businessInfoWrap" hidden>
+      <label for="taxIdInput">T.C. Kimlik No veya Vergi Numarası</label>
+      <input type="text" id="taxIdInput" inputmode="numeric" maxlength="11" autocomplete="off">
+      <p style="font-size:11.5px;color:var(--muted);margin:6px 0 14px;">Bireysel üreticiysen T.C. Kimlik No (11 hane), vergi mükellefiysen Vergi Numarası (10 hane) gir.</p>
       <label for="businessInfoInput">Ne / Nasıl Üretim Yapıyorsun?</label>
-      <textarea id="businessInfoInput" rows="3" placeholder="Örn. Manisa'da 5 yıldır zeytin ve zeytinyağı üreticisiyim, kendi bahçemden…" style="width:100%;padding:13px 14px;border-radius:12px;border:1.5px solid var(--line);font-family:inherit;font-size:14px;background:var(--card);resize:vertical;"></textarea>
+      <textarea id="businessInfoInput" rows="3" style="width:100%;padding:13px 14px;border-radius:12px;border:1.5px solid var(--line);font-family:inherit;font-size:14px;background:var(--card);resize:vertical;"></textarea>
       <p style="font-size:11.5px;color:var(--muted);margin:6px 0 0;">Satıcı başvurun admin onayından geçtikten sonra ürün ekleyebilirsin.</p>
     </div>
     <div class="terms-row">
@@ -302,18 +306,23 @@
     if (name.length < 2) { infoError.textContent = 'Lütfen adını ve soyadını gir.'; return; }
     if (city.length < 2) { infoError.textContent = 'Lütfen şehrini gir.'; return; }
     if (district.length < 2) { infoError.textContent = 'Lütfen ilçeni gir.'; return; }
-    if (pass.length < 4) { infoError.textContent = 'Parola en az 4 karakter olmalı.'; return; }
+    var passOk = pass.length >= 8 && /[a-zA-Z]/.test(pass) && /[0-9]/.test(pass);
+    if (!passOk) { infoError.textContent = 'Parola en az 8 karakter olmalı, en az bir harf ve bir rakam içermeli.'; return; }
     if (pass !== pass2) { infoError.textContent = 'Parolalar eşleşmiyor.'; return; }
     var businessInfo = document.getElementById('businessInfoInput').value.trim();
+    var taxId = document.getElementById('taxIdInput').value.trim();
     if (selectedRole === 'satici' && businessInfo.length < 10) {
       infoError.textContent = 'Ne/nasıl üretim yaptığını en az birkaç cümleyle anlat.'; return;
+    }
+    if (selectedRole === 'satici' && !/^\d{10,11}$/.test(taxId)) {
+      infoError.textContent = 'Geçerli bir T.C. Kimlik No (11 hane) veya Vergi Numarası (10 hane) gir.'; return;
     }
     if (!document.getElementById('termsCheck').checked) { infoError.textContent = 'Devam etmek için şartnameyi kabul etmelisin.'; return; }
     fetch('/api/auth/register-start', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         name: name, city: city, district: district, neighborhood: neighborhood,
-        password: pass, role: selectedRole, termsAccepted: true, businessInfo: businessInfo,
+        password: pass, role: selectedRole, termsAccepted: true, businessInfo: businessInfo, taxId: taxId,
       }),
     }).then(function (r) { return r.json(); }).then(function (data) {
       if (data.error) { infoError.textContent = data.error; return; }
