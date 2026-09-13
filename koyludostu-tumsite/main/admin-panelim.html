@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Yorumlarım — Köylü Dostu Yönetim</title>
+<title>Panelim — Köylü Dostu Yönetim</title>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/style.css">
 <style>
@@ -11,22 +11,33 @@
   .adm-wrap{max-width:640px;margin:0 auto;padding:24px 16px 60px;}
   .adm-wrap h1{font-size:20px;font-weight:800;margin:6px 0 4px;}
   .adm-wrap p.lead{font-size:12.5px;color:var(--muted);margin:0 0 18px;}
-  .adm-wrap p.lead a{color:var(--ring1);font-weight:700;}
-  .rev-item{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:10px;}
-  .rev-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px;}
-  .rev-product{font-size:12.5px;font-weight:700;color:var(--ring1);}
-  .rev-stars{font-size:13px;color:var(--ring2);letter-spacing:1px;}
-  .rev-name{font-size:12px;color:var(--muted);margin-bottom:6px;}
-  .rev-text{font-size:13.5px;line-height:1.5;}
-  .rev-time{font-size:11px;color:var(--muted);margin-top:6px;}
-  .rev-status{font-size:10px;font-weight:800;padding:2px 8px;border-radius:8px;margin-left:6px;}
-  .rev-status.pending{background:rgba(192,138,46,.15);color:var(--ring2);}
-  .rev-reply-box{margin-top:10px;padding:10px 12px;background:var(--bg);border-radius:9px;font-size:12.5px;line-height:1.5;}
-  .rev-reply-box b{color:var(--ink);}
-  .rev-reply-form{display:flex;gap:8px;margin-top:10px;}
-  .rev-reply-form input{flex:1;padding:9px 11px;border-radius:9px;border:1px solid var(--line);font-family:inherit;font-size:12.5px;background:var(--bg);}
-  .rev-reply-form button{background:var(--ink);color:#fff;border:none;padding:0 14px;border-radius:9px;font-size:12.5px;font-weight:700;cursor:pointer;}
-  .adm-empty{padding:40px;text-align:center;color:var(--muted);font-size:13px;}
+  .stat-grid{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;}
+  .stat-tile{flex:1;min-width:120px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;text-align:center;}
+  .stat-tile b{display:block;font-size:24px;font-weight:800;color:var(--ring1);}
+  .stat-tile span{font-size:11.5px;color:var(--muted);}
+  .stat-tile.warn b{color:var(--ring3);}
+  .sub-title{font-size:14px;font-weight:800;margin:24px 0 12px;}
+  .status-bars{display:flex;flex-direction:column;gap:8px;margin-bottom:20px;}
+  .status-bar-row{display:flex;align-items:center;gap:10px;}
+  .status-bar-label{font-size:12px;color:var(--muted);width:100px;flex-shrink:0;}
+  .status-bar-track{flex:1;height:8px;background:var(--bg);border-radius:6px;overflow:hidden;}
+  .status-bar-fill{height:100%;border-radius:6px;}
+  .status-bar-fill.requested{background:#c08a2e;}
+  .status-bar-fill.confirmed{background:#2e6ec0;}
+  .status-bar-fill.rejected{background:var(--ring3);}
+  .status-bar-fill.completed{background:var(--ring1);}
+  .status-bar-count{font-size:12px;font-weight:700;width:24px;text-align:right;flex-shrink:0;}
+  .recent-item{display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);font-size:12.5px;}
+  .recent-item:last-child{border-bottom:none;}
+  .recent-item .r-title{font-weight:700;}
+  .recent-item .r-sub{color:var(--muted);font-size:11.5px;margin-top:2px;}
+  .adm-empty{padding:30px;text-align:center;color:var(--muted);font-size:13px;}
+  .see-all{display:block;text-align:center;font-size:12.5px;color:var(--ring1);font-weight:700;margin-top:12px;}
+  .po-status-tag{font-size:10px;font-weight:800;padding:3px 9px;border-radius:10px;flex-shrink:0;white-space:nowrap;}
+  .po-status-tag.requested{background:rgba(192,138,46,.15);color:var(--ring2);}
+  .po-status-tag.confirmed{background:rgba(46,110,192,.12);color:#2e6ec0;}
+  .po-status-tag.rejected{background:rgba(200,60,60,.12);color:var(--ring3);}
+  .po-status-tag.completed{background:rgba(78,107,58,.12);color:var(--ring1);}
 </style>
 </head>
 <body>
@@ -57,12 +68,12 @@
   <nav class="drawer-nav">
     <a href="/index.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>Anasayfa</a>
     <div class="drawer-section-label">Satıcı Paneli</div>
-    <a href="/admin-panelim.html" data-page="panelim"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Panelim</a>
+    <a href="/admin-panelim.html" data-page="panelim" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Panelim</a>
     <a href="/admin-urunlerim.html" data-page="urunlerim"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>Ürünlerim</a>
     <a href="/admin-siparisler.html" data-page="siparisler"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h2l2.4 12.4a2 2 0 0 0 2 1.6h9.2a2 2 0 0 0 2-1.6L22 6H6"/><circle cx="9" cy="21" r="1"/><circle cx="18" cy="21" r="1"/></svg>Gelen Siparişler</a>
     <a href="/admin-kargo.html" data-page="kargo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="7" width="13" height="10" rx="1"/><path d="M14 10h4l3 3v4h-7z"/><circle cx="6" cy="19" r="1.5"/><circle cx="17" cy="19" r="1.5"/></svg>Kargo Takip</a>
     <a href="/admin-mesajlar.html" data-page="mesajlar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Mesaj Kutusu</a>
-    <a href="/admin-yorumlarim.html" data-page="yorumlarim" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>Yorumlarım</a>
+    <a href="/admin-yorumlarim.html" data-page="yorumlarim"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>Yorumlarım</a>
     <a href="/admin-ambalaj.html" data-page="ambalaj"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8v13H3V8"/><path d="M1 3h22v5H1z"/><path d="M10 12h4"/></svg>Ambalaj Satın Al</a>
     <a href="/admin-sikayetler.html" data-page="sikayetler"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 1 21h22z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>Şikayetler</a>
     <a href="/admin-postlar.html" data-page="postlar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>Postlarım</a>
@@ -77,74 +88,61 @@
   </nav>
 </div>
 <div class="adm-wrap">
-  <h1>Yorumlarım <span id="sellerName" style="font-weight:500;color:var(--muted);font-size:13px;"></span></h1>
-  <p class="lead">Ürünlerine yapılan tüm değerlendirmeler. 4-5 yıldızlılar doğrudan yayınlanır; düşük puanlılar admin onayından geçer. Onaylı yorumlara yanıt yazabilirsin.</p>
-  <div id="revList"><div class="adm-empty">Yükleniyor…</div></div>
+  <h1>Panelim <span id="sellerName" style="font-weight:500;color:var(--muted);font-size:13px;"></span></h1>
+  <p class="lead">İşletmenin Köylü Dostu'ndaki özeti.</p>
+  <div id="dashContent"><div class="adm-empty">Yükleniyor…</div></div>
 </div>
 
 <script src="assets/auth.js"></script>
 <script>
 (function () {
-  if (!window.KDAuth.requireApprovedSeller('/admin-yorumlarim.html')) return;
+  if (!window.KDAuth.requireApprovedSeller('/admin-panelim.html')) return;
   document.getElementById('sellerName').textContent = '· ' + window.KDAuth.name();
 
-  function starsHtml(n) {
-    var s = '';
-    for (var i = 1; i <= 5; i++) s += i <= n ? '★' : '☆';
-    return s;
-  }
+  var STATUS_LABELS = { requested: 'Talep Alındı', confirmed: 'Onaylandı', rejected: 'Reddedildi', completed: 'Tamamlandı' };
 
   function timeStr(iso) {
     var d = new Date(iso);
-    return d.toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    return d.toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit' });
   }
 
-  function load() {
-    window.KDAuth.authedFetch('/api/admin/reviews/mine').then(function (r) { return r.json(); }).then(function (data) {
-      var list = document.getElementById('revList');
-      var items = data.reviews || [];
-      if (!items.length) { list.innerHTML = '<div class="adm-empty">Ürünlerine henüz yorum yapılmamış.</div>'; return; }
-      list.innerHTML = items.map(function (r) {
-        var statusBadge = r.status === 'pending' ? '<span class="rev-status pending">ONAY BEKLİYOR</span>' : '';
-        var body;
-        if (r.sellerReply) {
-          body = '<div class="rev-reply-box"><b>Yanıtın:</b> ' + r.sellerReply.text.replace(/[<>]/g, '') + '</div>';
-        } else if (r.status === 'approved') {
-          body = '<div class="rev-reply-form"><input type="text" maxlength="500" placeholder="Bu yoruma yanıt yaz…" data-review="' + r.id + '" data-product="' + r.productSlug + '">' +
-            '<button data-reply-btn="' + r.id + '">Yanıtla</button></div>';
-        } else {
-          body = '';
-        }
-        return '<div class="rev-item">' +
-          '<div class="rev-top"><a class="rev-product" href="urun/' + r.productSlug + '.html">' + r.productTitle + '</a>' +
-          '<span class="rev-stars">' + starsHtml(r.rating) + '</span></div>' +
-          '<div class="rev-name">' + r.name.replace(/[<>]/g, '') + statusBadge + '</div>' +
-          '<div class="rev-text">' + r.text.replace(/[<>]/g, '') + '</div>' +
-          '<div class="rev-time">' + timeStr(r.createdAt) + '</div>' +
-          body +
-        '</div>';
+  window.KDAuth.authedFetch('/api/admin/dashboard').then(function (r) { return r.json(); }).then(function (d) {
+    var content = document.getElementById('dashContent');
+    var html = '<div class="stat-grid">' +
+      '<div class="stat-tile"><b>' + d.activeProductCount + '</b><span>Aktif Ürün (' + d.productCount + ' toplam)</span></div>' +
+      '<div class="stat-tile"><b>' + (d.avgRating !== null ? d.avgRating : '—') + '</b><span>Ortalama Puan (' + d.reviewCount + ' yorum)</span></div>' +
+      '<div class="stat-tile' + (d.openComplaints > 0 ? ' warn' : '') + '"><b>' + d.openComplaints + '</b><span>Açık Şikayet</span></div>' +
+    '</div>';
+
+    html += '<div class="sub-title">Sipariş Durumları (' + d.totalOrders + ' toplam)</div>';
+    html += '<div class="status-bars">' + Object.keys(STATUS_LABELS).map(function (key) {
+      var count = d.ordersByStatus[key] || 0;
+      var pct = d.totalOrders ? Math.round((count / d.totalOrders) * 100) : 0;
+      return '<div class="status-bar-row">' +
+        '<div class="status-bar-label">' + STATUS_LABELS[key] + '</div>' +
+        '<div class="status-bar-track"><div class="status-bar-fill ' + key + '" style="width:' + pct + '%"></div></div>' +
+        '<div class="status-bar-count">' + count + '</div>' +
+      '</div>';
+    }).join('') + '</div>';
+
+    html += '<div class="sub-title">Son Siparişler</div>';
+    if (!d.recentOrders.length) {
+      html += '<div class="adm-empty">Henüz sipariş talebi yok.</div>';
+    } else {
+      html += d.recentOrders.map(function (o) {
+        return '<div class="recent-item"><div><div class="r-title">' + o.productTitle + '</div>' +
+          '<div class="r-sub">' + o.buyerName + ' · ' + timeStr(o.createdAt) + '</div></div>' +
+          '<span class="po-status-tag ' + o.status + '" style="align-self:center;">' + STATUS_LABELS[o.status] + '</span></div>';
       }).join('');
+      html += '<a class="see-all" href="/admin-siparisler.html">Tüm siparişleri gör →</a>';
+    }
 
-      list.querySelectorAll('[data-reply-btn]').forEach(function (btn) {
-        btn.addEventListener('click', function () {
-          var id = btn.dataset.replyBtn;
-          var input = list.querySelector('input[data-review="' + id + '"]');
-          var text = input.value.trim();
-          if (!text) return;
-          btn.disabled = true;
-          window.KDAuth.authedFetch('/api/admin/reviews/reply', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ productSlug: input.dataset.product, reviewId: id, text: text }),
-          }).then(function (r) { return r.json(); }).then(function () { load(); }).catch(function () { btn.disabled = false; });
-        });
-      });
-    }).catch(function () {
-      document.getElementById('revList').innerHTML = '<div class="adm-empty">Yorumlar yüklenemedi.</div>';
-    });
-  }
-
-  load();
+    content.innerHTML = html;
+  }).catch(function () {
+    document.getElementById('dashContent').innerHTML = '<div class="adm-empty">Panel yüklenemedi.</div>';
+  });
 })();
 </script>
+<script>if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("/sw.js").catch(function(){});});}</script>
 </body>
 </html>

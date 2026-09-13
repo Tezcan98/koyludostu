@@ -107,8 +107,17 @@
     <p style="font-size:12.5px;color:var(--muted);margin:0 0 12px;">Kendi ürettiğin ürünleri satmak ister misin? Ne/nasıl üretim yaptığını birkaç cümleyle anlat, admin ekibimiz başvurunu incelesin.</p>
     <div class="acc-field"><label>T.C. Kimlik No veya Vergi Numarası</label><input type="text" id="sellerTaxId" inputmode="numeric" maxlength="11" style="width:100%;padding:11px 13px;border-radius:10px;border:1.5px solid var(--line);font-family:inherit;font-size:14px;background:var(--bg);"><p style="font-size:11.5px;color:var(--muted);margin:6px 0 0;">Bireysel üreticiysen T.C. Kimlik No (11 hane), vergi mükellefiysen Vergi Numarası (10 hane) gir.</p></div>
     <div class="acc-field" style="margin-top:12px;"><label>İşletme / Üretim Açıklaması</label><textarea id="sellerBusinessInfo" rows="3" style="width:100%;padding:11px 13px;border-radius:10px;border:1.5px solid var(--line);font-family:inherit;font-size:14px;background:var(--bg);resize:vertical;"></textarea></div>
+    <div class="acc-field" style="margin-top:12px;"><label>IBAN</label><input type="text" id="sellerIban" placeholder="TR__ ____ ____ ____ ____ ____ __" style="width:100%;padding:11px 13px;border-radius:10px;border:1.5px solid var(--line);font-family:inherit;font-size:14px;background:var(--bg);"><p style="font-size:11.5px;color:var(--muted);margin:6px 0 0;">Alıcılar siparişin karşılığını doğrudan bu hesaba gönderir.</p></div>
     <button class="acc-btn" id="applySellerBtn">Satıcı Başvurusu Yap</button>
     <p class="acc-msg" id="sellerMsg"></p>
+  </div>
+
+  <div class="acc-card" id="ibanCard" style="display:none;">
+    <h2>Ödeme Bilgileri</h2>
+    <div class="acc-field"><label>IBAN</label><input type="text" id="ibanField" placeholder="TR__ ____ ____ ____ ____ ____ __"></div>
+    <p style="font-size:11.5px;color:var(--muted);margin:0 0 12px;">Alıcılar siparişlerinin karşılığını doğrudan bu hesaba gönderir. Platform ödemeye aracılık etmez.</p>
+    <button class="acc-btn" id="saveIbanBtn">Kaydet</button>
+    <p class="acc-msg" id="ibanMsg"></p>
   </div>
 
   <div class="acc-card">
@@ -134,12 +143,39 @@
   document.getElementById('roleBadge').textContent = window.KDAuth.role() === 'satici' ? 'SATICI' : 'ALICI';
   if (window.KDAuth.role() !== 'satici') {
     document.getElementById('sellerCard').style.display = 'block';
+  } else {
+    document.getElementById('ibanCard').style.display = 'block';
   }
+
+  document.getElementById('saveIbanBtn').addEventListener('click', function () {
+    var msg = document.getElementById('ibanMsg');
+    var iban = document.getElementById('ibanField').value.replace(/\s+/g, '').toUpperCase();
+    msg.className = 'acc-msg';
+    if (!/^TR\d{24}$/.test(iban)) {
+      msg.className = 'acc-msg err'; msg.textContent = 'Geçerli bir IBAN gir (TR ile başlayan 26 karakter).'; return;
+    }
+    var btn = document.getElementById('saveIbanBtn');
+    btn.disabled = true;
+    window.KDAuth.authedFetch('/api/auth/update-profile', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: document.getElementById('nameField').value.trim(),
+        city: document.getElementById('cityField').value,
+        iban: iban,
+      }),
+    }).then(function (r) { return r.json(); }).then(function (data) {
+      btn.disabled = false;
+      if (data.error) { msg.className = 'acc-msg err'; msg.textContent = data.error; return; }
+      msg.className = 'acc-msg ok';
+      msg.textContent = 'Kaydedildi.';
+    }).catch(function () { btn.disabled = false; msg.className = 'acc-msg err'; msg.textContent = 'Bağlantı hatası, tekrar dene.'; });
+  });
 
   document.getElementById('applySellerBtn').addEventListener('click', function () {
     var msg = document.getElementById('sellerMsg');
     var businessInfo = document.getElementById('sellerBusinessInfo').value.trim();
     var taxId = document.getElementById('sellerTaxId').value.trim();
+    var iban = document.getElementById('sellerIban').value.replace(/\s+/g, '').toUpperCase();
     msg.className = 'acc-msg';
     if (businessInfo.length < 10) {
       msg.className = 'acc-msg err'; msg.textContent = 'Ne/nasıl üretim yaptığını en az birkaç cümleyle anlat.'; return;
@@ -147,12 +183,15 @@
     if (!/^\d{10,11}$/.test(taxId)) {
       msg.className = 'acc-msg err'; msg.textContent = 'Geçerli bir T.C. Kimlik No (11 hane) veya Vergi Numarası (10 hane) gir.'; return;
     }
+    if (!/^TR\d{24}$/.test(iban)) {
+      msg.className = 'acc-msg err'; msg.textContent = 'Geçerli bir IBAN gir (TR ile başlayan 26 karakter).'; return;
+    }
     var btn = document.getElementById('applySellerBtn');
     btn.disabled = true;
     msg.textContent = 'Gönderiliyor...';
     window.KDAuth.authedFetch('/api/auth/apply-seller', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ businessInfo: businessInfo, taxId: taxId }),
+      body: JSON.stringify({ businessInfo: businessInfo, taxId: taxId, iban: iban }),
     }).then(function (r) {
       if (!r.ok && r.status !== 400) throw new Error('http ' + r.status);
       return r.json();
@@ -176,6 +215,7 @@
     window.KDAddress.bindCascade(document.getElementById('cityField'), document.getElementById('districtField'), data.user.city, data.user.district);
     document.getElementById('neighborhoodField').value = data.user.neighborhood || '';
     document.getElementById('emailField').value = data.user.email || '';
+    if (document.getElementById('ibanField')) document.getElementById('ibanField').value = data.user.iban || '';
     var prefs = data.user.notifyPrefs || {};
     document.getElementById('notifySms').checked = !!prefs.sms;
     document.getElementById('notifyEmail').checked = !!prefs.email;

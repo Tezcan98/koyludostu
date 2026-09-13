@@ -1065,7 +1065,9 @@ describe('Bildirim sınıfları ve yönetici kontrolü', () => {
     assert.equal(r.settings.emailEnabled, true);
     const keys = r.channels.map((c) => c.key).sort();
     assert.deepEqual(keys, ['email', 'sms']);
-    assert.ok(r.channels.every((c) => c.configured === false));
+    const byKey = Object.fromEntries(r.channels.map((c) => [c.key, c.configured]));
+    assert.equal(byKey.sms, false);
+    assert.equal(byKey.email, true);
   });
 
   test('admin SMS kanalını global kapatınca kullanıcı tercihi açık olsa da SMS gitmez', async () => {
@@ -1218,7 +1220,7 @@ describe('Var olan alıcı hesabının kendi isteğiyle satıcıya geçmesi', ()
 
     const r = await fetch(url('/api/auth/apply-seller'), {
       method: 'POST', headers: authHeaders(buyer.token),
-      body: JSON.stringify({ businessInfo: 'Kendi bahçemde zeytin ve zeytinyağı üretiyorum.', taxId: '12345678901' }),
+      body: JSON.stringify({ businessInfo: 'Kendi bahçemde zeytin ve zeytinyağı üretiyorum.', taxId: '12345678901', iban: 'TR330006100519786457841326' }),
     });
     const data = await r.json();
     assert.equal(r.status, 200);
@@ -1399,5 +1401,65 @@ describe('Sipariş fotoğraf doğrulaması (opsiyonel): gönderim ve teslim alma
       body: JSON.stringify({ id: order.id, status: 'confirmed', proofPhotoUrl: 'https://evil.example/x.png' }),
     });
     assert.equal(bad.status, 400);
+  });
+});
+
+describe('Satıcı IBAN\'ı ve "ödemeyi gönderdim" öz-bildirimi', () => {
+  test('geçersiz IBAN ile satıcı kaydı reddedilir, geçerliyle kabul edilir', async () => {
+    const phone = nextTestPhone();
+    const base = {
+      name: 'IBAN Test', city: 'Test Şehir', district: 'Test İlçe', password: 'test1234',
+      role: 'satici', termsAccepted: true,
+      businessInfo: 'Bahçemden zeytin ve zeytinyağı üretip satıyorum, on yıldır bu işteyim.',
+      taxId: '12345678901',
+    };
+    const missing = await fetch(url('/api/auth/register-start'), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(base),
+    });
+    assert.equal(missing.status, 400);
+
+    const badFormat = await fetch(url('/api/auth/register-start'), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...base, iban: 'DE89370400440532013000' }),
+    });
+    assert.equal(badFormat.status, 400);
+
+    const reg = await registerUser(server.baseUrl, {
+      name: base.name, city: base.city, district: base.district, password: base.password,
+      role: 'satici', phone, businessInfo: base.businessInfo, taxId: base.taxId,
+      iban: 'tr33 0006 1005 1978 6457 8413 26',
+    });
+    assert.equal(reg.user.iban, 'TR330006100519786457841326');
+  });
+
+  test('alıcı, siparişinde satıcının güncel IBAN\'ını görür ve ödemeyi gönderdiğini işaretleyebilir', async () => {
+    const seller = await newSeller('IBAN Akış Satıcı');
+    const product = await createProduct(seller.token, { title: 'IBAN Akış Ürünü' });
+    const buyer = await newBuyer('IBAN Akış Alıcı');
+    const otherBuyer = await newBuyer('IBAN Akış Başka Alıcı');
+
+    const order = await fetch(url('/api/product-orders'), {
+      method: 'POST', headers: authHeaders(buyer.token),
+      body: JSON.stringify({ productSlug: product.slug, quantity: 1, city: 'Ankara', district: 'Çankaya' }),
+    }).then((r) => r.json());
+
+    const mineBefore = await fetch(url('/api/product-orders/mine'), { headers: authHeaders(buyer.token) }).then((r) => r.json());
+    assert.equal(mineBefore.orders[0].sellerIban, 'TR330006100519786457841326');
+    assert.equal(mineBefore.orders[0].paymentSentAt, null);
+
+    const wrongBuyer = await fetch(url('/api/product-orders/mark-payment-sent'), {
+      method: 'POST', headers: authHeaders(otherBuyer.token),
+      body: JSON.stringify({ id: order.id }),
+    });
+    assert.equal(wrongBuyer.status, 404);
+
+    const marked = await fetch(url('/api/product-orders/mark-payment-sent'), {
+      method: 'POST', headers: authHeaders(buyer.token),
+      body: JSON.stringify({ id: order.id }),
+    }).then((r) => r.json());
+    assert.ok(marked.paymentSentAt);
+
+    const incoming = await fetch(url('/api/admin/product-orders/mine'), { headers: authHeaders(seller.token) }).then((r) => r.json());
+    assert.ok(incoming.orders[0].paymentSentAt);
   });
 });

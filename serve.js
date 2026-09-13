@@ -2,6 +2,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const net = require('net');
 
 const PORT = process.env.PORT || 3010;
 const HOST = process.env.HOST || '0.0.0.0';
@@ -698,6 +699,16 @@ function isValidTaxId(id) {
   return /^\d{10,11}$/.test(digits);
 }
 
+// Türkiye IBAN'ı: TR + 24 hane (toplam 26 karakter). Gerçek IBAN checksum
+// doğrulaması yapmıyoruz, sadece format kontrolü — banka zaten geçersiz bir
+// IBAN'a transferi kabul etmeyecektir.
+function normalizeIban(iban) {
+  return String(iban || '').replace(/\s+/g, '').toUpperCase();
+}
+function isValidIban(iban) {
+  return /^TR\d{24}$/.test(normalizeIban(iban));
+}
+
 function hashPassword(password) {
   const salt = crypto.randomBytes(16).toString('hex');
   const hash = crypto.scryptSync(password, salt, 64).toString('hex');
@@ -809,6 +820,72 @@ function createSession(phone) {
 // Twilio, SendGrid, Postmark vb.) bağlanacağı zaman sadece ilgili sınıfın send() metodunun
 // içi değişir — notifyUser(), owner uçları ve tercih sistemi olduğu gibi kalır.
 
+// Sunucudaki yerel postfix'e (mynetworks: 127.0.0.1, kimlik doğrulama gerekmez)
+// ham SMTP ile bağlanıp mail gönderir — te-robotik.com.tr için SPF/DKIM zaten
+// yapılandırılı olduğundan postfix imzalayıp gönderiyor. Sadece o sunucuda
+// çalışır; yerel geliştirmede/testte 25. port kapalı olduğundan bağlantı
+// hemen reddedilir ve notifyUser bunu sessizce yutar (bkz. çağıran taraf).
+const SMTP_HOST = process.env.SMTP_HOST || '127.0.0.1';
+const SMTP_PORT = Number(process.env.SMTP_PORT) || 25;
+const MAIL_FROM = process.env.MAIL_FROM || 'koyludostu@te-robotik.com.tr';
+
+function sendMailViaLocalRelay({ to, subject, text }) {
+  return new Promise((resolve, reject) => {
+    const socket = net.createConnection({ host: SMTP_HOST, port: SMTP_PORT });
+    socket.setTimeout(8000);
+    let buf = '';
+    let resolveReply = null;
+
+    socket.on('data', (chunk) => {
+      buf += chunk.toString('utf8');
+      if (!buf.endsWith('\r\n')) return;
+      const lines = buf.trim().split('\r\n');
+      const last = lines[lines.length - 1];
+      if (/^\d{3} /.test(last)) {
+        const reply = buf;
+        buf = '';
+        if (resolveReply) { const r = resolveReply; resolveReply = null; r(reply); }
+      }
+    });
+    socket.on('timeout', () => { socket.destroy(); reject(new Error('SMTP zaman aşımı')); });
+    socket.on('error', reject);
+
+    function waitReply() {
+      return new Promise((res) => { resolveReply = res; });
+    }
+
+    async function run() {
+      await waitReply(); // 220 karşılama
+      socket.write('EHLO te-robotik.com.tr\r\n');
+      await waitReply();
+      socket.write(`MAIL FROM:<${MAIL_FROM}>\r\n`);
+      const mailResp = await waitReply();
+      if (!mailResp.startsWith('250')) throw new Error('MAIL FROM reddedildi: ' + mailResp);
+      socket.write(`RCPT TO:<${to}>\r\n`);
+      const rcptResp = await waitReply();
+      if (!rcptResp.startsWith('250')) throw new Error('RCPT TO reddedildi: ' + rcptResp);
+      socket.write('DATA\r\n');
+      const dataResp = await waitReply();
+      if (!dataResp.startsWith('354')) throw new Error('DATA reddedildi: ' + dataResp);
+      const escapedBody = text.split('\n').map((l) => (l.startsWith('.') ? '.' + l : l)).join('\r\n');
+      const message =
+        `From: Köylü Dostu <${MAIL_FROM}>\r\n` +
+        `To: <${to}>\r\n` +
+        `Subject: ${subject}\r\n` +
+        `MIME-Version: 1.0\r\n` +
+        `Content-Type: text/plain; charset=UTF-8\r\n` +
+        `\r\n${escapedBody}\r\n.\r\n`;
+      socket.write(message);
+      const sentResp = await waitReply();
+      if (!sentResp.startsWith('250')) throw new Error('Mesaj kabul edilmedi: ' + sentResp);
+      socket.write('QUIT\r\n');
+      socket.end();
+    }
+
+    run().then(() => resolve({ ok: true })).catch((err) => { socket.destroy(); reject(err); });
+  });
+}
+
 class NotificationChannel {
   constructor(key, label) {
     this.key = key;
@@ -838,11 +915,18 @@ class SmsChannel extends NotificationChannel {
 
 class EmailChannel extends NotificationChannel {
   constructor() { super('email', 'E-posta'); }
+  isConfigured() { return true; }
   formatTarget(user) { return user.email || null; }
   async send(target, message) {
-    // DEV: gerçek bir e-posta sağlayıcısı henüz bağlı değil, gönderim konsola simüle edilir.
-    console.log(`[EMAIL-DEV] ${target}: ${message}`);
-    return { ok: true, simulated: true };
+    try {
+      await sendMailViaLocalRelay({ to: target, subject: 'Köylü Dostu bildirimi', text: message });
+      return { ok: true };
+    } catch (e) {
+      // Yerel geliştirme/testte 25. port kapalı olacağından burası sık düşer —
+      // notifyUser çağıranı zaten hatayı yutuyor, sadece görünürlük için logluyoruz.
+      console.log(`[EMAIL-FAIL] ${target}: ${e.message}`);
+      throw e;
+    }
   }
 }
 
@@ -1102,7 +1186,7 @@ const server = http.createServer(async (req, res) => {
     // ---------- Auth: önce üyelik bilgileri (ad+şehir+parola), sonra telefon SMS onayı ----------
 
     if (p === '/api/auth/register-start' && req.method === 'POST') {
-      const { name, city, district, neighborhood, password, role, termsAccepted, businessInfo, taxId } = await readBody(req);
+      const { name, city, district, neighborhood, password, role, termsAccepted, businessInfo, taxId, iban } = await readBody(req);
       const cleanName = String(name || '').trim().slice(0, 60);
       const cleanCity = String(city || '').trim().slice(0, 60);
       const cleanDistrict = String(district || '').trim().slice(0, 60);
@@ -1117,11 +1201,15 @@ const server = http.createServer(async (req, res) => {
 
       const cleanBusinessInfo = String(businessInfo || '').trim().slice(0, 500);
       const cleanTaxId = String(taxId || '').trim();
+      const cleanIban = normalizeIban(iban);
       if (role === 'satici' && cleanBusinessInfo.length < 10) {
         return jsonResponse(res, 400, { error: 'Satıcı başvurusu için ne/nasıl üretim yaptığını en az birkaç cümleyle anlat.' });
       }
       if (role === 'satici' && !isValidTaxId(cleanTaxId)) {
         return jsonResponse(res, 400, { error: 'Geçerli bir T.C. Kimlik No (11 hane) veya Vergi Numarası (10 hane) gir.' });
+      }
+      if (role === 'satici' && !isValidIban(cleanIban)) {
+        return jsonResponse(res, 400, { error: 'Geçerli bir IBAN gir (TR ile başlayan 26 karakter).' });
       }
 
       const regToken = randomToken();
@@ -1129,6 +1217,7 @@ const server = http.createServer(async (req, res) => {
         name: cleanName, city: cleanCity, district: cleanDistrict, neighborhood: cleanNeighborhood,
         passwordHash: hashPassword(pass), role,
         businessInfo: cleanBusinessInfo, taxId: role === 'satici' ? cleanTaxId : '',
+        iban: role === 'satici' ? cleanIban : '',
         termsAcceptedAt: new Date().toISOString(), at: Date.now(),
       });
       return jsonResponse(res, 200, { regToken });
@@ -1171,7 +1260,7 @@ const server = http.createServer(async (req, res) => {
         createdAt: new Date().toISOString(),
         // Satıcı hesapları admin onayından geçmeden ürün ekleyemez (bkz. requireApprovedSeller).
         ...(pendingReg.role === 'satici'
-          ? { sellerStatus: 'pending', businessInfo: pendingReg.businessInfo || '', taxId: pendingReg.taxId || '', sellerDocUrl: null, verifiedSeller: false }
+          ? { sellerStatus: 'pending', businessInfo: pendingReg.businessInfo || '', taxId: pendingReg.taxId || '', iban: pendingReg.iban || '', sellerDocUrl: null, verifiedSeller: false }
           : {}),
       };
       writeJson(USERS_PATH, users);
@@ -1223,11 +1312,15 @@ const server = http.createServer(async (req, res) => {
       const body = await readBody(req);
       const cleanBusinessInfo = String(body.businessInfo || '').trim().slice(0, 500);
       const cleanTaxId = String(body.taxId || '').trim();
+      const cleanIban = normalizeIban(body.iban);
       if (cleanBusinessInfo.length < 10) {
         return jsonResponse(res, 400, { error: 'Ne/nasıl üretim yaptığını en az birkaç cümleyle anlat.' });
       }
       if (!isValidTaxId(cleanTaxId)) {
         return jsonResponse(res, 400, { error: 'Geçerli bir T.C. Kimlik No (11 hane) veya Vergi Numarası (10 hane) gir.' });
+      }
+      if (!isValidIban(cleanIban)) {
+        return jsonResponse(res, 400, { error: 'Geçerli bir IBAN gir (TR ile başlayan 26 karakter).' });
       }
       const users = readJson(USERS_PATH, {});
       const user = users[session.phone];
@@ -1235,6 +1328,7 @@ const server = http.createServer(async (req, res) => {
       user.sellerStatus = 'pending';
       user.businessInfo = cleanBusinessInfo;
       user.taxId = cleanTaxId;
+      user.iban = cleanIban;
       user.sellerDocUrl = user.sellerDocUrl || null;
       user.verifiedSeller = false;
       writeJson(USERS_PATH, users);
@@ -1330,6 +1424,9 @@ const server = http.createServer(async (req, res) => {
         // Fotoğraf doğrulaması opsiyoneldir — ne satıcı gönderirken ne alıcı teslim
         // alırken fotoğraf eklemek zorunda değildir, isteyen ekler.
         sellerProofPhotoUrl: null, buyerProofPhotoUrl: null, buyerConfirmedAt: null,
+        // Ödeme platform üzerinden geçmiyor (IBAN'a doğrudan havale) — bu sadece
+        // alıcının "gönderdim" dediği bir öz-bildirim, gerçek transferi doğrulamaz.
+        paymentSentAt: null,
       };
       writeJson(PRODUCT_ORDERS_PATH, orders);
       notifyUser(product.sellerPhone, 'new_product_order',
@@ -1343,7 +1440,13 @@ const server = http.createServer(async (req, res) => {
       const orders = readJson(PRODUCT_ORDERS_PATH, {});
       const mine = Object.values(orders)
         .filter((o) => o.buyerId === session.user.id)
-        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+        // Satıcının IBAN'ı siparişte sabit tutulmaz, her okumada güncel halinden
+        // katılır — satıcı sonradan değiştirirse alıcı hep güncelini görsün diye.
+        .map((o) => {
+          const found = findUserById(o.sellerId);
+          return { ...o, sellerIban: (found && found.user.iban) || null };
+        });
       return jsonResponse(res, 200, { orders: mine });
     }
 
@@ -1405,6 +1508,23 @@ const server = http.createServer(async (req, res) => {
       writeJson(PRODUCT_ORDERS_PATH, orders);
       notifyUser(order.sellerPhone, 'product_order_receipt_confirmed',
         `"${order.productTitle}" siparişini alıcı teslim aldığını onayladı.`);
+      return jsonResponse(res, 200, order);
+    }
+
+    // Alıcının "IBAN'a ödemeyi gönderdim" öz-bildirimi — platform ödemeyi işlemez,
+    // bu sadece satıcıya "artık kontrol edebilirsin" bildirimi göndermek içindir.
+    if (p === '/api/product-orders/mark-payment-sent' && req.method === 'POST') {
+      const session = requireAuth(req, res);
+      if (!session) return;
+      const { id } = await readBody(req);
+      const orders = readJson(PRODUCT_ORDERS_PATH, {});
+      const order = orders[id];
+      if (!order || order.buyerId !== session.user.id) return jsonResponse(res, 404, { error: 'Sipariş bulunamadı' });
+      order.paymentSentAt = new Date().toISOString();
+      order.updatedAt = order.paymentSentAt;
+      writeJson(PRODUCT_ORDERS_PATH, orders);
+      notifyUser(order.sellerPhone, 'product_order_payment_sent',
+        `"${order.productTitle}" siparişi için alıcı ödemeyi IBAN'a gönderdiğini bildirdi. Hesabını kontrol et.`);
       return jsonResponse(res, 200, order);
     }
 
@@ -1593,7 +1713,7 @@ const server = http.createServer(async (req, res) => {
     if (p === '/api/auth/update-profile' && req.method === 'POST') {
       const session = requireAuth(req, res);
       if (!session) return;
-      const { name, city, district, neighborhood, email } = await readBody(req);
+      const { name, city, district, neighborhood, email, iban } = await readBody(req);
       const cleanName = String(name || '').trim().slice(0, 60);
       const cleanCity = String(city || '').trim().slice(0, 60);
       if (cleanName.length < 2) return jsonResponse(res, 400, { error: 'Lütfen adını gir.' });
@@ -1607,6 +1727,9 @@ const server = http.createServer(async (req, res) => {
           return jsonResponse(res, 400, { error: 'Geçerli bir e-posta adresi gir.' });
         }
       }
+      if (iban !== undefined && normalizeIban(iban) && !isValidIban(iban)) {
+        return jsonResponse(res, 400, { error: 'Geçerli bir IBAN gir (TR ile başlayan 26 karakter).' });
+      }
       const users = readJson(USERS_PATH, {});
       const user = users[session.phone];
       if (!user) return jsonResponse(res, 404, { error: 'Hesap bulunamadı' });
@@ -1615,6 +1738,7 @@ const server = http.createServer(async (req, res) => {
       if (district !== undefined) user.district = String(district).trim().slice(0, 60);
       if (neighborhood !== undefined) user.neighborhood = String(neighborhood).trim().slice(0, 80);
       if (email !== undefined) user.email = String(email || '').trim().slice(0, 120);
+      if (iban !== undefined) user.iban = normalizeIban(iban);
       writeJson(USERS_PATH, users);
       const { passwordHash, ...safeUser } = user;
       return jsonResponse(res, 200, { user: safeUser });
@@ -1730,6 +1854,48 @@ const server = http.createServer(async (req, res) => {
       const products = readJson(PRODUCTS_PATH, {});
       const mine = Object.values(products).filter((prod) => prod.sellerId === session.user.id);
       return jsonResponse(res, 200, { products: mine });
+    }
+
+    // ---------- Satıcı özet paneli: ürün/sipariş/yorum/şikayet sayılarının tek bakışta özeti ----------
+
+    if (p === '/api/admin/dashboard' && req.method === 'GET') {
+      const session = requireRole(req, res, 'satici');
+      if (!session) return;
+      const products = readJson(PRODUCTS_PATH, {});
+      const myProducts = Object.values(products).filter((prod) => prod.sellerId === session.user.id);
+      const mySlugs = new Set(myProducts.map((p) => p.slug));
+
+      const reviewsStore = readJson(REVIEWS_PATH, {});
+      let ratingSum = 0, ratingCount = 0;
+      mySlugs.forEach((slug) => {
+        (reviewsStore[slug] || []).forEach((r) => {
+          if (r.status === 'pending' || r.status === 'rejected') return;
+          ratingSum += r.rating; ratingCount++;
+        });
+      });
+
+      const orders = readJson(PRODUCT_ORDERS_PATH, {});
+      const myOrders = Object.values(orders).filter((o) => o.sellerId === session.user.id);
+      const ordersByStatus = { requested: 0, confirmed: 0, rejected: 0, completed: 0 };
+      myOrders.forEach((o) => { if (ordersByStatus[o.status] !== undefined) ordersByStatus[o.status]++; });
+      const recentOrders = myOrders
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+        .slice(0, 5)
+        .map((o) => ({ id: o.id, productTitle: o.productTitle, buyerName: o.buyerName, status: o.status, createdAt: o.createdAt }));
+
+      const complaints = readJson(COMPLAINTS_PATH, {});
+      const openComplaints = Object.values(complaints).filter((c) => c.sellerId === session.user.id && c.status !== 'resolved').length;
+
+      return jsonResponse(res, 200, {
+        productCount: myProducts.length,
+        activeProductCount: myProducts.filter((p) => p.active !== false).length,
+        avgRating: ratingCount ? Math.round((ratingSum / ratingCount) * 10) / 10 : null,
+        reviewCount: ratingCount,
+        ordersByStatus,
+        totalOrders: myOrders.length,
+        openComplaints,
+        recentOrders,
+      });
     }
 
     // ---------- Satıcı: kendi ürünlerine yapılan yorumları görüntüleme ----------

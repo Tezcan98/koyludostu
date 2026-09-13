@@ -136,7 +136,10 @@
       <p style="font-size:11.5px;color:var(--muted);margin:6px 0 14px;">Bireysel üreticiysen T.C. Kimlik No (11 hane), vergi mükellefiysen Vergi Numarası (10 hane) gir.</p>
       <label for="businessInfoInput">Ne / Nasıl Üretim Yapıyorsun?</label>
       <textarea id="businessInfoInput" rows="3" style="width:100%;padding:13px 14px;border-radius:12px;border:1.5px solid var(--line);font-family:inherit;font-size:14px;background:var(--card);resize:vertical;"></textarea>
-      <p style="font-size:11.5px;color:var(--muted);margin:6px 0 0;">Satıcı başvurun admin onayından geçtikten sonra ürün ekleyebilirsin.</p>
+      <p style="font-size:11.5px;color:var(--muted);margin:6px 0 14px;">Satıcı başvurun admin onayından geçtikten sonra ürün ekleyebilirsin.</p>
+      <label for="ibanInput">IBAN</label>
+      <input type="text" id="ibanInput" placeholder="TR__ ____ ____ ____ ____ ____ __" autocomplete="off">
+      <p style="font-size:11.5px;color:var(--muted);margin:6px 0 0;">Alıcılar siparişin karşılığını doğrudan bu hesaba gönderir. Platform ödemeye aracılık etmez.</p>
     </div>
     <div class="terms-row">
       <input type="checkbox" id="termsCheck">
@@ -316,18 +319,22 @@
     if (pass !== pass2) { infoError.textContent = 'Parolalar eşleşmiyor.'; return; }
     var businessInfo = document.getElementById('businessInfoInput').value.trim();
     var taxId = document.getElementById('taxIdInput').value.trim();
+    var iban = document.getElementById('ibanInput').value.replace(/\s+/g, '').toUpperCase();
     if (selectedRole === 'satici' && businessInfo.length < 10) {
       infoError.textContent = 'Ne/nasıl üretim yaptığını en az birkaç cümleyle anlat.'; return;
     }
     if (selectedRole === 'satici' && !/^\d{10,11}$/.test(taxId)) {
       infoError.textContent = 'Geçerli bir T.C. Kimlik No (11 hane) veya Vergi Numarası (10 hane) gir.'; return;
     }
+    if (selectedRole === 'satici' && !/^TR\d{24}$/.test(iban)) {
+      infoError.textContent = 'Geçerli bir IBAN gir (TR ile başlayan 26 karakter).'; return;
+    }
     if (!document.getElementById('termsCheck').checked) { infoError.textContent = 'Devam etmek için şartnameyi kabul etmelisin.'; return; }
     fetch('/api/auth/register-start', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         name: name, city: city, district: district, neighborhood: neighborhood,
-        password: pass, role: selectedRole, termsAccepted: true, businessInfo: businessInfo, taxId: taxId,
+        password: pass, role: selectedRole, termsAccepted: true, businessInfo: businessInfo, taxId: taxId, iban: iban,
       }),
     }).then(function (r) { return r.json(); }).then(function (data) {
       if (data.error) { infoError.textContent = data.error; return; }
