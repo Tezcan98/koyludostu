@@ -229,7 +229,7 @@
 <script src="assets/address.js"></script>
 <script>
 (function () {
-  if (!window.KDAuth.requireSeller('/admin-urunlerim.html')) return;
+  if (!window.KDAuth.requireApprovedSeller('/admin-urunlerim.html')) return;
   document.getElementById('sellerName').textContent = '· ' + window.KDAuth.name();
   window.KDAddress.fillIlSelect(document.getElementById('fCity'));
 

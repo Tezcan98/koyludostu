@@ -159,6 +159,7 @@
       btn.disabled = false;
       if (data.error) { msg.className = 'acc-msg err'; msg.textContent = data.error; return; }
       localStorage.setItem('kd_auth_role', 'satici');
+      localStorage.setItem('kd_auth_seller_status', data.user.sellerStatus || 'pending');
       msg.className = 'acc-msg ok';
       msg.textContent = 'Başvurun alındı, yönlendiriliyorsun...';
       setTimeout(function () { location.href = '/satici-basvurum.html'; }, 600);

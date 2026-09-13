@@ -100,6 +100,7 @@
 
   function render(user) {
     var status = user.sellerStatus || 'pending';
+    localStorage.setItem('kd_auth_seller_status', status);
     var card = document.getElementById('statusCard');
     document.getElementById('businessInfoText').textContent = user.businessInfo || '—';
 

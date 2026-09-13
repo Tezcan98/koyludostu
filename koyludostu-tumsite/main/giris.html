@@ -92,19 +92,19 @@
     <p class="sub">Önce birkaç bilgi alalım, telefon doğrulaması son adımda.</p>
     <div class="auth-field">
       <label for="nameInput">Ad Soyad</label>
-      <input type="text" id="nameInput" autocomplete="name">
+      <input type="text" id="nameInput" name="kd-name-field" autocomplete="off">
     </div>
     <div class="auth-field">
       <label for="cityInput">İl</label>
-      <select id="cityInput" autocomplete="address-level1"><option value="">Yükleniyor…</option></select>
+      <select id="cityInput" name="kd-city-field" autocomplete="off"><option value="">Yükleniyor…</option></select>
     </div>
     <div class="auth-field">
       <label for="districtInput">İlçe</label>
-      <select id="districtInput" autocomplete="address-level2" disabled><option value="">Önce il seç</option></select>
+      <select id="districtInput" name="kd-district-field" autocomplete="off" disabled><option value="">Önce il seç</option></select>
     </div>
     <div class="auth-field">
-      <label for="neighborhoodInput">Mahalle <span style="font-weight:400;color:var(--muted);">(opsiyonel)</span></label>
-      <input type="text" id="neighborhoodInput" autocomplete="address-level3">
+      <label for="neighborhoodInput">Mahalle (opsiyonel)</label>
+      <input type="text" id="neighborhoodInput" name="kd-neighborhood-field" autocomplete="off">
     </div>
     <div class="auth-field">
       <label for="passInput">Parola</label>
@@ -153,7 +153,7 @@
     <p class="sub">Son adım: telefon numaranı doğrula.</p>
     <div class="auth-field">
       <label for="phoneInput">Telefon Numarası</label>
-      <input type="tel" id="phoneInput" placeholder="05XX XXX XX XX" autocomplete="tel" inputmode="numeric">
+      <input type="tel" id="phoneInput" name="kd-phone-verify-field" placeholder="05XX XXX XX XX" autocomplete="off" inputmode="numeric">
     </div>
     <button class="auth-btn" id="sendCodeBtn">Kod Gönder</button>
     <p class="auth-error" id="phoneError"></p>
@@ -265,6 +265,7 @@
     localStorage.setItem('kd_auth_userid', data.user.id || '');
     localStorage.setItem('kd_auth_name', data.user.name || '');
     localStorage.setItem('kd_auth_role', data.user.role || 'alici');
+    localStorage.setItem('kd_auth_seller_status', data.user.sellerStatus || '');
     var isPendingSeller = data.user.role === 'satici' && data.user.sellerStatus !== 'approved';
     var dest = isPendingSeller
       ? '/satici-basvurum.html'

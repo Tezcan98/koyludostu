@@ -94,7 +94,7 @@
 <script src="assets/auth.js"></script>
 <script>
 (function () {
-  if (!window.KDAuth.requireSeller('/admin-ambalaj.html')) return;
+  if (!window.KDAuth.requireApprovedSeller('/admin-ambalaj.html')) return;
   document.getElementById('sellerName').textContent = '· ' + window.KDAuth.name();
 
   var STATUS_LABELS = { requested: 'Talep Edildi', confirmed: 'Onaylandı', delivered: 'Teslim Edildi', cancelled: 'İptal Edildi' };

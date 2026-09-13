@@ -1,3 +1,8 @@
 node_modules/
 .DS_Store
 *.log
+
+# Gerçek kullanıcı verisi (telefon, parola hash'i vb.) — canlı sunucuda sürekli
+# değişiyor, artık git ile takip edilmiyor (bkz. commit mesajı). Dosyalar
+# diskte kalmaya devam eder, serve.js bunları KD_DATA_DIR üzerinden okur/yazar.
+data/*.json

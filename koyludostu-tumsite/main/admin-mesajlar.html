@@ -90,7 +90,7 @@
 <script src="assets/auth.js"></script>
 <script>
 (function () {
-  if (!window.KDAuth.requireSeller('/admin-mesajlar.html')) return;
+  if (!window.KDAuth.requireApprovedSeller('/admin-mesajlar.html')) return;
   document.getElementById('sellerName').textContent = '· ' + window.KDAuth.name();
   document.getElementById('logoutLink').addEventListener('click', function () {
     window.KDAuth.logout(); location.href = '/index.html';

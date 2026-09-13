@@ -5,8 +5,10 @@
     userId: function () { return localStorage.getItem('kd_auth_userid') || ''; },
     name: function () { return localStorage.getItem('kd_auth_name') || ''; },
     role: function () { return localStorage.getItem('kd_auth_role') || 'alici'; },
+    sellerStatus: function () { return localStorage.getItem('kd_auth_seller_status') || ''; },
     isLoggedIn: function () { return !!this.token(); },
     isSeller: function () { return this.isLoggedIn() && this.role() === 'satici'; },
+    isApprovedSeller: function () { return this.isSeller() && this.sellerStatus() === 'approved'; },
     logout: function () {
       var t = this.token();
       localStorage.removeItem('kd_auth_token');
@@ -14,6 +16,7 @@
       localStorage.removeItem('kd_auth_userid');
       localStorage.removeItem('kd_auth_name');
       localStorage.removeItem('kd_auth_role');
+      localStorage.removeItem('kd_auth_seller_status');
       if (t) fetch('/api/auth/logout', { method: 'POST', headers: { Authorization: 'Bearer ' + t } }).catch(function () {});
     },
     requireLogin: function (redirectTo) {
@@ -30,6 +33,16 @@
         location.href = '/giris.html?sonra=' + encodeURIComponent(redirectTo || location.pathname);
       }
       return false;
+    },
+    // Satıcı paneli sayfaları (admin-*.html) için: hesap onaylanmamışsa (pending/rejected)
+    // panele almak yerine başvuru durumunu gösteren sayfaya yönlendirir.
+    requireApprovedSeller: function (redirectTo) {
+      if (this.isApprovedSeller()) return true;
+      if (this.isSeller()) {
+        location.href = '/satici-basvurum.html';
+        return false;
+      }
+      return this.requireSeller(redirectTo);
     },
     fmtPhone: function (p) {
       if (!p || p.length !== 10) return p || '';
@@ -79,11 +92,15 @@
     if (!nav || nav.querySelector('.seller-panel-link')) return;
     var label = nav.querySelector('.drawer-section-label');
     if (!label) return;
-    label.insertAdjacentHTML('afterend',
-      '<a href="/admin-urunlerim.html" class="seller-panel-link">' +
-        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>Satıcı Panelim' +
-      '</a>'
-    );
+    // Onaylanmamış (pending/rejected) satıcı için panele değil, başvuru durumuna götürür.
+    var link = window.KDAuth.isApprovedSeller()
+      ? '<a href="/admin-urunlerim.html" class="seller-panel-link">' +
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>Satıcı Panelim' +
+        '</a>'
+      : '<a href="/satici-basvurum.html" class="seller-panel-link">' +
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>Satıcı Başvurum' +
+        '</a>';
+    label.insertAdjacentHTML('afterend', link);
   }
 
   document.addEventListener('DOMContentLoaded', function () {

@@ -52,7 +52,7 @@
       var priceNum = parseInt(String(p.price).replace(/\D/g, ''), 10) || 0;
       var imgSrc = /^\d+$/.test(String(p.img)) ?
         'https://images.pexels.com/photos/' + p.img + '/pexels-photo-' + p.img + '.jpeg?auto=compress&cs=tinysrgb&w=700' : p.img;
-      var sellerBadge = p.sellerVerified ? ' <span class="seller-badge" title="Güvenilir Satıcı">🛡️</span>' : '';
+      var sellerBadge = p.sellerVerified ? ' <span class="seller-badge" title="Güvenilir Satıcı">✅</span>' : '';
       return '<a class="pin" href="urun/' + p.slug + '.html" data-cat="' + p.cat + '" data-price="' + priceNum +
         '" data-title="' + p.title.replace(/"/g, '&quot;') + '" data-city="' + p.city + '" data-delivery="' + p.delivery.join(',') +
         '" data-created="' + p.createdAt + '" data-slug="' + p.slug + '">' +

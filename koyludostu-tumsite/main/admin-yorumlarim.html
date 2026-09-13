@@ -83,7 +83,7 @@
 <script src="assets/auth.js"></script>
 <script>
 (function () {
-  if (!window.KDAuth.requireSeller('/admin-yorumlarim.html')) return;
+  if (!window.KDAuth.requireApprovedSeller('/admin-yorumlarim.html')) return;
   document.getElementById('sellerName').textContent = '· ' + window.KDAuth.name();
 
   function starsHtml(n) {

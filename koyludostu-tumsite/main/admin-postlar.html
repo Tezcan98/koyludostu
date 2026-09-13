@@ -112,7 +112,7 @@
 <script src="assets/auth.js"></script>
 <script>
 (function () {
-  if (!window.KDAuth.requireSeller('/admin-postlar.html')) return;
+  if (!window.KDAuth.requireApprovedSeller('/admin-postlar.html')) return;
   document.getElementById('sellerName').textContent = '· ' + window.KDAuth.name();
 
   window.KDAuth.authedFetch('/api/admin/products/mine').then(function (r) { return r.json(); }).then(function (data) {

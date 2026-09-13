@@ -238,6 +238,9 @@ button{font-family:inherit;}
   font-size:12px;font-weight:700;padding:7px 14px;border-radius:16px;cursor:pointer;font-family:inherit;
 }
 .fav-seller-cta.active{border-color:#c08a2e;color:#c08a2e;background:#fbf3e3;}
+.seller-cta-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;}
+.seller-cta-row .fav-seller-cta{margin-top:0;}
+.seller-cta-row .msg-cta{padding:7px 14px;font-size:12px;border-radius:16px;}
 
 /* Reviews */
 .reviews-section{margin-top:36px;border-top:1px solid var(--line);padding-top:24px;}
@@ -670,6 +673,15 @@ body.vitrin-body{margin:0;background:#000;overflow:hidden;}
   position:absolute;top:14px;left:14px;background:#c08a2e;color:#fff;font-size:10.5px;font-weight:800;
   padding:4px 10px;border-radius:10px;z-index:2;
 }
+.story-progress-row{position:absolute;top:8px;left:8px;right:8px;display:flex;gap:4px;z-index:2;}
+.story-progress-seg{flex:1;height:2.5px;background:rgba(255,255,255,.35);border-radius:2px;overflow:hidden;}
+.story-progress-fill{display:block;height:100%;width:0%;background:#fff;}
+.story-progress-seg.done .story-progress-fill{width:100%;}
+.story-progress-seg.active .story-progress-fill{width:0%;animation:storyFill linear forwards;animation-duration:var(--story-dur, 5s);}
+@keyframes storyFill{from{width:0%;}to{width:100%;}}
+.story-tap-zone{position:absolute;top:0;bottom:0;width:50%;z-index:1;cursor:pointer;}
+.story-tap-zone.prev{left:0;}
+.story-tap-zone.next{right:0;}
 .story-viewer-info{background:#fff;padding:16px 18px;}
 .story-viewer-seller{font-size:11.5px;color:var(--muted);margin-bottom:4px;}
 .story-viewer-caption{font-size:13.5px;color:var(--ink);margin-bottom:12px;line-height:1.5;}

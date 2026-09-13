@@ -255,7 +255,7 @@ function renderProductPage(product, allProducts) {
       <div class="producer-box">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>
         <div>
-          <div class="producer-name"><a href="../satici/${esc(product.sellerId)}.html">${esc(product.sellerName)}</a>${sellerVerified ? ' <span class="seller-badge" title="Güvenilir Satıcı">🛡️</span>' : ''}</div>
+          <div class="producer-name"><a href="../satici/${esc(product.sellerId)}.html">${esc(product.sellerName)}</a>${sellerVerified ? ' <span class="seller-badge" title="Güvenilir Satıcı">✅</span>' : ''}</div>
           <div class="producer-loc">${esc(product.city)}</div>
         </div>
       </div>
@@ -314,7 +314,7 @@ function renderSellerPage(seller, sellerId, products) {
     });
   });
   const avg = count ? (sum / count).toFixed(1) : null;
-  const badge = seller.verifiedSeller ? '<span class="seller-badge" title="Güvenilir Satıcı">🛡️</span>' : '';
+  const badge = seller.verifiedSeller ? '<span class="seller-badge" title="Güvenilir Satıcı">✅</span>' : '';
   const ratingLine = avg
     ? `<div class="seller-rating">★ ${avg} / 5 <span>· ${count} değerlendirme</span></div>`
     : `<div class="seller-rating"><span>Henüz değerlendirme yok</span></div>`;
@@ -404,7 +404,10 @@ function renderSellerPage(seller, sellerId, products) {
     </div>
   </div>
   ${businessLine}
-  <button class="fav-seller-cta" data-id="${esc(sellerId)}">☆ Satıcıyı Takip Et</button>
+  <div class="seller-cta-row">
+    <button class="fav-seller-cta" data-id="${esc(sellerId)}">☆ Satıcıyı Takip Et</button>
+    ${own.length ? `<button class="msg-cta" data-slug="${esc(own[0].slug)}" data-title="${esc(own[0].title)}">💬 Satıcıya Mesaj Yaz</button>` : ''}
+  </div>
 
   <h2 class="seller-products-title">Ürünleri (${own.length})</h2>
   <div class="grid">${gridHtml}</div>
@@ -415,6 +418,7 @@ function renderSellerPage(seller, sellerId, products) {
 
 <script src="../assets/auth.js"></script>
 <script src="../assets/favorites.js"></script>
+<script src="../assets/messages.js"></script>
 <script src="../assets/protect.js"></script>
 <script>if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("/sw.js").catch(function(){});});}</script>
 </body>

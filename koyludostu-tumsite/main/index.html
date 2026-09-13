@@ -79,9 +79,12 @@
 <div class="story-row" id="storyRow"><div class="story-empty">Yükleniyor…</div></div>
 <div class="story-viewer" id="storyViewer" hidden>
   <div class="story-viewer-card">
+    <div class="story-progress-row" id="storyProgressRow"></div>
     <button type="button" class="story-viewer-close" id="storyViewerClose" aria-label="Kapat">×</button>
     <span class="story-viewer-badge" id="storyViewerBadge" hidden>REKLAM</span>
     <img id="storyViewerImg" src="" alt="">
+    <div class="story-tap-zone prev" id="storyTapPrev"></div>
+    <div class="story-tap-zone next" id="storyTapNext"></div>
     <div class="story-viewer-info">
       <div class="story-viewer-seller" id="storyViewerSeller"></div>
       <div class="story-viewer-caption" id="storyViewerCaption"></div>
@@ -119,7 +122,7 @@
     <div class="filter-group-title">Diğer</div>
     <div class="filter-checks">
       <label class="check-chip"><input type="checkbox" id="fOrganicOnly"> 🌱 Sadece Organik</label>
-      <label class="check-chip"><input type="checkbox" id="fVerifiedOnly"> 🛡️ Rozetli Satıcılar</label>
+      <label class="check-chip"><input type="checkbox" id="fVerifiedOnly"> ✅ Rozetli Satıcılar</label>
     </div>
   </div>
   <div class="filter-group">
@@ -147,20 +150,56 @@
 (function () {
   var row = document.getElementById('storyRow');
   var viewer = document.getElementById('storyViewer');
+  var progressRow = document.getElementById('storyProgressRow');
+  var STORY_DURATION_MS = 5000;
+  var posts = [];
+  var current = -1;
 
-  function openStory(post) {
+  function clearAdvanceTimer() {
+    if (viewer._advanceTimer) { clearTimeout(viewer._advanceTimer); viewer._advanceTimer = null; }
+  }
+
+  function renderProgress() {
+    progressRow.innerHTML = posts.map(function (_, i) {
+      var cls = i < current ? 'done' : (i === current ? 'active' : '');
+      return '<span class="story-progress-seg ' + cls + '"><span class="story-progress-fill"></span></span>';
+    }).join('');
+    var activeSeg = progressRow.querySelector('.story-progress-seg.active');
+    if (activeSeg) activeSeg.style.setProperty('--story-dur', STORY_DURATION_MS + 'ms');
+  }
+
+  function showStory(i) {
+    if (i < 0) return; // ilk hikayeden geriye gidilemez
+    if (i >= posts.length) { closeViewer(); return; } // son hikayeden sonra kapan
+    current = i;
+    var post = posts[current];
     document.getElementById('storyViewerImg').src = 'https://images.pexels.com/photos/' + post.img + '/pexels-photo-' + post.img + '.jpeg?auto=compress&cs=tinysrgb&w=900';
     document.getElementById('storyViewerSeller').textContent = post.sellerName + ' · ' + post.productTitle;
     document.getElementById('storyViewerCaption').textContent = post.caption || '';
     document.getElementById('storyViewerCta').href = 'urun/' + post.productSlug + '.html';
     document.getElementById('storyViewerBadge').hidden = !post.isAd;
-    viewer.hidden = false;
+    renderProgress();
+    clearAdvanceTimer();
+    viewer._advanceTimer = setTimeout(function () { showStory(current + 1); }, STORY_DURATION_MS);
   }
-  document.getElementById('storyViewerClose').addEventListener('click', function () { viewer.hidden = true; });
-  viewer.addEventListener('click', function (e) { if (e.target === viewer) viewer.hidden = true; });
+
+  function openStory(i) {
+    viewer.hidden = false;
+    showStory(i);
+  }
+
+  function closeViewer() {
+    clearAdvanceTimer();
+    viewer.hidden = true;
+  }
+
+  document.getElementById('storyViewerClose').addEventListener('click', closeViewer);
+  viewer.addEventListener('click', function (e) { if (e.target === viewer) closeViewer(); });
+  document.getElementById('storyTapPrev').addEventListener('click', function () { showStory(current - 1); });
+  document.getElementById('storyTapNext').addEventListener('click', function () { showStory(current + 1); });
 
   fetch('/api/posts/active').then(function (r) { return r.json(); }).then(function (data) {
-    var posts = data.posts || [];
+    posts = data.posts || [];
     if (!posts.length) { row.innerHTML = ''; row.style.display = 'none'; return; }
     row.innerHTML = posts.map(function (post, i) {
       return '<a class="story-item" href="javascript:;" data-i="' + i + '">' +
@@ -169,7 +208,7 @@
       '</a>';
     }).join('');
     row.querySelectorAll('.story-item').forEach(function (el) {
-      el.addEventListener('click', function () { openStory(posts[+el.dataset.i]); });
+      el.addEventListener('click', function () { openStory(+el.dataset.i); });
     });
   }).catch(function () { row.style.display = 'none'; });
 })();

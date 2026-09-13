@@ -131,7 +131,7 @@
 <script src="assets/auth.js"></script>
 <script>
 (function () {
-  if (!window.KDAuth.requireSeller('/admin-kargo.html')) return;
+  if (!window.KDAuth.requireApprovedSeller('/admin-kargo.html')) return;
   document.getElementById('sellerName').textContent = '· ' + window.KDAuth.name();
 
   var STATUS_LABELS = {

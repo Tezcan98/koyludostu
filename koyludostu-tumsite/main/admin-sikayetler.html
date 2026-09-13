@@ -82,7 +82,7 @@
 <script src="assets/auth.js"></script>
 <script>
 (function () {
-  if (!window.KDAuth.requireSeller('/admin-sikayetler.html')) return;
+  if (!window.KDAuth.requireApprovedSeller('/admin-sikayetler.html')) return;
   document.getElementById('sellerName').textContent = '· ' + window.KDAuth.name();
   var REASON_LABELS = { kalite: 'Kalite düşük', gelmedi: 'Ürün hiç gelmedi', farkli: 'Tarif edilenden farklı', diger: 'Diğer' };
 
