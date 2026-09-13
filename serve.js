@@ -1001,6 +1001,24 @@ function isValidUploadedFile(url) {
   return /^\/assets\/uploads\/[A-Za-z0-9_.-]+$/.test(String(url || ''));
 }
 
+// data: URL'sini diske yazan ortak yardımcı — hem oturum açmış satıcının
+// /api/admin/upload-doc çağrısında hem de kayıt sırasında (henüz oturum yokken,
+// verify() adımında) kimlik belgesi kaydederken kullanılır. Hata durumunda
+// mesajıyla birlikte fırlatır, çağıran taraf 400'e çevirir.
+function saveUploadedDoc(dataUrl) {
+  const m = /^data:(image\/(?:png|jpe?g|webp)|application\/pdf);base64,(.+)$/.exec(String(dataUrl || ''));
+  if (!m) throw new Error('Geçersiz dosya. PNG, JPEG, WEBP ya da PDF yükle.');
+  const extMap = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/jpg': 'jpg', 'image/webp': 'webp', 'application/pdf': 'pdf' };
+  const ext = extMap[m[1]];
+  const buf = Buffer.from(m[2], 'base64');
+  if (buf.length > 8 * 1024 * 1024) throw new Error('Dosya çok büyük (max 8MB).');
+  const uploadsDir = path.join(MAIN, 'assets', 'uploads');
+  fs.mkdirSync(uploadsDir, { recursive: true });
+  const fname = 'd_' + randomToken().slice(0, 12) + '.' + ext;
+  fs.writeFileSync(path.join(uploadsDir, fname), buf);
+  return { url: '/assets/uploads/' + fname };
+}
+
 function uniqueSlug(base, products) {
   let slug = base;
   let n = 2;
@@ -1187,7 +1205,7 @@ const server = http.createServer(async (req, res) => {
     // ---------- Auth: önce üyelik bilgileri (ad+şehir+parola), sonra telefon SMS onayı ----------
 
     if (p === '/api/auth/register-start' && req.method === 'POST') {
-      const { name, city, district, neighborhood, password, role, termsAccepted, businessInfo, taxId, iban } = await readBody(req);
+      const { name, city, district, neighborhood, password, role, termsAccepted, businessInfo, taxId, iban, idDocDataUrl, idDocConsent } = await readBody(req);
       const cleanName = String(name || '').trim().slice(0, 60);
       const cleanCity = String(city || '').trim().slice(0, 60);
       const cleanDistrict = String(district || '').trim().slice(0, 60);
@@ -1213,12 +1231,27 @@ const server = http.createServer(async (req, res) => {
         return jsonResponse(res, 400, { error: 'Geçerli bir IBAN gir (TR ile başlayan 26 karakter).' });
       }
 
+      // Kimlik belgesi tamamen opsiyoneldir (satıcı başvurusunu hızlandırmak için
+      // önerilir, zorunlu değil) — ama verilmişse KVKK kapsamında ayrı ve açık bir
+      // rıza şart. Genel "Kullanım Şartları" onayı bunun yerine geçmez.
+      const cleanIdDocDataUrl = String(idDocDataUrl || '').trim();
+      if (cleanIdDocDataUrl) {
+        if (!idDocConsent) {
+          return jsonResponse(res, 400, { error: 'Kimlik belgeni yüklemek için ayrıca açık rıza vermelisin (ya da belgeyi kaldırıp devam et).' });
+        }
+        if (!/^data:(image\/(?:png|jpe?g|webp)|application\/pdf);base64,/.test(cleanIdDocDataUrl)) {
+          return jsonResponse(res, 400, { error: 'Geçersiz kimlik belgesi. PNG, JPEG, WEBP ya da PDF yükle.' });
+        }
+      }
+
       const regToken = randomToken();
       pendingRegs.set(regToken, {
         name: cleanName, city: cleanCity, district: cleanDistrict, neighborhood: cleanNeighborhood,
         passwordHash: hashPassword(pass), role,
         businessInfo: cleanBusinessInfo, taxId: role === 'satici' ? cleanTaxId : '',
         iban: role === 'satici' ? cleanIban : '',
+        idDocDataUrl: role === 'satici' ? cleanIdDocDataUrl : '',
+        idDocConsent: role === 'satici' ? !!idDocConsent : false,
         termsAcceptedAt: new Date().toISOString(), at: Date.now(),
       });
       return jsonResponse(res, 200, { regToken });
@@ -1253,6 +1286,19 @@ const server = http.createServer(async (req, res) => {
         return jsonResponse(res, 400, { error: 'Kayıt bilgilerinin süresi doldu. Lütfen baştan başla.' });
       }
 
+      // Kimlik belgesi varsa hesap oluşturulurken diske yazılır (kayıt sırasında henüz
+      // oturum yoktu, dosya register-start'tan beri sadece bellekte bekliyordu).
+      let idDocUrl = null;
+      let idDocConsentAt = null;
+      if (pendingReg.role === 'satici' && pendingReg.idDocDataUrl) {
+        try {
+          idDocUrl = saveUploadedDoc(pendingReg.idDocDataUrl).url;
+          idDocConsentAt = new Date().toISOString();
+        } catch (e) {
+          return jsonResponse(res, 400, { error: e.message });
+        }
+      }
+
       users[norm] = {
         id: 'u_' + randomToken().slice(0, 10), phone: norm,
         name: pendingReg.name, city: pendingReg.city, district: pendingReg.district,
@@ -1261,7 +1307,13 @@ const server = http.createServer(async (req, res) => {
         createdAt: new Date().toISOString(),
         // Satıcı hesapları admin onayından geçmeden ürün ekleyemez (bkz. requireApprovedSeller).
         ...(pendingReg.role === 'satici'
-          ? { sellerStatus: 'pending', businessInfo: pendingReg.businessInfo || '', taxId: pendingReg.taxId || '', iban: pendingReg.iban || '', sellerDocUrl: null, verifiedSeller: false }
+          ? {
+              sellerStatus: 'pending', businessInfo: pendingReg.businessInfo || '', taxId: pendingReg.taxId || '', iban: pendingReg.iban || '',
+              sellerDocUrl: null, verifiedSeller: false,
+              // Kimlik belgesi: KVKK md.5 kapsamında açık rıza ile işlenir, sadece
+              // satıcı doğrulama amaçlıdır, sadece admin görebilir (bkz. owner-admin.html).
+              idDocUrl, idDocConsentAt,
+            }
           : {}),
       };
       writeJson(USERS_PATH, users);
@@ -1789,6 +1841,27 @@ const server = http.createServer(async (req, res) => {
       return jsonResponse(res, 200, { user: safeUser });
     }
 
+    // Kimlik belgesi — "Destekleyici Belge"den ayrı, bilerek: KVKK md.5 kapsamında
+    // ayrı ve açık rıza gerektirir (idDocConsent olmadan kaydedilmez). Sadece admin
+    // görebilir (bkz. owner-admin.html Satıcılar sekmesi), satıcı doğrulama dışında
+    // bir amaçla kullanılmaz.
+    if (p === '/api/auth/seller-application/id-doc' && req.method === 'POST') {
+      const session = requireRole(req, res, 'satici');
+      if (!session) return;
+      const { docUrl, idDocConsent } = await readBody(req);
+      const clean = String(docUrl || '').trim();
+      if (!isValidUploadedFile(clean)) return jsonResponse(res, 400, { error: 'Geçersiz belge. Önce /api/admin/upload-doc ile yükle.' });
+      if (!idDocConsent) return jsonResponse(res, 400, { error: 'Kimlik belgeni kaydetmek için açık rıza vermelisin.' });
+      const users = readJson(USERS_PATH, {});
+      const user = users[session.phone];
+      if (!user) return jsonResponse(res, 404, { error: 'Hesap bulunamadı' });
+      user.idDocUrl = clean;
+      user.idDocConsentAt = new Date().toISOString();
+      writeJson(USERS_PATH, users);
+      const { passwordHash, ...safeUser } = user;
+      return jsonResponse(res, 200, { user: safeUser });
+    }
+
     if (p === '/api/auth/change-password' && req.method === 'POST') {
       const session = requireAuth(req, res);
       if (!session) return;
@@ -2214,17 +2287,11 @@ const server = http.createServer(async (req, res) => {
       const session = requireRole(req, res, 'satici');
       if (!session) return;
       const { dataUrl } = await readBody(req);
-      const m = /^data:(image\/(?:png|jpe?g|webp)|application\/pdf);base64,(.+)$/.exec(String(dataUrl || ''));
-      if (!m) return jsonResponse(res, 400, { error: 'Geçersiz dosya. PNG, JPEG, WEBP ya da PDF yükle.' });
-      const extMap = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/jpg': 'jpg', 'image/webp': 'webp', 'application/pdf': 'pdf' };
-      const ext = extMap[m[1]];
-      const buf = Buffer.from(m[2], 'base64');
-      if (buf.length > 8 * 1024 * 1024) return jsonResponse(res, 400, { error: 'Dosya çok büyük (max 8MB).' });
-      const uploadsDir = path.join(MAIN, 'assets', 'uploads');
-      fs.mkdirSync(uploadsDir, { recursive: true });
-      const fname = 'd_' + randomToken().slice(0, 12) + '.' + ext;
-      fs.writeFileSync(path.join(uploadsDir, fname), buf);
-      return jsonResponse(res, 200, { url: '/assets/uploads/' + fname });
+      try {
+        return jsonResponse(res, 200, saveUploadedDoc(dataUrl));
+      } catch (e) {
+        return jsonResponse(res, 400, { error: e.message });
+      }
     }
 
     // ---------- Ürünler: satıcılar kendi ilanlarını ekler/düzenler/kaldırır ----------

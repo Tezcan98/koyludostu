@@ -322,6 +322,7 @@
         (status === 'pending' ? 'background:rgba(192,138,46,.15);color:#8a5a10;' : status === 'rejected' ? 'background:rgba(200,60,60,.12);color:#8e3b46;' : 'background:rgba(78,107,58,.12);color:#4e6b3a;') +
         '">' + SELLER_STATUS_LABELS[status] + '</span>';
       var docLink = s.sellerDocUrl ? '<a href="' + s.sellerDocUrl + '" target="_blank" class="own-badge" style="text-decoration:none;">Belge</a>' : '';
+      var idDocLink = s.idDocUrl ? '<a href="' + s.idDocUrl + '" target="_blank" class="own-badge" style="text-decoration:none;background:rgba(46,110,192,.12);color:#2e6ec0;">🪪 Kimlik</a>' : '';
       var decideBtns = status === 'pending'
         ? '<button class="own-approve-btn" data-seller-decide="approved" data-phone="' + s.phone + '">Onayla</button>' +
           '<button class="own-reject-btn" data-seller-decide="rejected" data-phone="' + s.phone + '">Reddet</button>'
@@ -331,11 +332,12 @@
         (s.verifiedSeller ? 'Rozeti Kaldır' : 'Rozet Ver') + '</button>';
       return '<div class="own-row">' +
         '<div class="own-body"><div class="own-title">' + s.name + '</div><div class="own-sub">' + s.phone + ' · ' + s.city +
+        (s.taxId ? ' · TC/VN: ' + s.taxId : '') + (s.iban ? ' · ' + s.iban : '') +
         (s.businessInfo ? ' · ' + s.businessInfo.replace(/[<>]/g, '') : '') + '</div></div>' +
         '<span class="own-badge">' + s.productCount + ' ürün</span>' +
         '<span class="own-badge">' + s.convoCount + ' sohbet</span>' +
         '<span class="own-badge" style="' + (s.openComplaints ? 'background:#f4e3c8;color:#8a5a10;' : '') + '">' + s.openComplaints + ' açık şikayet</span>' +
-        statusBadge + verifiedBadge + docLink + badgeBtn + decideBtns +
+        statusBadge + verifiedBadge + docLink + idDocLink + badgeBtn + decideBtns +
       '</div>';
     }
   }

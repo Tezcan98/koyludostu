@@ -139,7 +139,23 @@
       <p style="font-size:11.5px;color:var(--muted);margin:6px 0 14px;">Satıcı başvurun admin onayından geçtikten sonra ürün ekleyebilirsin.</p>
       <label for="ibanInput">IBAN</label>
       <input type="text" id="ibanInput" placeholder="TR__ ____ ____ ____ ____ ____ __" autocomplete="off">
-      <p style="font-size:11.5px;color:var(--muted);margin:6px 0 0;">Alıcılar siparişin karşılığını doğrudan bu hesaba gönderir. Platform ödemeye aracılık etmez.</p>
+      <p style="font-size:11.5px;color:var(--muted);margin:6px 0 14px;">Alıcılar siparişin karşılığını doğrudan bu hesaba gönderir. Platform ödemeye aracılık etmez.</p>
+
+      <label for="idDocInput">Kimlik Belgesi (opsiyonel)</label>
+      <input type="file" id="idDocInput" accept="image/png,image/jpeg,image/webp">
+      <p style="font-size:11.5px;color:var(--muted);margin:6px 0 8px;">Ön yüzünü yüklersen başvurun daha hızlı onaylanır. Yüklemek zorunda değilsin.</p>
+      <img id="idDocPreview" alt="" style="display:none;max-width:220px;border-radius:10px;margin-bottom:8px;">
+      <button type="button" id="idDocOcrBtn" style="display:none;padding:9px 16px;border-radius:9px;background:var(--bg);border:1.5px solid var(--line);font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;">🔍 Kimlikten Bilgileri Okumayı Dene (deneysel)</button>
+      <p id="idDocOcrStatus" style="font-size:11.5px;color:var(--muted);margin:6px 0 0;"></p>
+      <div id="idDocOcrResult" style="display:none;margin-top:8px;">
+        <label style="font-size:11.5px;">Okunan metin (doğruluğu garanti edilmez, kontrol et)</label>
+        <textarea id="idDocOcrText" readonly rows="3" style="width:100%;padding:9px 11px;border-radius:9px;border:1.5px solid var(--line);font-family:inherit;font-size:12px;background:var(--bg);resize:vertical;"></textarea>
+        <button type="button" id="idDocFillTaxIdBtn" style="margin-top:6px;padding:7px 14px;border-radius:8px;background:var(--ink);color:#fff;border:none;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">T.C. Kimlik No'yu Bul ve Doldur</button>
+      </div>
+      <label class="order-terms-row" id="idDocConsentRow" style="display:none;">
+        <input type="checkbox" id="idDocConsentCheck">
+        <span>Kimlik belgemin, satıcı hesabımı doğrulamak amacıyla işlenmesine ve saklanmasına (bkz. <a href="/kvkk.html" target="_blank">KVKK Aydınlatma Metni</a>) açık rıza veriyorum.</span>
+      </label>
     </div>
     <div class="terms-row">
       <input type="checkbox" id="termsCheck">
@@ -292,6 +308,86 @@
     }).catch(function () { loginError.textContent = 'Bağlantı hatası, tekrar deneyin.'; });
   });
 
+  // ---- Kimlik belgesi: yükleme (opsiyonel) + deneysel OCR ----
+  var idDocDataUrl = '';
+  var tesseractLoadPromise = null;
+  function loadTesseract() {
+    if (window.Tesseract) return Promise.resolve();
+    if (tesseractLoadPromise) return tesseractLoadPromise;
+    tesseractLoadPromise = new Promise(function (resolve, reject) {
+      var s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5.0.4/dist/tesseract.min.js';
+      s.onload = resolve;
+      s.onerror = function () { reject(new Error('Tesseract.js yüklenemedi.')); };
+      document.head.appendChild(s);
+    });
+    return tesseractLoadPromise;
+  }
+
+  document.getElementById('idDocInput').addEventListener('change', function (e) {
+    var file = e.target.files[0];
+    var consentRow = document.getElementById('idDocConsentRow');
+    var ocrBtn = document.getElementById('idDocOcrBtn');
+    var preview = document.getElementById('idDocPreview');
+    document.getElementById('idDocOcrResult').style.display = 'none';
+    document.getElementById('idDocOcrStatus').textContent = '';
+    if (!file) {
+      idDocDataUrl = '';
+      preview.style.display = 'none';
+      ocrBtn.style.display = 'none';
+      consentRow.style.display = 'none';
+      document.getElementById('idDocConsentCheck').checked = false;
+      return;
+    }
+    var reader = new FileReader();
+    reader.onload = function () {
+      idDocDataUrl = reader.result;
+      preview.src = idDocDataUrl;
+      preview.style.display = 'block';
+      ocrBtn.style.display = 'inline-block';
+      consentRow.style.display = 'flex';
+    };
+    reader.readAsDataURL(file);
+  });
+
+  document.getElementById('idDocOcrBtn').addEventListener('click', function () {
+    var btn = this;
+    var statusEl = document.getElementById('idDocOcrStatus');
+    if (!idDocDataUrl) return;
+    btn.disabled = true;
+    statusEl.textContent = 'Okuma motoru indiriliyor (ilk kullanımda biraz sürebilir)…';
+    loadTesseract().then(function () {
+      statusEl.textContent = 'Kimlik okunuyor…';
+      return window.Tesseract.recognize(idDocDataUrl, 'tur', {
+        logger: function (m) {
+          if (m.status === 'recognizing text') {
+            statusEl.textContent = 'Kimlik okunuyor… %' + Math.round((m.progress || 0) * 100);
+          }
+        },
+      });
+    }).then(function (result) {
+      btn.disabled = false;
+      statusEl.textContent = 'Bitti — sonucu kontrol et, bu sadece bir tahmindir.';
+      document.getElementById('idDocOcrText').value = (result.data && result.data.text || '').trim();
+      document.getElementById('idDocOcrResult').style.display = 'block';
+    }).catch(function (err) {
+      btn.disabled = false;
+      statusEl.textContent = 'Okunamadı (' + (err && err.message || 'bilinmeyen hata') + '). Bilgileri elle girebilirsin.';
+    });
+  });
+
+  document.getElementById('idDocFillTaxIdBtn').addEventListener('click', function () {
+    var text = document.getElementById('idDocOcrText').value;
+    var m = text.match(/\b\d{11}\b/);
+    var statusEl = document.getElementById('idDocOcrStatus');
+    if (m) {
+      document.getElementById('taxIdInput').value = m[0];
+      statusEl.textContent = 'T.C. Kimlik No dolduruldu, lütfen doğruluğunu kontrol et.';
+    } else {
+      statusEl.textContent = '11 haneli bir numara bulunamadı, elle girmen gerekebilir.';
+    }
+  });
+
   // ---- Üye Ol adım 1: ad + şehir + parola + rol ----
   var businessInfoWrap = document.getElementById('businessInfoWrap');
   document.querySelectorAll('.role-opt').forEach(function (el) {
@@ -329,12 +425,17 @@
     if (selectedRole === 'satici' && !/^TR\d{24}$/.test(iban)) {
       infoError.textContent = 'Geçerli bir IBAN gir (TR ile başlayan 26 karakter).'; return;
     }
+    var idDocConsent = document.getElementById('idDocConsentCheck').checked;
+    if (selectedRole === 'satici' && idDocDataUrl && !idDocConsent) {
+      infoError.textContent = 'Kimlik belgeni yüklemek için ayrıca açık rıza vermelisin (ya da dosyayı kaldırıp boş bırak).'; return;
+    }
     if (!document.getElementById('termsCheck').checked) { infoError.textContent = 'Devam etmek için şartnameyi kabul etmelisin.'; return; }
     fetch('/api/auth/register-start', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         name: name, city: city, district: district, neighborhood: neighborhood,
         password: pass, role: selectedRole, termsAccepted: true, businessInfo: businessInfo, taxId: taxId, iban: iban,
+        idDocDataUrl: selectedRole === 'satici' ? idDocDataUrl : '', idDocConsent: idDocConsent,
       }),
     }).then(function (r) { return r.json(); }).then(function (data) {
       if (data.error) { infoError.textContent = data.error; return; }

@@ -1530,3 +1530,65 @@ describe('Sipariş Şartları: her iki taraf da kendi adımında kabul etmek zor
     assert.equal(rejected.sellerTermsAcceptedAt, null);
   });
 });
+
+describe('Kimlik belgesi (opsiyonel, KVKK açık rıza gerekli)', () => {
+  test('kayıt sırasında kimlik belgesi rıza olmadan gönderilemez, rızayla kaydedilir', async () => {
+    const phone = nextTestPhone();
+    const base = {
+      name: 'Kimlik Test', city: 'Test Şehir', district: 'Test İlçe', password: 'test1234',
+      role: 'satici', termsAccepted: true,
+      businessInfo: 'Bahçemden zeytin ve zeytinyağı üretip satıyorum, on yıldır bu işteyim.',
+      taxId: '12345678901', iban: 'TR330006100519786457841326',
+    };
+
+    const noConsent = await fetch(url('/api/auth/register-start'), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...base, idDocDataUrl: TINY_PNG_DATA_URL }),
+    });
+    assert.equal(noConsent.status, 400);
+
+    const badFile = await fetch(url('/api/auth/register-start'), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...base, idDocDataUrl: 'data:text/plain;base64,aGk=', idDocConsent: true }),
+    });
+    assert.equal(badFile.status, 400);
+
+    const reg = await fetch(url('/api/auth/register-start'), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...base, idDocDataUrl: TINY_PNG_DATA_URL, idDocConsent: true }),
+    }).then((r) => r.json());
+    await fetch(url('/api/auth/request-code'), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone }),
+    });
+    const ver = await fetch(url('/api/auth/verify'), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone, code: '0000', regToken: reg.regToken }),
+    }).then((r) => r.json());
+    assert.ok(ver.user.idDocUrl);
+    assert.ok(ver.user.idDocConsentAt);
+    uploadedFiles.push(ver.user.idDocUrl);
+  });
+
+  test('kaydolduktan sonra da kimlik belgesi rıza olmadan eklenemez', async () => {
+    const seller = await newSeller('Sonradan Kimlik Satıcı');
+    const img = await uploadImage(seller.token);
+
+    const noConsent = await fetch(url('/api/auth/seller-application/id-doc'), {
+      method: 'POST', headers: authHeaders(seller.token),
+      body: JSON.stringify({ docUrl: img }),
+    });
+    assert.equal(noConsent.status, 400);
+
+    const withConsent = await fetch(url('/api/auth/seller-application/id-doc'), {
+      method: 'POST', headers: authHeaders(seller.token),
+      body: JSON.stringify({ docUrl: img, idDocConsent: true }),
+    }).then((r) => r.json());
+    assert.equal(withConsent.user.idDocUrl, img);
+    assert.ok(withConsent.user.idDocConsentAt);
+  });
+
+  test('kimlik belgesi olmadan kayıt normal şekilde çalışmaya devam eder', async () => {
+    const buyer = await newBuyer('İdDocsuz Test');
+    assert.equal(buyer.user.idDocUrl, undefined);
+  });
+});

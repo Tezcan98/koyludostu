@@ -54,12 +54,33 @@
 
   <div class="info-card" id="docCard">
     <h2>Destekleyici Belge (opsiyonel)</h2>
-    <p style="margin-bottom:10px;">Kimlik, vergi levhası ya da çiftçi kayıt belgesi gibi bir belge eklemek başvurunun daha hızlı onaylanmasına yardımcı olur.</p>
+    <p style="margin-bottom:10px;">Vergi levhası ya da çiftçi kayıt belgesi gibi bir belge eklemek başvurunun daha hızlı onaylanmasına yardımcı olur.</p>
     <div class="doc-field">
       <input type="file" id="docInput" accept="image/png,image/jpeg,image/webp,application/pdf">
     </div>
     <button class="doc-btn" id="docUploadBtn">Belgeyi Yükle</button>
     <p class="doc-status" id="docStatus"></p>
+  </div>
+
+  <div class="info-card" id="idDocCard">
+    <h2>Kimlik Belgesi (opsiyonel)</h2>
+    <p style="margin-bottom:10px;">Ön yüzünü yüklersen başvurun daha hızlı onaylanır. Yüklemek zorunda değilsin.</p>
+    <div class="doc-field">
+      <input type="file" id="idDocInput" accept="image/png,image/jpeg,image/webp">
+    </div>
+    <img id="idDocPreview" alt="" style="display:none;max-width:220px;border-radius:10px;margin-bottom:8px;">
+    <button type="button" id="idDocOcrBtn" style="display:none;padding:9px 16px;border-radius:9px;background:var(--bg);border:1.5px solid var(--line);font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:8px;">🔍 Kimlikten Bilgileri Okumayı Dene (deneysel)</button>
+    <p id="idDocOcrStatus" style="font-size:11.5px;color:var(--muted);margin:0 0 8px;"></p>
+    <div id="idDocOcrResult" style="display:none;margin-bottom:8px;">
+      <label style="font-size:11.5px;display:block;margin-bottom:4px;">Okunan metin (doğruluğu garanti edilmez)</label>
+      <textarea id="idDocOcrText" readonly rows="3" style="width:100%;padding:9px 11px;border-radius:9px;border:1.5px solid var(--line);font-family:inherit;font-size:12px;background:var(--bg);resize:vertical;"></textarea>
+    </div>
+    <label class="order-terms-row" id="idDocConsentRow" style="display:none;">
+      <input type="checkbox" id="idDocConsentCheck">
+      <span>Kimlik belgemin, satıcı hesabımı doğrulamak amacıyla işlenmesine ve saklanmasına (bkz. <a href="/kvkk.html" target="_blank">KVKK Aydınlatma Metni</a>) açık rıza veriyorum.</span>
+    </label>
+    <button class="doc-btn" id="idDocUploadBtn">Kimlik Belgesini Yükle</button>
+    <p class="doc-status" id="idDocStatus"></p>
   </div>
 
   <a class="go-btn" id="goBtn" href="/admin-urunlerim.html" style="display:none;">Ürün Eklemeye Başla →</a>
@@ -98,17 +119,106 @@
     }).catch(function () {});
   });
 
+  // ---- Kimlik belgesi: yükleme (opsiyonel) + deneysel OCR ----
+  var idDocDataUrl = '';
+  var tesseractLoadPromise = null;
+  function loadTesseract() {
+    if (window.Tesseract) return Promise.resolve();
+    if (tesseractLoadPromise) return tesseractLoadPromise;
+    tesseractLoadPromise = new Promise(function (resolve, reject) {
+      var s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5.0.4/dist/tesseract.min.js';
+      s.onload = resolve;
+      s.onerror = function () { reject(new Error('Tesseract.js yüklenemedi.')); };
+      document.head.appendChild(s);
+    });
+    return tesseractLoadPromise;
+  }
+
+  document.getElementById('idDocInput').addEventListener('change', function (e) {
+    var file = e.target.files[0];
+    var consentRow = document.getElementById('idDocConsentRow');
+    var ocrBtn = document.getElementById('idDocOcrBtn');
+    var preview = document.getElementById('idDocPreview');
+    document.getElementById('idDocOcrResult').style.display = 'none';
+    document.getElementById('idDocOcrStatus').textContent = '';
+    if (!file) {
+      idDocDataUrl = ''; preview.style.display = 'none'; ocrBtn.style.display = 'none'; consentRow.style.display = 'none';
+      return;
+    }
+    var reader = new FileReader();
+    reader.onload = function () {
+      idDocDataUrl = reader.result;
+      preview.src = idDocDataUrl;
+      preview.style.display = 'block';
+      ocrBtn.style.display = 'inline-block';
+      consentRow.style.display = 'flex';
+    };
+    reader.readAsDataURL(file);
+  });
+
+  document.getElementById('idDocOcrBtn').addEventListener('click', function () {
+    var btn = this;
+    var statusEl = document.getElementById('idDocOcrStatus');
+    if (!idDocDataUrl) return;
+    btn.disabled = true;
+    statusEl.textContent = 'Okuma motoru indiriliyor (ilk kullanımda biraz sürebilir)…';
+    loadTesseract().then(function () {
+      statusEl.textContent = 'Kimlik okunuyor…';
+      return window.Tesseract.recognize(idDocDataUrl, 'tur', {
+        logger: function (m) {
+          if (m.status === 'recognizing text') statusEl.textContent = 'Kimlik okunuyor… %' + Math.round((m.progress || 0) * 100);
+        },
+      });
+    }).then(function (result) {
+      btn.disabled = false;
+      statusEl.textContent = 'Bitti — sonucu kontrol et, bu sadece bir tahmindir.';
+      document.getElementById('idDocOcrText').value = (result.data && result.data.text || '').trim();
+      document.getElementById('idDocOcrResult').style.display = 'block';
+    }).catch(function (err) {
+      btn.disabled = false;
+      statusEl.textContent = 'Okunamadı (' + (err && err.message || 'bilinmeyen hata') + ').';
+    });
+  });
+
+  document.getElementById('idDocUploadBtn').addEventListener('click', function () {
+    var statusEl = document.getElementById('idDocStatus');
+    if (!idDocDataUrl) { statusEl.textContent = 'Önce bir dosya seç.'; return; }
+    if (!document.getElementById('idDocConsentCheck').checked) {
+      statusEl.textContent = 'Kimlik belgeni kaydetmek için açık rıza vermelisin.'; return;
+    }
+    window.KDAuth.authedFetch('/api/admin/upload-doc', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dataUrl: idDocDataUrl }),
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      if (d.error) { statusEl.textContent = d.error; return; }
+      return window.KDAuth.authedFetch('/api/auth/seller-application/id-doc', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ docUrl: d.url, idDocConsent: true }),
+      }).then(function (r) { return r.json(); });
+    }).then(function () {
+      statusEl.textContent = 'Kimlik belgesi kaydedildi, admin inceleyecek.';
+    }).catch(function () {});
+  });
+
   function render(user) {
     var status = user.sellerStatus || 'pending';
     localStorage.setItem('kd_auth_seller_status', status);
     var card = document.getElementById('statusCard');
     document.getElementById('businessInfoText').textContent = user.businessInfo || '—';
 
+    if (user.idDocUrl) {
+      document.getElementById('idDocCard').querySelector('p').textContent = '✅ Kimlik belgeni zaten yükledin.';
+      document.getElementById('idDocInput').closest('.doc-field').style.display = 'none';
+      document.getElementById('idDocUploadBtn').style.display = 'none';
+    }
+
     if (status === 'approved') {
       card.innerHTML = '<div class="status-icon">✅</div><h1>Başvurun Onaylandı</h1>' +
         '<p>Artık ürün ekleyip satışa başlayabilirsin.</p>' +
         '<span class="status-badge approved">ONAYLANDI</span>';
       document.getElementById('docCard').style.display = 'none';
+      document.getElementById('idDocCard').style.display = 'none';
       document.getElementById('goBtn').style.display = 'block';
     } else if (status === 'rejected') {
       card.innerHTML = '<div class="status-icon">✕</div><h1>Başvurun Reddedildi</h1>' +
