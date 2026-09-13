@@ -1269,7 +1269,7 @@ describe('Ürün siparişleri (Siparişlerim): oluşturma, takip, durum güncell
       method: 'POST', headers: authHeaders(buyer.token),
       body: JSON.stringify({
         productSlug: product.slug, quantity: 3, city: 'İzmir', district: 'Konak',
-        address: 'Test mahallesi', deadline: 'Bu hafta içinde', note: 'Az şekerli olsun',
+        address: 'Test mahallesi', deadline: 'Bu hafta içinde', note: 'Az şekerli olsun', termsAccepted: true,
       }),
     }).then((r) => r.json());
     assert.equal(order.status, 'requested');
@@ -1293,7 +1293,7 @@ describe('Ürün siparişleri (Siparişlerim): oluşturma, takip, durum güncell
 
     const order = await fetch(url('/api/product-orders'), {
       method: 'POST', headers: authHeaders(buyer.token),
-      body: JSON.stringify({ productSlug: product.slug, quantity: 1, city: 'Manisa', district: 'Şehzadeler' }),
+      body: JSON.stringify({ productSlug: product.slug, quantity: 1, city: 'Manisa', district: 'Şehzadeler', termsAccepted: true }),
     }).then((r) => r.json());
 
     const wrongSeller = await fetch(url('/api/admin/product-orders/update'), {
@@ -1310,7 +1310,7 @@ describe('Ürün siparişleri (Siparişlerim): oluşturma, takip, durum güncell
 
     const updated = await fetch(url('/api/admin/product-orders/update'), {
       method: 'POST', headers: authHeaders(seller.token),
-      body: JSON.stringify({ id: order.id, status: 'confirmed' }),
+      body: JSON.stringify({ id: order.id, status: 'confirmed', termsAccepted: true }),
     }).then((r) => r.json());
     assert.equal(updated.status, 'confirmed');
 
@@ -1337,13 +1337,13 @@ describe('Sipariş fotoğraf doğrulaması (opsiyonel): gönderim ve teslim alma
 
     const order = await fetch(url('/api/product-orders'), {
       method: 'POST', headers: authHeaders(buyer.token),
-      body: JSON.stringify({ productSlug: product.slug, quantity: 1, city: 'Bursa', district: 'Nilüfer' }),
+      body: JSON.stringify({ productSlug: product.slug, quantity: 1, city: 'Bursa', district: 'Nilüfer', termsAccepted: true }),
     }).then((r) => r.json());
 
     // fotoğrafsız güncelleme hâlâ çalışmalı (opsiyonel olduğu için zorunlu değil)
     const noPhoto = await fetch(url('/api/admin/product-orders/update'), {
       method: 'POST', headers: authHeaders(seller.token),
-      body: JSON.stringify({ id: order.id, status: 'confirmed' }),
+      body: JSON.stringify({ id: order.id, status: 'confirmed', termsAccepted: true }),
     }).then((r) => r.json());
     assert.equal(noPhoto.sellerProofPhotoUrl, null);
 
@@ -1366,7 +1366,7 @@ describe('Sipariş fotoğraf doğrulaması (opsiyonel): gönderim ve teslim alma
 
     const order = await fetch(url('/api/product-orders'), {
       method: 'POST', headers: authHeaders(buyer.token),
-      body: JSON.stringify({ productSlug: product.slug, quantity: 1, city: 'Konya', district: 'Selçuklu' }),
+      body: JSON.stringify({ productSlug: product.slug, quantity: 1, city: 'Konya', district: 'Selçuklu', termsAccepted: true }),
     }).then((r) => r.json());
 
     const wrongBuyer = await fetch(url('/api/product-orders/confirm-receipt'), {
@@ -1393,7 +1393,7 @@ describe('Sipariş fotoğraf doğrulaması (opsiyonel): gönderim ve teslim alma
     const buyer = await newBuyer('Geçersiz Foto Alıcı');
     const order = await fetch(url('/api/product-orders'), {
       method: 'POST', headers: authHeaders(buyer.token),
-      body: JSON.stringify({ productSlug: product.slug, quantity: 1, city: 'Trabzon', district: 'Ortahisar' }),
+      body: JSON.stringify({ productSlug: product.slug, quantity: 1, city: 'Trabzon', district: 'Ortahisar', termsAccepted: true }),
     }).then((r) => r.json());
 
     const bad = await fetch(url('/api/admin/product-orders/update'), {
@@ -1440,7 +1440,7 @@ describe('Satıcı IBAN\'ı ve "ödemeyi gönderdim" öz-bildirimi', () => {
 
     const order = await fetch(url('/api/product-orders'), {
       method: 'POST', headers: authHeaders(buyer.token),
-      body: JSON.stringify({ productSlug: product.slug, quantity: 1, city: 'Ankara', district: 'Çankaya' }),
+      body: JSON.stringify({ productSlug: product.slug, quantity: 1, city: 'Ankara', district: 'Çankaya', termsAccepted: true }),
     }).then((r) => r.json());
 
     const mineBefore = await fetch(url('/api/product-orders/mine'), { headers: authHeaders(buyer.token) }).then((r) => r.json());
@@ -1461,5 +1461,72 @@ describe('Satıcı IBAN\'ı ve "ödemeyi gönderdim" öz-bildirimi', () => {
 
     const incoming = await fetch(url('/api/admin/product-orders/mine'), { headers: authHeaders(seller.token) }).then((r) => r.json());
     assert.ok(incoming.orders[0].paymentSentAt);
+  });
+});
+
+describe('Sipariş Şartları: her iki taraf da kendi adımında kabul etmek zorunda', () => {
+  test('alıcı Sipariş Şartları\'nı kabul etmeden talep oluşturamaz', async () => {
+    const seller = await newSeller('Şart Satıcı');
+    const product = await createProduct(seller.token, { title: 'Şart Testi Ürünü' });
+    const buyer = await newBuyer('Şart Alıcı');
+
+    const noTerms = await fetch(url('/api/product-orders'), {
+      method: 'POST', headers: authHeaders(buyer.token),
+      body: JSON.stringify({ productSlug: product.slug, quantity: 1, city: 'İzmir', district: 'Konak' }),
+    });
+    assert.equal(noTerms.status, 400);
+
+    const withTerms = await fetch(url('/api/product-orders'), {
+      method: 'POST', headers: authHeaders(buyer.token),
+      body: JSON.stringify({ productSlug: product.slug, quantity: 1, city: 'İzmir', district: 'Konak', termsAccepted: true }),
+    }).then((r) => r.json());
+    assert.ok(withTerms.buyerTermsAcceptedAt);
+    assert.equal(withTerms.sellerTermsAcceptedAt, null);
+  });
+
+  test('satıcı ilk onayda/tamamlamada Sipariş Şartları\'nı kabul etmek zorunda, sonrasında tekrar istenmez', async () => {
+    const seller = await newSeller('Şart Satıcı 2');
+    const product = await createProduct(seller.token, { title: 'Şart Testi Ürünü 2' });
+    const buyer = await newBuyer('Şart Alıcı 2');
+    const order = await fetch(url('/api/product-orders'), {
+      method: 'POST', headers: authHeaders(buyer.token),
+      body: JSON.stringify({ productSlug: product.slug, quantity: 1, city: 'Bursa', district: 'Nilüfer', termsAccepted: true }),
+    }).then((r) => r.json());
+
+    const noTerms = await fetch(url('/api/admin/product-orders/update'), {
+      method: 'POST', headers: authHeaders(seller.token),
+      body: JSON.stringify({ id: order.id, status: 'confirmed' }),
+    });
+    assert.equal(noTerms.status, 400);
+
+    const confirmed = await fetch(url('/api/admin/product-orders/update'), {
+      method: 'POST', headers: authHeaders(seller.token),
+      body: JSON.stringify({ id: order.id, status: 'confirmed', termsAccepted: true }),
+    }).then((r) => r.json());
+    assert.ok(confirmed.sellerTermsAcceptedAt);
+
+    // Bir kere kabul edince, sonraki durum değişikliklerinde tekrar istenmiyor.
+    const completedWithoutTerms = await fetch(url('/api/admin/product-orders/update'), {
+      method: 'POST', headers: authHeaders(seller.token),
+      body: JSON.stringify({ id: order.id, status: 'completed' }),
+    }).then((r) => r.json());
+    assert.equal(completedWithoutTerms.status, 'completed');
+  });
+
+  test('satıcı şartları kabul etmeden siparişi reddedebilir (red için şart aranmaz)', async () => {
+    const seller = await newSeller('Şart Satıcı 3');
+    const product = await createProduct(seller.token, { title: 'Şart Testi Ürünü 3' });
+    const buyer = await newBuyer('Şart Alıcı 3');
+    const order = await fetch(url('/api/product-orders'), {
+      method: 'POST', headers: authHeaders(buyer.token),
+      body: JSON.stringify({ productSlug: product.slug, quantity: 1, city: 'Konya', district: 'Selçuklu', termsAccepted: true }),
+    }).then((r) => r.json());
+
+    const rejected = await fetch(url('/api/admin/product-orders/update'), {
+      method: 'POST', headers: authHeaders(seller.token),
+      body: JSON.stringify({ id: order.id, status: 'rejected' }),
+    }).then((r) => r.json());
+    assert.equal(rejected.status, 'rejected');
+    assert.equal(rejected.sellerTermsAcceptedAt, null);
   });
 });

@@ -772,6 +772,10 @@ body.vitrin-body{margin:0;background:#000;overflow:hidden;}
 .terms-row input{margin-top:3px;flex-shrink:0;accent-color:var(--ink);}
 .terms-row label{font-size:12px;color:var(--muted);line-height:1.5;}
 .terms-row a{color:var(--ring1);font-weight:700;cursor:pointer;}
+.order-terms-row{display:flex;align-items:flex-start;gap:8px;margin:10px 0;cursor:pointer;}
+.order-terms-row input{margin-top:3px;flex-shrink:0;accent-color:var(--ink);}
+.order-terms-row span{font-size:12px;color:var(--muted);line-height:1.5;}
+.order-terms-row a{color:var(--ring1);font-weight:700;}
 .terms-modal{
   position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:90;display:flex;align-items:center;justify-content:center;padding:20px;
 }

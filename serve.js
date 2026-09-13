@@ -293,6 +293,7 @@ ${relatedHtml}</div><footer class="site-footer">
 <script src="../assets/auth.js"></script>
 <script src="../assets/messages.js"></script>
 <script src="../assets/address.js"></script>
+<script src="../assets/order-terms.js"></script>
 <script src="../assets/order.js"></script>
 <script src="../assets/reviews.js"></script>
 <script src="../assets/favorites.js"></script>
@@ -1411,6 +1412,7 @@ const server = http.createServer(async (req, res) => {
       const note = String(body.note || '').trim().slice(0, 300);
       if (!city) return jsonResponse(res, 400, { error: 'Teslimat ili gerekli.' });
       if (!district) return jsonResponse(res, 400, { error: 'Teslimat ilçesi gerekli.' });
+      if (!body.termsAccepted) return jsonResponse(res, 400, { error: 'Sipariş Şartları\'nı kabul etmelisin.' });
 
       const orders = readJson(PRODUCT_ORDERS_PATH, {});
       const id = 'po_' + randomToken().slice(0, 10);
@@ -1427,6 +1429,10 @@ const server = http.createServer(async (req, res) => {
         // Ödeme platform üzerinden geçmiyor (IBAN'a doğrudan havale) — bu sadece
         // alıcının "gönderdim" dediği bir öz-bildirim, gerçek transferi doğrulamaz.
         paymentSentAt: null,
+        // Sipariş Şartları'nı her iki taraf da ayrı ayrı, bu sipariş özelinde kabul
+        // eder — genel Kullanım Şartları'ndan (kayıt anında, bir kere) farklı olarak
+        // burada her siparişte tazelenir.
+        buyerTermsAcceptedAt: now, sellerTermsAcceptedAt: null,
       };
       writeJson(PRODUCT_ORDERS_PATH, orders);
       notifyUser(product.sellerPhone, 'new_product_order',
@@ -1463,11 +1469,18 @@ const server = http.createServer(async (req, res) => {
     if (p === '/api/admin/product-orders/update' && req.method === 'POST') {
       const session = requireRole(req, res, 'satici');
       if (!session) return;
-      const { id, status, proofPhotoUrl } = await readBody(req);
+      const { id, status, proofPhotoUrl, termsAccepted } = await readBody(req);
       const orders = readJson(PRODUCT_ORDERS_PATH, {});
       const order = orders[id];
       if (!order || order.sellerId !== session.user.id) return jsonResponse(res, 404, { error: 'Sipariş bulunamadı' });
       if (!PRODUCT_ORDER_STATUSES.includes(status)) return jsonResponse(res, 400, { error: 'Geçersiz durum.' });
+      // Satıcı siparişi ilk kez üstlenirken (onaylarken ya da doğrudan tamamlanmış
+      // işaretlerken) Sipariş Şartları'nı da kabul etmiş sayılır — reddetmek için
+      // gerekmez, daha önce kabul etmişse tekrar istenmez.
+      if ((status === 'confirmed' || status === 'completed') && !order.sellerTermsAcceptedAt) {
+        if (!termsAccepted) return jsonResponse(res, 400, { error: 'Onaylamak için Sipariş Şartları\'nı kabul etmelisin.' });
+        order.sellerTermsAcceptedAt = new Date().toISOString();
+      }
       order.status = status;
       // Satıcının ürünü gönderirken/teslim ederken eklediği fotoğraf — opsiyonel.
       if (proofPhotoUrl !== undefined) {

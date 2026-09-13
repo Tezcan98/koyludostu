@@ -88,6 +88,7 @@
 </div>
 
 <script src="assets/auth.js"></script>
+<script src="assets/order-terms.js"></script>
 <script>
 (function () {
   if (!window.KDAuth.requireApprovedSeller('/admin-siparisler.html')) return;
@@ -131,6 +132,9 @@
           '</select>' +
           '<label class="po-photo-label">Gönderim fotoğrafı (opsiyonel)</label>' +
           '<input type="file" class="po-photo-input" accept="image/png,image/jpeg,image/webp">' +
+          (!o.sellerTermsAcceptedAt
+            ? '<label class="order-terms-row"><input type="checkbox" class="po-terms-check"> <span>Onaylarken/tamamlarken <a href="javascript:;" class="order-terms-link">Sipariş Şartları\'nı</a> kabul ediyorum.</span></label>'
+            : '') +
           '<button type="button" class="po-save-btn" data-id="' + o.id + '">Güncelle</button>' +
           '<p class="po-save-msg"></p>' +
         '</div>';
@@ -141,6 +145,7 @@
           var status = item.querySelector('.po-sel').value;
           var fileInput = item.querySelector('.po-photo-input');
           var msgEl = item.querySelector('.po-save-msg');
+          var termsCheck = item.querySelector('.po-terms-check');
           var file = fileInput.files[0];
           btn.disabled = true;
           msgEl.textContent = '';
@@ -148,7 +153,10 @@
           function sendUpdate(proofPhotoUrl) {
             window.KDAuth.authedFetch('/api/admin/product-orders/update', {
               method: 'POST', headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ id: btn.dataset.id, status: status, proofPhotoUrl: proofPhotoUrl }),
+              body: JSON.stringify({
+                id: btn.dataset.id, status: status, proofPhotoUrl: proofPhotoUrl,
+                termsAccepted: termsCheck ? termsCheck.checked : undefined,
+              }),
             }).then(function (r) { return r.json(); }).then(function (data) {
               btn.disabled = false;
               if (data.error) { msgEl.textContent = data.error; return; }

@@ -28,6 +28,7 @@
           '<input type="text" id="orderDeadline" placeholder="Örn. bu hafta içinde, acil değil" maxlength="80">' +
           '<label>Özel isteğin var mı? (opsiyonel)</label>' +
           '<textarea id="orderNote" placeholder="Örn. az şekerli olsun, hediyelik paketlensin" maxlength="300"></textarea>' +
+          '<label class="order-terms-row"><input type="checkbox" id="orderTermsCheck"> <span><a href="javascript:;" class="order-terms-link">Sipariş Şartları\'nı</a> okudum, kabul ediyorum.</span></label>' +
           '<button id="orderSendBtn">Talebi Gönder</button>' +
           '<p class="order-msg" id="orderMsg"></p>' +
         '</div>' +
@@ -48,6 +49,7 @@
     document.getElementById('orderAddress').value = '';
     document.getElementById('orderDeadline').value = '';
     document.getElementById('orderNote').value = '';
+    document.getElementById('orderTermsCheck').checked = false;
     var msgEl = document.getElementById('orderMsg');
     msgEl.textContent = '';
 
@@ -64,6 +66,7 @@
       if (qty < 1) { msgEl.textContent = 'Geçerli bir adet gir.'; return; }
       if (!city) { msgEl.textContent = 'Teslimat ili gerekli.'; return; }
       if (!district) { msgEl.textContent = 'Teslimat ilçesi gerekli.'; return; }
+      if (!document.getElementById('orderTermsCheck').checked) { msgEl.textContent = 'Sipariş Şartları\'nı kabul etmelisin.'; return; }
 
       msgEl.textContent = '';
       sendBtn.disabled = true;
@@ -72,7 +75,7 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           productSlug: slug, quantity: qty, city: city, district: district,
-          address: address, deadline: deadline, note: note,
+          address: address, deadline: deadline, note: note, termsAccepted: true,
         }),
       }).then(function (r) { return r.json(); }).then(function (data) {
         sendBtn.disabled = false;
