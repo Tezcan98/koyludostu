@@ -29,7 +29,7 @@
     }
     thread.innerHTML = messages.map(function (m) {
       return '<div class="msg-bubble ' + (m.from === 'buyer' ? 'buyer' : 'seller') + '">' +
-        m.text.replace(/[<>]/g, '') + '</div>';
+        window.KDAuth.esc(m.text) + '</div>';
     }).join('');
     thread.scrollTop = thread.scrollHeight;
   }

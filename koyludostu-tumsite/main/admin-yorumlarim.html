@@ -116,7 +116,7 @@
           body = '';
         }
         return '<div class="rev-item">' +
-          '<div class="rev-top"><a class="rev-product" href="urun/' + r.productSlug + '.html">' + r.productTitle + '</a>' +
+          '<div class="rev-top"><a class="rev-product" href="urun/' + encodeURIComponent(r.productSlug) + '.html">' + window.KDAuth.esc(r.productTitle) + '</a>' +
           '<span class="rev-stars">' + starsHtml(r.rating) + '</span></div>' +
           '<div class="rev-name">' + r.name.replace(/[<>]/g, '') + statusBadge + '</div>' +
           '<div class="rev-text">' + r.text.replace(/[<>]/g, '') + '</div>' +

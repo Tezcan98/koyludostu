@@ -106,12 +106,12 @@
       list.innerHTML = items.map(function (c) {
         var statusLabel = c.status === 'resolved' ? 'Çözüldü' : 'Beklemede';
         var response = c.sellerResponse
-          ? '<div class="cx-response"><b>Satıcı yanıtı</b>' + c.sellerResponse + '</div>'
+          ? '<div class="cx-response"><b>Satıcı yanıtı</b>' + window.KDAuth.esc(c.sellerResponse) + '</div>'
           : '';
         return '<div class="cx-item">' +
-          '<div class="cx-head"><span class="cx-title">' + c.productTitle + '</span><span class="cx-status ' + c.status + '">' + statusLabel + '</span></div>' +
-          '<div class="cx-reason">' + (REASON_LABELS[c.reason] || c.reason) + ' · ' + timeAgo(c.createdAt) + '</div>' +
-          '<div class="cx-text">' + c.text.replace(/[<>]/g, '') + '</div>' +
+          '<div class="cx-head"><span class="cx-title">' + window.KDAuth.esc(c.productTitle) + '</span><span class="cx-status ' + c.status + '">' + statusLabel + '</span></div>' +
+          '<div class="cx-reason">' + window.KDAuth.esc(REASON_LABELS[c.reason] || c.reason) + ' · ' + timeAgo(c.createdAt) + '</div>' +
+          '<div class="cx-text">' + window.KDAuth.esc(c.text) + '</div>' +
           response +
         '</div>';
       }).join('');

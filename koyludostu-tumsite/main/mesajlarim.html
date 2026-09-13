@@ -116,16 +116,16 @@
       }
       list.innerHTML = convs.map(function (c) {
         var last = c.messages[c.messages.length - 1];
-        var titleAttr = c.productTitle.replace(/"/g, '&quot;');
-        return '<div class="conv-item" data-slug="' + c.productSlug + '" data-title="' + titleAttr + '">' +
+        var titleAttr = window.KDAuth.esc(c.productTitle);
+        return '<div class="conv-item" data-slug="' + window.KDAuth.esc(c.productSlug) + '" data-title="' + titleAttr + '">' +
           '<div class="conv-icon">🌾</div>' +
           '<div class="conv-body">' +
-            '<div class="conv-title">' + c.productTitle + '</div>' +
-            '<div class="conv-last">' + (last.from === 'buyer' ? 'Sen: ' : '') + last.text + '</div>' +
+            '<div class="conv-title">' + titleAttr + '</div>' +
+            '<div class="conv-last">' + (last.from === 'buyer' ? 'Sen: ' : '') + window.KDAuth.esc(last.text) + '</div>' +
           '</div>' +
           '<div class="conv-actions">' +
             '<span class="conv-badge">' + timeAgo(c.updatedAt) + '</span>' +
-            '<button type="button" class="complaint-cta" data-slug="' + c.productSlug + '" data-title="' + titleAttr + '">Şikayet Et</button>' +
+            '<button type="button" class="complaint-cta" data-slug="' + window.KDAuth.esc(c.productSlug) + '" data-title="' + titleAttr + '">Şikayet Et</button>' +
           '</div>' +
         '</div>';
       }).join('');

@@ -112,7 +112,7 @@
       if (!convs.length) { list.innerHTML = '<div class="adm-empty">Henüz mesaj yok.</div>'; return; }
       list.innerHTML = convs.map(function (c) {
         return '<div class="adm-conv' + (c.id === activeId ? ' active' : '') + '" data-id="' + c.id + '">' +
-          '<div class="adm-conv-title">' + c.productTitle + '</div>' +
+          '<div class="adm-conv-title">' + window.KDAuth.esc(c.productTitle) + '</div>' +
           '<div class="adm-conv-phone">0' + c.buyerPhone.slice(0, 3) + ' ' + c.buyerPhone.slice(3, 6) + ' ' + c.buyerPhone.slice(6) + '</div>' +
         '</div>';
       }).join('');
@@ -139,7 +139,7 @@
     document.getElementById('threadHead').textContent = conv.productTitle + ' · 0' + conv.buyerPhone.slice(0, 3) + ' ' + conv.buyerPhone.slice(3, 6) + ' ' + conv.buyerPhone.slice(6);
     var body = document.getElementById('threadBody');
     body.innerHTML = conv.messages.map(function (m) {
-      return '<div class="msg-bubble ' + (m.from === 'buyer' ? 'seller' : 'buyer') + '">' + m.text.replace(/[<>]/g, '') +
+      return '<div class="msg-bubble ' + (m.from === 'buyer' ? 'seller' : 'buyer') + '">' + window.KDAuth.esc(m.text) +
         '<div style="font-size:10px;opacity:.7;margin-top:3px;">' + timeStr(m.at) + '</div></div>';
     }).join('');
     body.scrollTop = body.scrollHeight;

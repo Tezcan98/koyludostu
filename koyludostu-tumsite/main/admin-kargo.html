@@ -177,12 +177,12 @@
       var items = data.shipments || [];
       if (!items.length) { list.innerHTML = '<div class="adm-empty">Henüz kargo talebin yok.</div>'; return; }
       list.innerHTML = items.map(function (s) {
-        var track = s.trackingNo ? '<div class="sh-track">Takip No: ' + s.trackingNo + '</div>' : '';
+        var track = s.trackingNo ? '<div class="sh-track">Takip No: ' + window.KDAuth.esc(s.trackingNo) + '</div>' : '';
         var perishBadge = s.perishable ? '<span class="sh-perishable">❄️ Çabuk Bozulur</span>' : '';
         var weight = s.totalWeightKg ? '<div class="sh-weight">Miktar: ' + s.quantity + ' · Toplam ~' + s.totalWeightKg + ' kg</div>' : '<div class="sh-weight">Miktar: ' + s.quantity + '</div>';
         return '<div class="sh-item">' +
-          '<div class="sh-top"><div><div class="sh-title">' + s.productTitle + ' → ' + s.buyerName + perishBadge + '</div>' +
-          '<div class="sh-sub">' + s.address.replace(/[<>]/g, '') + '</div>' + weight + '</div>' +
+          '<div class="sh-top"><div><div class="sh-title">' + window.KDAuth.esc(s.productTitle) + ' → ' + window.KDAuth.esc(s.buyerName) + perishBadge + '</div>' +
+          '<div class="sh-sub">' + window.KDAuth.esc(s.address) + '</div>' + weight + '</div>' +
           '<span class="sh-status ' + s.status + '">' + STATUS_LABELS[s.status] + '</span></div>' +
           track +
           '<div class="sh-track">' + timeStr(s.updatedAt) + '</div>' +

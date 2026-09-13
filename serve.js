@@ -692,8 +692,12 @@ function normalizePhone(raw) {
   return digits;
 }
 
+// Oturum/admin/kayıt token'ları ve dosya adları burada üretilir — Math.random()
+// kriptografik olarak güvenli değildir (tahmin edilebilir iç durumu vardır), bu yüzden
+// crypto.randomBytes kullanıyoruz. Hex çıktısı eski base36 formatıyla aynı karakter
+// kümesine (0-9a-f ⊂ [A-Za-z0-9]) uyduğundan mevcut dosya adı/ID regex'leriyle uyumlu.
 function randomToken() {
-  return [...Array(32)].map(() => Math.floor(Math.random() * 36).toString(36)).join('');
+  return crypto.randomBytes(24).toString('hex');
 }
 
 function isValidPassword(pw) {
@@ -738,11 +742,22 @@ function verifyPassword(password, stored) {
 //                  3) verify (telefon, kod, regToken) -> hesap oluşturulur, oturum açılır
 // Akış (dönen üye): login (telefon + parola) -> doğrudan oturum açılır, SMS gerekmez.
 
-const pendingCodes = new Map(); // phone -> { code, at }
+const pendingCodes = new Map(); // phone -> { code, at, attempts }
 const pendingRegs = new Map(); // regToken -> { name, city, passwordHash, role, at }
 const CODE_TTL = 5 * 60 * 1000;
 const REGISTER_TTL = 15 * 60 * 1000;
 const DEV_CODE = '0000';
+const MAX_CODE_ATTEMPTS = 5;
+// Gerçek bir SMS sağlayıcısı (Netgsm, Twilio vb.) henüz bağlı değil. Testler (KD_DATA_DIR
+// her zaman ayarlı) hâlâ sabit '0000' kodunu kullanır; ama üretimde/manuel çalıştırmada
+// gerçek rastgele bir kod üretilir ve SADECE sunucu konsoluna yazılır — ASLA API
+// yanıtında istemciye dönülmez. Aksi halde (eski davranış) telefon doğrulaması hiçbir
+// şeyi doğrulamamış olurdu: kod her zaman '0000' olduğu ve bu public repo'da görülebildiği
+// için biri kendisine ait olmayan bir telefon numarasıyla hesap açabilir/doğrulayabilirdi.
+const IS_TEST_ENV = !!process.env.KD_DATA_DIR;
+function generateSmsCode() {
+  return IS_TEST_ENV ? DEV_CODE : String(crypto.randomInt(0, 10000)).padStart(4, '0');
+}
 const VALID_ROLES = ['alici', 'satici'];
 
 function findUserById(id) {
@@ -972,9 +987,17 @@ function notifyUser(phone, event, message) {
 // ---------- Platform yönetici paneli: telefon hesaplarından bağımsız, tek parolalı erişim ----------
 // Gerçek e-Devlet/kimlik doğrulaması eklenemediği için (bkz. run.sh), site sahibinin
 // tüm ürün/kullanıcı/şikayet/post verilerini görebildiği ayrı bir "owner" oturumu.
-// Geliştirme parolası: env ADMIN_PASSWORD, verilmezse aşağıdaki varsayılan kullanılır.
-
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'koylu-admin-2026';
+// ÖNEMLİ: sabit bir varsayılan parola ASLA kaynak koduna gömülmemeli — bu repo public
+// (github.com/Tezcan98/koyludostu), gömülü bir varsayılan orada herkese açık olur.
+// ADMIN_PASSWORD ortam değişkeni ayarlanmamışsa, her süreç başlangıcında rastgele
+// bir parola üretilip SADECE sunucu konsoluna (pm2 logs ile görülür) yazılır.
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || (() => {
+  const generated = crypto.randomBytes(9).toString('base64url');
+  console.warn('\n⚠️  ADMIN_PASSWORD ortam değişkeni ayarlanmamış! Bu çalıştırma için geçici bir parola üretildi:');
+  console.warn('    ' + generated);
+  console.warn('    Kalıcı olması için ADMIN_PASSWORD ortam değişkenini ayarlayıp süreci yeniden başlatın.\n');
+  return generated;
+})();
 const adminTokens = new Map(); // token -> { at }
 const ADMIN_SESSION_TTL = 12 * 60 * 60 * 1000;
 
@@ -1133,11 +1156,51 @@ setInterval(() => {
   }
 }, 5 * 60 * 1000).unref();
 
+// ---------- parola denemesi sınırlama (admin/kullanıcı girişinde kaba kuvvete karşı) ----------
+// Genel hız sınırlaması (yukarıda) dakikada 300 istek gibi geniş bir eşik — bir parola
+// tahmin saldırısını caydırmaya yetmez. Burada başarısız girişleri ayrıca sayıyoruz.
+
+const loginAttemptMap = new Map(); // key -> { count, windowStart }
+const LOGIN_ATTEMPT_WINDOW_MS = 15 * 60 * 1000;
+const LOGIN_ATTEMPT_MAX = 10;
+
+function isLoginRateLimited(key) {
+  const entry = loginAttemptMap.get(key);
+  if (!entry || Date.now() - entry.windowStart > LOGIN_ATTEMPT_WINDOW_MS) return false;
+  return entry.count >= LOGIN_ATTEMPT_MAX;
+}
+function recordFailedLogin(key) {
+  const now = Date.now();
+  const entry = loginAttemptMap.get(key);
+  if (!entry || now - entry.windowStart > LOGIN_ATTEMPT_WINDOW_MS) {
+    loginAttemptMap.set(key, { count: 1, windowStart: now });
+  } else {
+    entry.count++;
+  }
+}
+function clearLoginAttempts(key) {
+  loginAttemptMap.delete(key);
+}
+
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, entry] of loginAttemptMap) {
+    if (now - entry.windowStart > LOGIN_ATTEMPT_WINDOW_MS) loginAttemptMap.delete(k);
+  }
+}, 5 * 60 * 1000).unref();
+
 // ---------- server ----------
 
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://localhost:${PORT}`);
   const p = url.pathname;
+
+  // Temel güvenlik başlıkları — sayfa her yerde çok sayıda satır içi <script> kullandığından
+  // sıkı bir Content-Security-Policy şu an eklenemiyor (o, ayrı ve daha büyük bir iş);
+  // ama bu üçü hiçbir şeyi bozmadan ücretsiz gelir.
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
 
   const clientIp = getClientIp(req);
   if (isRateLimited(clientIp)) {
@@ -1332,10 +1395,13 @@ const server = http.createServer(async (req, res) => {
       const { phone } = await readBody(req);
       const norm = normalizePhone(phone);
       if (norm.length !== 10) return jsonResponse(res, 400, { error: 'Geçerli bir telefon numarası girin (5XX XXX XX XX)' });
-      pendingCodes.set(norm, { code: DEV_CODE, at: Date.now() });
-      // NOT: Gerçek SMS entegrasyonu yok; geliştirme aşamasında kod her zaman 0000.
-      console.log(`[SMS-DEV] +90${norm} için onay kodu: ${DEV_CODE}`);
-      return jsonResponse(res, 200, { ok: true, dev: true, hint: 'Geliştirme modunda onay kodu her zaman 0000.' });
+      const code = generateSmsCode();
+      pendingCodes.set(norm, { code, at: Date.now(), attempts: 0 });
+      // Kod ASLA API yanıtında istemciye dönülmez — sadece konsola yazılır (gerçek bir
+      // SMS sağlayıcısı bağlanana kadar bu, sunucuya erişimi olan birinin görebileceği
+      // tek yerdir).
+      console.log(`[SMS] +90${norm} için onay kodu: ${code}`);
+      return jsonResponse(res, 200, { ok: true });
     }
 
     if (p === '/api/auth/verify' && req.method === 'POST') {
@@ -1343,8 +1409,18 @@ const server = http.createServer(async (req, res) => {
       const norm = normalizePhone(phone);
       const pendingCode = pendingCodes.get(norm);
       const now = Date.now();
+      // 4 haneli kodun sadece 10.000 ihtimali olduğundan, deneme sayısını sınırlamazsak
+      // biri CODE_TTL süresi içinde kodu deneyerek bulabilir (bkz. genel hız sınırlaması
+      // da var ama bu ayrıca ve daha sıkı bir koruma).
+      if (pendingCode && now - pendingCode.at < CODE_TTL && pendingCode.attempts >= MAX_CODE_ATTEMPTS) {
+        pendingCodes.delete(norm);
+        return jsonResponse(res, 400, { error: 'Çok fazla hatalı deneme. Lütfen yeni bir kod iste.' });
+      }
       const codeOk = pendingCode && pendingCode.code === String(code).trim() && now - pendingCode.at < CODE_TTL;
-      if (!codeOk) return jsonResponse(res, 400, { error: 'Kod hatalı veya süresi doldu' });
+      if (!codeOk) {
+        if (pendingCode) pendingCode.attempts = (pendingCode.attempts || 0) + 1;
+        return jsonResponse(res, 400, { error: 'Kod hatalı veya süresi doldu' });
+      }
       pendingCodes.delete(norm);
 
       const users = readJson(USERS_PATH, {});
@@ -1402,12 +1478,18 @@ const server = http.createServer(async (req, res) => {
     if (p === '/api/auth/login' && req.method === 'POST') {
       const { phone, password } = await readBody(req);
       const norm = normalizePhone(phone);
+      const loginKey = 'user:' + clientIp + ':' + norm;
+      if (isLoginRateLimited(loginKey)) {
+        return jsonResponse(res, 429, { error: 'Çok fazla hatalı deneme. Lütfen biraz sonra tekrar dene.' });
+      }
       const users = readJson(USERS_PATH, {});
       const user = users[norm];
       if (!user) return jsonResponse(res, 404, { error: 'Bu numara kayıtlı değil. Önce üye ol.' });
       if (!verifyPassword(String(password || ''), user.passwordHash)) {
+        recordFailedLogin(loginKey);
         return jsonResponse(res, 401, { error: 'Telefon veya parola hatalı.' });
       }
+      clearLoginAttempts(loginKey);
       const token = createSession(norm);
       const { passwordHash, ...safeUser } = user;
       return jsonResponse(res, 200, { token, user: safeUser });
@@ -2560,10 +2642,19 @@ const server = http.createServer(async (req, res) => {
     // ---------- Platform yönetici paneli ----------
 
     if (p === '/api/owner/login' && req.method === 'POST') {
+      const loginKey = 'owner:' + clientIp;
+      if (isLoginRateLimited(loginKey)) {
+        return jsonResponse(res, 429, { error: 'Çok fazla hatalı deneme. Lütfen biraz sonra tekrar dene.' });
+      }
       const { password } = await readBody(req);
-      if (String(password || '') !== ADMIN_PASSWORD) {
+      const attempt = Buffer.from(String(password || ''));
+      const expected = Buffer.from(ADMIN_PASSWORD);
+      const passwordOk = attempt.length === expected.length && crypto.timingSafeEqual(attempt, expected);
+      if (!passwordOk) {
+        recordFailedLogin(loginKey);
         return jsonResponse(res, 401, { error: 'Parola hatalı.' });
       }
+      clearLoginAttempts(loginKey);
       const token = randomToken();
       adminTokens.set(token, { at: Date.now() });
       return jsonResponse(res, 200, { token });

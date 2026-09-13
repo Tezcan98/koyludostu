@@ -104,11 +104,11 @@
     list.innerHTML = items.map(function (c) {
       var statusLabel = c.status === 'resolved' ? 'Çözüldü' : 'Beklemede';
       var body = '<div class="cx-item" data-id="' + c.id + '">' +
-        '<div class="cx-head"><span class="cx-title">' + c.productTitle + ' · ' + c.buyerName + '</span><span class="cx-status ' + c.status + '">' + statusLabel + '</span></div>' +
-        '<div class="cx-reason">' + (REASON_LABELS[c.reason] || c.reason) + ' · ' + timeAgo(c.createdAt) + '</div>' +
-        '<div class="cx-text">' + c.text.replace(/[<>]/g, '') + '</div>';
+        '<div class="cx-head"><span class="cx-title">' + window.KDAuth.esc(c.productTitle) + ' · ' + window.KDAuth.esc(c.buyerName) + '</span><span class="cx-status ' + c.status + '">' + statusLabel + '</span></div>' +
+        '<div class="cx-reason">' + window.KDAuth.esc(REASON_LABELS[c.reason] || c.reason) + ' · ' + timeAgo(c.createdAt) + '</div>' +
+        '<div class="cx-text">' + window.KDAuth.esc(c.text) + '</div>';
       if (c.status === 'resolved') {
-        body += '<div class="cx-response"><b>Yanıtın</b>' + c.sellerResponse.replace(/[<>]/g, '') + '</div>';
+        body += '<div class="cx-response"><b>Yanıtın</b>' + window.KDAuth.esc(c.sellerResponse) + '</div>';
       } else {
         body += '<div class="cx-reply-row"><input type="text" placeholder="Yanıt yaz ve çözüldü olarak işaretle…" class="cx-reply-input"><button class="cx-reply-btn">Gönder</button></div>';
       }

@@ -1670,3 +1670,54 @@ describe('Şirket/Bireysel satıcı türü', () => {
     assert.notEqual(ver.user.idDocOcrTaxId, ver.user.taxId);
   });
 });
+
+describe('Siber güvenlik sertleştirmeleri', () => {
+  test('SMS doğrulama kodu API yanıtında asla dönülmez (sadece konsola yazılır)', async () => {
+    const phone = nextTestPhone();
+    const r = await fetch(url('/api/auth/request-code'), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone }),
+    }).then((res) => res.json());
+    assert.deepEqual(Object.keys(r).sort(), ['ok']);
+    assert.equal(r.dev, undefined);
+    assert.equal(r.hint, undefined);
+    assert.equal(r.code, undefined);
+  });
+
+  test('yönetici parolası çok sayıda hatalı denemeden sonra kilitlenir', async () => {
+    for (let i = 0; i < 10; i++) {
+      const r = await fetch(url('/api/owner/login'), {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: 'yanlis-parola-' + i }),
+      });
+      assert.equal(r.status, 401);
+    }
+    const lockedOut = await fetch(url('/api/owner/login'), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: server.adminPassword }),
+    });
+    assert.equal(lockedOut.status, 429);
+  });
+
+  test('kullanıcı parolası tek bir telefon için çok sayıda hatalı denemeden sonra kilitlenir', async () => {
+    const buyer = await newBuyer('Kilitlenme Testi');
+    for (let i = 0; i < 10; i++) {
+      const r = await fetch(url('/api/auth/login'), {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: buyer.phone, password: 'yanlis-parola-' + i }),
+      });
+      assert.equal(r.status, 401);
+    }
+    const lockedOut = await fetch(url('/api/auth/login'), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: buyer.phone, password: 'test1234' }),
+    });
+    assert.equal(lockedOut.status, 429);
+  });
+
+  test('yanıtlar temel güvenlik başlıklarını içerir', async () => {
+    const r = await fetch(url('/api/piyasa'));
+    assert.equal(r.headers.get('x-content-type-options'), 'nosniff');
+    assert.equal(r.headers.get('x-frame-options'), 'DENY');
+    assert.equal(r.headers.get('referrer-policy'), 'strict-origin-when-cross-origin');
+  });
+});

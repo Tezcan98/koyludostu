@@ -130,8 +130,8 @@
       html += '<div class="adm-empty">Henüz sipariş talebi yok.</div>';
     } else {
       html += d.recentOrders.map(function (o) {
-        return '<div class="recent-item"><div><div class="r-title">' + o.productTitle + '</div>' +
-          '<div class="r-sub">' + o.buyerName + ' · ' + timeStr(o.createdAt) + '</div></div>' +
+        return '<div class="recent-item"><div><div class="r-title">' + window.KDAuth.esc(o.productTitle) + '</div>' +
+          '<div class="r-sub">' + window.KDAuth.esc(o.buyerName) + ' · ' + timeStr(o.createdAt) + '</div></div>' +
           '<span class="po-status-tag ' + o.status + '" style="align-self:center;">' + STATUS_LABELS[o.status] + '</span></div>';
       }).join('');
       html += '<a class="see-all" href="/admin-siparisler.html">Tüm siparişleri gör →</a>';

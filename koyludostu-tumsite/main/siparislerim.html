@@ -142,11 +142,11 @@
       list.innerHTML = items.map(function (o) {
         var metaLines = [
           '<b>Adet:</b> ' + o.quantity,
-          '<b>Teslimat:</b> ' + o.district + ' / ' + o.city,
+          '<b>Teslimat:</b> ' + window.KDAuth.esc(o.district) + ' / ' + window.KDAuth.esc(o.city),
         ];
-        if (o.address) metaLines.push('<b>Adres/Not:</b> ' + o.address.replace(/[<>]/g, ''));
-        if (o.deadline) metaLines.push('<b>Aciliyet:</b> ' + o.deadline.replace(/[<>]/g, ''));
-        if (o.note) metaLines.push('<b>Özel İstek:</b> ' + o.note.replace(/[<>]/g, ''));
+        if (o.address) metaLines.push('<b>Adres/Not:</b> ' + window.KDAuth.esc(o.address));
+        if (o.deadline) metaLines.push('<b>Aciliyet:</b> ' + window.KDAuth.esc(o.deadline));
+        if (o.note) metaLines.push('<b>Özel İstek:</b> ' + window.KDAuth.esc(o.note));
         var sellerProof = o.sellerProofPhotoUrl
           ? '<div class="po-proof"><b>Satıcının gönderim fotoğrafı:</b><br><img class="po-proof-thumb" src="' + o.sellerProofPhotoUrl + '" alt="Gönderim fotoğrafı"></div>' : '';
         var payment = o.sellerIban
@@ -160,13 +160,14 @@
           ? '<div class="po-confirmed">✅ Teslim aldığını onayladın (' + new Date(o.buyerConfirmedAt).toLocaleDateString('tr-TR') + ')' +
             (o.buyerProofPhotoUrl ? '<br><img class="po-proof-thumb" src="' + o.buyerProofPhotoUrl + '" alt="Teslim fotoğrafın">' : '') + '</div>'
           : '<button type="button" class="receipt-toggle" data-id="' + o.id + '">Teslim Aldım</button>';
+        var titleAttr = window.KDAuth.esc(o.productTitle);
         var actions = receiptAction +
-          '<button type="button" class="qr-toggle" data-id="' + o.id + '" data-slug="' + o.productSlug + '">Yorum Yap</button>' +
-          '<button type="button" class="complaint-cta" data-slug="' + o.productSlug + '" data-title="' + o.productTitle.replace(/"/g, '&quot;') + '">Şikayet Et</button>';
+          '<button type="button" class="qr-toggle" data-id="' + o.id + '" data-slug="' + window.KDAuth.esc(o.productSlug) + '">Yorum Yap</button>' +
+          '<button type="button" class="complaint-cta" data-slug="' + window.KDAuth.esc(o.productSlug) + '" data-title="' + titleAttr + '">Şikayet Et</button>';
         return '<div class="po-item" data-id="' + o.id + '">' +
           '<div class="po-head">' +
-            '<div class="po-title"><a href="urun/' + o.productSlug + '.html">' + o.productTitle + '</a>' +
-              '<div class="po-seller">Satıcı: <a href="satici/' + o.sellerId + '.html">' + o.sellerName + '</a> · ' + timeAgo(o.createdAt) + '</div>' +
+            '<div class="po-title"><a href="urun/' + encodeURIComponent(o.productSlug) + '.html">' + titleAttr + '</a>' +
+              '<div class="po-seller">Satıcı: <a href="satici/' + encodeURIComponent(o.sellerId) + '.html">' + window.KDAuth.esc(o.sellerName) + '</a> · ' + timeAgo(o.createdAt) + '</div>' +
             '</div>' +
             '<span class="po-status ' + o.status + '">' + STATUS_LABELS[o.status] + '</span>' +
           '</div>' +

@@ -95,6 +95,16 @@
   var data = null;
   var activeTab = 'products';
 
+  // Ürün/kullanıcı/mesaj/şikayet/yorum gibi listelerdeki her serbest metin alanı
+  // (başlık, isim, mesaj, açıklama vb.) kullanıcıların kendi girdiği veridir — admin
+  // paneli en yüksek yetkili token'ı taşıdığından, kaçışlanmadan innerHTML'e
+  // gömülürse biri buradan admin oturumunu ele geçirebilir.
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
   function authedFetch(url, options) {
     options = options || {};
     options.headers = Object.assign({}, options.headers, { Authorization: 'Bearer ' + localStorage.getItem(TOKEN_KEY) });
@@ -157,7 +167,7 @@
           : '';
         return '<div class="own-row" data-kind="products" data-key="' + p.slug + '">' +
           '<img src="' + imgSrc(p.img) + '" alt="">' +
-          '<div class="own-body"><div class="own-title">' + p.title + pauseBadge + organicBadge + '</div><div class="own-sub">' + p.cat + ' · ' + p.city + ' · ' + p.sellerName + ' · ' + p.price + '</div></div>' +
+          '<div class="own-body"><div class="own-title">' + esc(p.title) + pauseBadge + organicBadge + '</div><div class="own-sub">' + esc(p.cat) + ' · ' + esc(p.city) + ' · ' + esc(p.sellerName) + ' · ' + esc(p.price) + '</div></div>' +
           docLink + certLink + organicBtn +
           '<button class="own-star" data-feature="' + (!p.featured) + '" title="Öne çıkar">' + (p.featured ? '★' : '☆') + '</button>' +
           '<button class="own-del">Sil</button>' +
@@ -187,7 +197,7 @@
       if (!data.users.length) { content.innerHTML = '<div class="own-empty">Kullanıcı yok.</div>'; return; }
       content.innerHTML = data.users.map(function (u) {
         return '<div class="own-row" data-kind="users" data-key="' + u.phone + '">' +
-          '<div class="own-body"><div class="own-title">' + u.name + '</div><div class="own-sub">' + u.phone + ' · ' + u.city + '</div></div>' +
+          '<div class="own-body"><div class="own-title">' + esc(u.name) + '</div><div class="own-sub">' + esc(u.phone) + ' · ' + esc(u.city) + '</div></div>' +
           '<span class="own-badge">' + (u.role === 'satici' ? 'SATICI' : 'ALICI') + '</span>' +
           '<button class="own-del">Sil</button>' +
         '</div>';
@@ -196,7 +206,7 @@
       if (!data.complaints.length) { content.innerHTML = '<div class="own-empty">Şikayet yok.</div>'; return; }
       content.innerHTML = data.complaints.map(function (c) {
         return '<div class="own-row" data-kind="complaints" data-key="' + c.id + '">' +
-          '<div class="own-body"><div class="own-title">' + c.productTitle + '</div><div class="own-sub">' + c.buyerName + ' → ' + c.sellerName + ' · ' + c.text.replace(/[<>]/g, '') + '</div></div>' +
+          '<div class="own-body"><div class="own-title">' + esc(c.productTitle) + '</div><div class="own-sub">' + esc(c.buyerName) + ' → ' + esc(c.sellerName) + ' · ' + esc(c.text) + '</div></div>' +
           '<span class="own-badge">' + (c.status === 'resolved' ? 'Çözüldü' : 'Beklemede') + '</span>' +
           '<button class="own-del">Sil</button>' +
         '</div>';
@@ -206,7 +216,7 @@
       content.innerHTML = data.posts.map(function (p) {
         return '<div class="own-row" data-kind="posts" data-key="' + p.id + '">' +
           '<img src="' + imgSrc(p.img) + '" alt="">' +
-          '<div class="own-body"><div class="own-title">' + p.productTitle + '</div><div class="own-sub">' + p.sellerName + ' · ' + (p.caption || '—') + '</div></div>' +
+          '<div class="own-body"><div class="own-title">' + esc(p.productTitle) + '</div><div class="own-sub">' + esc(p.sellerName) + ' · ' + esc(p.caption || '—') + '</div></div>' +
           '<span class="own-badge">' + (p.isAd ? 'Reklam' : 'Normal') + '</span>' +
           '<button class="own-del">Sil</button>' +
         '</div>';
@@ -266,7 +276,7 @@
       html += ads.map(function (p) {
         return '<div class="own-row" data-key="' + p.id + '">' +
           '<img src="' + imgSrc(p.img) + '" alt="">' +
-          '<div class="own-body"><div class="own-title">' + p.productTitle + '</div><div class="own-sub">' + p.sellerName + ' · ' + (p.caption || '—') + '</div></div>' +
+          '<div class="own-body"><div class="own-title">' + esc(p.productTitle) + '</div><div class="own-sub">' + esc(p.sellerName) + ' · ' + esc(p.caption || '—') + '</div></div>' +
           '<button class="own-ad-btn is-ad">Reklamdan indir</button>' +
         '</div>';
       }).join('');
@@ -278,7 +288,7 @@
       html += normalPosts.map(function (p) {
         return '<div class="own-row" data-key="' + p.id + '">' +
           '<img src="' + imgSrc(p.img) + '" alt="">' +
-          '<div class="own-body"><div class="own-title">' + p.productTitle + '</div><div class="own-sub">' + p.sellerName + ' · ' + (p.caption || '—') + '</div></div>' +
+          '<div class="own-body"><div class="own-title">' + esc(p.productTitle) + '</div><div class="own-sub">' + esc(p.sellerName) + ' · ' + esc(p.caption || '—') + '</div></div>' +
           '<button class="own-ad-btn">Reklam yap</button>' +
         '</div>';
       }).join('');
@@ -359,9 +369,9 @@
       var ocrMismatchWarning = (s.idDocOcrTaxId && s.taxId && s.idDocOcrTaxId !== s.taxId)
         ? '<span class="own-badge" title="Beyan: ' + s.taxId + ' · Belgeden okunan: ' + s.idDocOcrTaxId + '" style="background:rgba(200,60,60,.12);color:#8e3b46;">⚠️ Beyan/Belge Uyuşmazlığı</span>' : '';
       return '<div class="own-row">' +
-        '<div class="own-body"><div class="own-title">' + s.name + '</div><div class="own-sub">' + s.phone + ' · ' + s.city +
-        (s.taxId ? ' · TC/VN: ' + s.taxId : '') + (s.iban ? ' · ' + s.iban : '') +
-        (s.businessInfo ? ' · ' + s.businessInfo.replace(/[<>]/g, '') : '') + '</div></div>' +
+        '<div class="own-body"><div class="own-title">' + esc(s.name) + '</div><div class="own-sub">' + esc(s.phone) + ' · ' + esc(s.city) +
+        (s.taxId ? ' · TC/VN: ' + esc(s.taxId) : '') + (s.iban ? ' · ' + esc(s.iban) : '') +
+        (s.businessInfo ? ' · ' + esc(s.businessInfo) : '') + '</div></div>' +
         typeBadge +
         '<span class="own-badge">' + s.productCount + ' ürün</span>' +
         '<span class="own-badge">' + s.convoCount + ' sohbet</span>' +
@@ -379,7 +389,7 @@
       content.innerHTML = convos.map(function (c) {
         var last = c.messages[c.messages.length - 1];
         return '<div class="own-row">' +
-          '<div class="own-body"><div class="own-title">' + c.productTitle + '</div><div class="own-sub">' + (last ? last.text.replace(/[<>]/g, '') : '') + '</div></div>' +
+          '<div class="own-body"><div class="own-title">' + esc(c.productTitle) + '</div><div class="own-sub">' + (last ? esc(last.text) : '') + '</div></div>' +
           '<span class="own-badge">' + c.messages.length + ' mesaj</span>' +
         '</div>';
       }).join('');
@@ -429,8 +439,8 @@
           '<button class="own-reject-btn" data-mod="rejected" data-slug="' + r.productSlug + '" data-review="' + r.id + '">Reddet</button>'
         : '';
       return '<div class="own-row">' +
-        '<div class="own-body"><div class="own-title">' + r.productTitle + ' · ' + r.rating + '★</div>' +
-        '<div class="own-sub">' + r.name.replace(/[<>]/g, '') + ': ' + r.text.replace(/[<>]/g, '') + '</div></div>' +
+        '<div class="own-body"><div class="own-title">' + esc(r.productTitle) + ' · ' + r.rating + '★</div>' +
+        '<div class="own-sub">' + esc(r.name) + ': ' + esc(r.text) + '</div></div>' +
         statusBadge + actions +
       '</div>';
     }
@@ -455,8 +465,8 @@
         var perishBadge = s.perishable ? '<span class="own-pause-badge">❄️ Çabuk Bozulur</span>' : '';
         var weightNote = s.totalWeightKg ? ' · ' + s.quantity + ' adet, ~' + s.totalWeightKg + ' kg' : ' · ' + s.quantity + ' adet';
         return '<div class="own-row" data-id="' + s.id + '">' +
-          '<div class="own-body"><div class="own-title">' + s.productTitle + ' → ' + s.buyerName + perishBadge + '</div>' +
-          '<div class="own-sub">' + s.sellerName + ' · ' + s.address.replace(/[<>]/g, '') + (s.note ? ' · ' + s.note.replace(/[<>]/g, '') : '') + weightNote + '</div></div>' +
+          '<div class="own-body"><div class="own-title">' + esc(s.productTitle) + ' → ' + esc(s.buyerName) + perishBadge + '</div>' +
+          '<div class="own-sub">' + esc(s.sellerName) + ' · ' + esc(s.address) + (s.note ? ' · ' + esc(s.note) : '') + weightNote + '</div></div>' +
           '<input class="own-track-input" placeholder="Takip no" value="' + (s.trackingNo || '') + '" data-track="' + s.id + '">' +
           '<select class="own-sel" data-status="' + s.id + '">' + opts + '</select>' +
         '</div>';
@@ -502,8 +512,8 @@
       html += '<p style="font-size:12px;color:var(--muted);margin:16px 0 10px;">Katalog:</p>';
       html += items.length ? items.map(function (it) {
         return '<div class="own-row" data-pk="' + it.id + '">' +
-          '<div class="own-body"><div class="own-title">' + it.name + (it.active === false ? ' <span class="own-pause-badge">PASİF</span>' : '') + '</div>' +
-          '<div class="own-sub">' + it.price + ' ' + it.unit + (it.description ? ' · ' + it.description.replace(/[<>]/g, '') : '') + '</div></div>' +
+          '<div class="own-body"><div class="own-title">' + esc(it.name) + (it.active === false ? ' <span class="own-pause-badge">PASİF</span>' : '') + '</div>' +
+          '<div class="own-sub">' + esc(it.price) + ' ' + esc(it.unit) + (it.description ? ' · ' + esc(it.description) : '') + '</div></div>' +
           '<button class="own-ad-btn" data-pk-toggle="' + it.id + '" data-active="' + (it.active !== false) + '">' + (it.active === false ? 'Aktifleştir' : 'Pasife Al') + '</button>' +
           '<button class="own-del" data-pk-del="' + it.id + '">Sil</button>' +
         '</div>';
@@ -515,8 +525,8 @@
           return '<option value="' + s + '"' + (s === o.status ? ' selected' : '') + '>' + s + '</option>';
         }).join('');
         return '<div class="own-row" data-order="' + o.id + '">' +
-          '<div class="own-body"><div class="own-title">' + o.itemName + ' × ' + o.quantity + '</div>' +
-          '<div class="own-sub">' + o.sellerName + ' · ' + o.sellerPhone + '</div></div>' +
+          '<div class="own-body"><div class="own-title">' + esc(o.itemName) + ' × ' + esc(o.quantity) + '</div>' +
+          '<div class="own-sub">' + esc(o.sellerName) + ' · ' + esc(o.sellerPhone) + '</div></div>' +
           '<select class="own-sel" data-order-status="' + o.id + '">' + opts + '</select>' +
         '</div>';
       }).join('') : '<div class="own-empty">Ambalaj talebi yok.</div>';

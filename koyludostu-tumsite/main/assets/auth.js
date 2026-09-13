@@ -48,6 +48,15 @@
       if (!p || p.length !== 10) return p || '';
       return '0' + p.slice(0, 3) + ' ' + p.slice(3, 6) + ' ' + p.slice(6, 8) + ' ' + p.slice(8);
     },
+    // Başka bir kullanıcının yazdığı metni (mesaj, yorum, şikayet, ürün başlığı vb.)
+    // innerHTML içine gömmeden önce kaçışlamak için — aksi halde biri <script> ya da
+    // onerror= içeren bir metin gönderip bunu okuyan kişinin oturumunu (localStorage'daki
+    // token) çalabilir. Her zaman esc(kullanıcıdan gelen metin) şeklinde kullanılmalı.
+    esc: function (s) {
+      return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+      });
+    },
     // Oturumun sunucu tarafında geçersiz olduğu (ör. token silindi) ama tarayıcıda hâlâ
     // kayıtlı görünen durumları sessizce görmezden gelmek yerine, 401 aldığında yerel
     // girişi temizleyip kullanıcıyı tekrar giriş yapmaya yönlendirir.

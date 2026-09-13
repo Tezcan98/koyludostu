@@ -32,11 +32,11 @@
     el.innerHTML = visible.map(function (r) {
       var badge = r.role === 'satici' ? ' <span style="font-size:10px;font-weight:800;color:var(--ring1);">SATICI</span>' : '';
       var pendingNote = r.status === 'pending' ? ' <span style="font-size:10px;font-weight:800;color:var(--ring2);">ONAY BEKLİYOR (sadece sen görüyorsun)</span>' : '';
-      var reply = r.sellerReply ? '<div class="rreply"><b>Satıcı yanıtı:</b> ' + r.sellerReply.text.replace(/[<>]/g, '') + '</div>' : '';
+      var reply = r.sellerReply ? '<div class="rreply"><b>Satıcı yanıtı:</b> ' + window.KDAuth.esc(r.sellerReply.text) + '</div>' : '';
       return '<div class="review-item">' +
-        '<div class="rname">' + r.name.replace(/[<>]/g, '') + badge + pendingNote + '</div>' +
+        '<div class="rname">' + window.KDAuth.esc(r.name) + badge + pendingNote + '</div>' +
         '<div class="rstars">' + starsHtml(r.rating) + ' <span style="color:var(--muted);font-weight:400;font-size:11px;">' + timeAgo(r.createdAt) + '</span></div>' +
-        '<div class="rtext">' + r.text.replace(/[<>]/g, '') + '</div>' +
+        '<div class="rtext">' + window.KDAuth.esc(r.text) + '</div>' +
         reply +
       '</div>';
     }).join('');
@@ -56,7 +56,7 @@
         '<label>Puanın</label>' +
         '<div class="star-picker" id="starPicker"></div>' +
         '<label>Yorumun</label>' +
-        '<textarea id="rText" rows="3" placeholder="Bu ürün hakkında ne düşünüyorsun?">' + (mine ? mine.text.replace(/</g, '&lt;') : '') + '</textarea>' +
+        '<textarea id="rText" rows="3" placeholder="Bu ürün hakkında ne düşünüyorsun?">' + (mine ? window.KDAuth.esc(mine.text) : '') + '</textarea>' +
         '<button type="button" id="submitReviewBtn">' + (mine ? 'Yorumu Güncelle' : 'Yorumu Gönder') + '</button>' +
       '</div>';
 

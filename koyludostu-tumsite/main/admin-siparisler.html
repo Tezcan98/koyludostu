@@ -108,10 +108,10 @@
       if (!items.length) { list.innerHTML = '<div class="adm-empty">Henüz gelen sipariş talebin yok.</div>'; return; }
       var opts = Object.keys(STATUS_LABELS).map(function (k) { return '<option value="' + k + '">' + STATUS_LABELS[k] + '</option>'; }).join('');
       list.innerHTML = items.map(function (o) {
-        var metaBits = [o.buyerName, o.district + ' / ' + o.city, o.quantity + ' adet', timeStr(o.createdAt)];
-        if (o.address) metaBits.push('Adres: ' + o.address.replace(/[<>]/g, ''));
-        if (o.deadline) metaBits.push('Aciliyet: ' + o.deadline.replace(/[<>]/g, ''));
-        if (o.note) metaBits.push('Not: ' + o.note.replace(/[<>]/g, ''));
+        var metaBits = [window.KDAuth.esc(o.buyerName), window.KDAuth.esc(o.district) + ' / ' + window.KDAuth.esc(o.city), o.quantity + ' adet', timeStr(o.createdAt)];
+        if (o.address) metaBits.push('Adres: ' + window.KDAuth.esc(o.address));
+        if (o.deadline) metaBits.push('Aciliyet: ' + window.KDAuth.esc(o.deadline));
+        if (o.note) metaBits.push('Not: ' + window.KDAuth.esc(o.note));
         var proofThumb = o.sellerProofPhotoUrl
           ? '<img class="po-proof-thumb" src="' + o.sellerProofPhotoUrl + '" alt="Gönderim fotoğrafı">' : '';
         var buyerConfirm = o.buyerConfirmedAt
@@ -123,7 +123,7 @@
           : '';
         return '<div class="po-item" data-id="' + o.id + '">' +
           '<div class="po-top">' +
-            '<div><div class="po-title">' + o.productTitle + '</div><div class="po-sub">' + metaBits.join(' · ') + '</div></div>' +
+            '<div><div class="po-title">' + window.KDAuth.esc(o.productTitle) + '</div><div class="po-sub">' + metaBits.join(' · ') + '</div></div>' +
             '<span class="po-status-tag ' + o.status + '">' + STATUS_LABELS[o.status] + '</span>' +
           '</div>' +
           paymentConfirm + proofThumb + buyerConfirm +

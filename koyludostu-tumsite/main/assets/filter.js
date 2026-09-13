@@ -1,4 +1,15 @@
 (function () {
+  // Ürün başlığı/kategori/şehir/birim/satıcı adı gibi alanlar satıcının kendi girdiği
+  // serbest metin — bir script etiketiyle gönderilirse bunu okuyan HER ziyaretçinin
+  // (giriş yapmamış olsa bile) tarayıcısında çalışır. KDAuth henüz yüklenmemiş
+  // olabileceğinden (bazı sayfalarda script sırası garanti değil) burada bağımsız
+  // bir kaçışlama fonksiyonu tanımlıyoruz.
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
     var grid = document.getElementById('productGrid');
     if (!grid) return;
@@ -53,15 +64,16 @@
       var imgSrc = /^\d+$/.test(String(p.img)) ?
         'https://images.pexels.com/photos/' + p.img + '/pexels-photo-' + p.img + '.jpeg?auto=compress&cs=tinysrgb&w=700' : p.img;
       var sellerBadge = p.sellerVerified ? ' <span class="seller-badge" title="Güvenilir Satıcı">✅</span>' : '';
-      return '<a class="pin" href="urun/' + p.slug + '.html" data-cat="' + p.cat + '" data-price="' + priceNum +
-        '" data-title="' + p.title.replace(/"/g, '&quot;') + '" data-city="' + p.city + '" data-delivery="' + p.delivery.join(',') +
-        '" data-created="' + p.createdAt + '" data-slug="' + p.slug + '">' +
-        '<img src="' + imgSrc + '" alt="' + p.title.replace(/"/g, '&quot;') + '" loading="lazy">' +
+      var titleAttr = esc(p.title);
+      return '<a class="pin" href="urun/' + encodeURIComponent(p.slug) + '.html" data-cat="' + esc(p.cat) + '" data-price="' + priceNum +
+        '" data-title="' + titleAttr + '" data-city="' + esc(p.city) + '" data-delivery="' + esc(p.delivery.join(',')) +
+        '" data-created="' + esc(p.createdAt) + '" data-slug="' + esc(p.slug) + '">' +
+        '<img src="' + imgSrc + '" alt="' + titleAttr + '" loading="lazy">' +
         '<div class="pin-overlay">' +
-          '<div class="pin-cat">' + p.cat + ' · ' + p.sellerName + sellerBadge + '</div>' +
-          '<div class="pin-title">' + p.title + '</div>' +
-          '<div class="pin-foot"><div class="pin-price">' + p.price + '<br><small>' + p.unit + '</small></div>' +
-        '<button type="button" class="fav-cta pin-fav" data-id="' + p.slug + '">🤍</button></div>' +
+          '<div class="pin-cat">' + esc(p.cat) + ' · ' + esc(p.sellerName) + sellerBadge + '</div>' +
+          '<div class="pin-title">' + titleAttr + '</div>' +
+          '<div class="pin-foot"><div class="pin-price">' + esc(p.price) + '<br><small>' + esc(p.unit) + '</small></div>' +
+        '<button type="button" class="fav-cta pin-fav" data-id="' + esc(p.slug) + '">🤍</button></div>' +
         '</div>' +
       '</a>';
     }
@@ -112,7 +124,8 @@
 
     function renderChecks(wrap, values, cls) {
       wrap.innerHTML = values.map(function (v) {
-        return '<label class="check-chip"><input type="checkbox" class="' + cls + '" value="' + v.replace(/"/g, '&quot;') + '"> ' + v + '</label>';
+        var vEsc = esc(v);
+        return '<label class="check-chip"><input type="checkbox" class="' + cls + '" value="' + vEsc + '"> ' + vEsc + '</label>';
       }).join('');
       wrap.querySelectorAll('input').forEach(function (c) { c.addEventListener('change', apply); });
     }
@@ -158,7 +171,8 @@
       if (!values.length) { attrGroup.hidden = true; attrWrap.innerHTML = ''; return; }
       attrGroup.hidden = false;
       attrWrap.innerHTML = values.map(function (v) {
-        return '<label class="check-chip"><input type="checkbox" class="attrCheck" value="' + v.replace(/"/g, '&quot;') + '"> ' + v + '</label>';
+        var vEsc = esc(v);
+        return '<label class="check-chip"><input type="checkbox" class="attrCheck" value="' + vEsc + '"> ' + vEsc + '</label>';
       }).join('');
     }
 

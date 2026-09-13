@@ -98,8 +98,8 @@
       list.innerHTML = items.map(function (r) {
         var stars = '★'.repeat(r.rating) + '☆'.repeat(5 - r.rating);
         return '<div class="rv-item">' +
-          '<div class="rv-head"><span class="rv-title"><a href="urun/' + r.productSlug + '.html">' + r.productTitle + '</a></span><span class="rv-stars">' + stars + '</span></div>' +
-          '<div class="rv-text">' + r.text.replace(/[<>]/g, '') + '</div>' +
+          '<div class="rv-head"><span class="rv-title"><a href="urun/' + encodeURIComponent(r.productSlug) + '.html">' + window.KDAuth.esc(r.productTitle) + '</a></span><span class="rv-stars">' + stars + '</span></div>' +
+          '<div class="rv-text">' + window.KDAuth.esc(r.text) + '</div>' +
           '<div class="rv-date">' + timeAgo(r.createdAt) + '</div>' +
         '</div>';
       }).join('');
