@@ -113,6 +113,23 @@
     ownWrap.hidden = true;
   }
 
+  // Hassas belgeler (kimlik, vergi levhası/destekleyici belge, organik belgesi)
+  // doğrudan bir URL değil, bir dosya adı olarak tutulur — görüntülemek için her
+  // seferinde 5 dakika geçerli imzalı bir bağlantı üretilir (bkz. sunucudaki
+  // /api/owner/sign-file-url). Bu yüzden düz <a href> yerine bu buton kullanılır.
+  function bindSecureFileButtons(root) {
+    root.querySelectorAll('.secure-file-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        authedFetch('/api/owner/sign-file-url', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ filename: btn.dataset.secureFile }),
+        }).then(function (r) { return r.json(); }).then(function (d) {
+          if (d.url) window.open(d.url, '_blank', 'noopener,noreferrer');
+        }).catch(function () {});
+      });
+    });
+  }
+
   function imgSrc(img) {
     return /^\d+$/.test(String(img)) ?
       'https://images.pexels.com/photos/' + img + '/pexels-photo-' + img + '.jpeg?auto=compress&cs=tinysrgb&w=100' : img;
@@ -133,7 +150,7 @@
       content.innerHTML = data.products.map(function (p) {
         var pauseBadge = p.active === false ? '<span class="own-pause-badge">PASİF</span>' : '';
         var organicBadge = p.organic ? '<span class="own-organic-badge">' + (p.organicApproved ? '🌱 Onaylı' : '🌱 Onay Bekliyor') + '</span>' : '';
-        var docLink = p.organic && p.organicDocUrl ? '<a href="' + p.organicDocUrl + '" target="_blank" class="own-badge" style="text-decoration:none;">Belge</a>' : '';
+        var docLink = p.organic && p.organicDocUrl ? '<button type="button" class="own-badge secure-file-btn" data-secure-file="' + p.organicDocUrl + '" style="border:none;cursor:pointer;font-family:inherit;">Belge</button>' : '';
         var certLink = p.certificateUrl ? '<a href="' + p.certificateUrl + '" target="_blank" class="own-badge" style="text-decoration:none;">Sertifika</a>' : '';
         var organicBtn = p.organic
           ? '<button class="own-approve-btn" data-organic-approve="' + p.slug + '" data-approved="' + (!p.organicApproved) + '">' + (p.organicApproved ? 'Onayı Kaldır' : 'Onayla') + '</button>'
@@ -146,6 +163,7 @@
           '<button class="own-del">Sil</button>' +
         '</div>';
       }).join('');
+      bindSecureFileButtons(content);
       content.querySelectorAll('.own-star').forEach(function (btn) {
         btn.addEventListener('click', function () {
           var row = btn.closest('.own-row');
@@ -295,6 +313,7 @@
       }
       html += rest.length ? rest.map(sellerRow).join('') : '<div class="own-empty">Başka satıcı yok.</div>';
       content.innerHTML = html;
+      bindSecureFileButtons(content);
 
       content.querySelectorAll('[data-seller-decide]').forEach(function (btn) {
         btn.addEventListener('click', function () {
@@ -321,8 +340,8 @@
       var statusBadge = '<span class="own-badge' + (status === 'pending' ? '' : '') + '" style="' +
         (status === 'pending' ? 'background:rgba(192,138,46,.15);color:#8a5a10;' : status === 'rejected' ? 'background:rgba(200,60,60,.12);color:#8e3b46;' : 'background:rgba(78,107,58,.12);color:#4e6b3a;') +
         '">' + SELLER_STATUS_LABELS[status] + '</span>';
-      var docLink = s.sellerDocUrl ? '<a href="' + s.sellerDocUrl + '" target="_blank" class="own-badge" style="text-decoration:none;">Belge</a>' : '';
-      var idDocLink = s.idDocUrl ? '<a href="' + s.idDocUrl + '" target="_blank" class="own-badge" style="text-decoration:none;background:rgba(46,110,192,.12);color:#2e6ec0;">🪪 Kimlik</a>' : '';
+      var docLink = s.sellerDocUrl ? '<button type="button" class="own-badge secure-file-btn" data-secure-file="' + s.sellerDocUrl + '" style="border:none;cursor:pointer;font-family:inherit;">Belge</button>' : '';
+      var idDocLink = s.idDocUrl ? '<button type="button" class="own-badge secure-file-btn" data-secure-file="' + s.idDocUrl + '" style="border:none;cursor:pointer;font-family:inherit;background:rgba(46,110,192,.12);color:#2e6ec0;">🪪 Kimlik</button>' : '';
       var decideBtns = status === 'pending'
         ? '<button class="own-approve-btn" data-seller-decide="approved" data-phone="' + s.phone + '">Onayla</button>' +
           '<button class="own-reject-btn" data-seller-decide="rejected" data-phone="' + s.phone + '">Reddet</button>'

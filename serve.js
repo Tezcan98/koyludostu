@@ -25,6 +25,11 @@ const NOTIFICATIONS_PATH = path.join(DATA_DIR, 'notifications.json');
 const PACKAGING_PATH = path.join(DATA_DIR, 'packaging.json');
 const PACKAGING_ORDERS_PATH = path.join(DATA_DIR, 'packaging_orders.json');
 const PRODUCT_ORDERS_PATH = path.join(DATA_DIR, 'product_orders.json');
+// Kimlik/vergi levhası/destekleyici belge gibi hassas dosyalar, ürün fotoğrafı ve
+// sertifika gibi kasıtlı olarak herkese açık dosyalardan farklı olarak, statik
+// sunucunun (koyludostu-tumsite/) DIŞINDA, imzalı URL olmadan hiç erişilemeyen ayrı
+// bir klasörde tutulur — bkz. saveSecureDoc / signFileToken / GET /secure-uploads.
+const SECURE_UPLOADS_DIR = path.join(DATA_DIR, 'secure-uploads');
 const NOTIFICATION_SETTINGS_PATH = path.join(DATA_DIR, 'notification-settings.json');
 const POST_TTL_MS = 24 * 60 * 60 * 1000;
 
@@ -1019,6 +1024,49 @@ function saveUploadedDoc(dataUrl) {
   return { url: '/assets/uploads/' + fname };
 }
 
+// Kimlik/vergi levhası/organik belgesi gibi hassas belgeleri, statik sunucunun
+// hiç dokunmadığı SECURE_UPLOADS_DIR'a yazar. Dönen değer bir URL değil, sadece
+// dosya adıdır — görüntülemek için mutlaka signFileToken ile imzalı bir bağlantı
+// üretilmesi gerekir (bkz. GET /secure-uploads/:filename).
+function saveSecureDoc(dataUrl) {
+  const m = /^data:(image\/(?:png|jpe?g|webp)|application\/pdf);base64,(.+)$/.exec(String(dataUrl || ''));
+  if (!m) throw new Error('Geçersiz dosya. PNG, JPEG, WEBP ya da PDF yükle.');
+  const extMap = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/jpg': 'jpg', 'image/webp': 'webp', 'application/pdf': 'pdf' };
+  const ext = extMap[m[1]];
+  const buf = Buffer.from(m[2], 'base64');
+  if (buf.length > 8 * 1024 * 1024) throw new Error('Dosya çok büyük (max 8MB).');
+  fs.mkdirSync(SECURE_UPLOADS_DIR, { recursive: true });
+  const fname = 's_' + randomToken().slice(0, 12) + '.' + ext;
+  fs.writeFileSync(path.join(SECURE_UPLOADS_DIR, fname), buf);
+  return { filename: fname };
+}
+
+function isValidSecureFilename(name) {
+  return /^s_[A-Za-z0-9]+\.[a-z]+$/.test(String(name || ''));
+}
+
+// Hassas belgeler için kısa ömürlü, imzalı erişim bağlantıları. Sunucu her
+// başladığında yeni bir gizli anahtar üretilir — bir restart'ta eldeki linklerin
+// geçersiz kalması sorun değildir, admin panelden tekrar "Görüntüle"ye basmak
+// yeterlidir (bkz. POST /api/owner/sign-file-url).
+const FILE_TOKEN_SECRET = crypto.randomBytes(32).toString('hex');
+const FILE_TOKEN_TTL_MS = 5 * 60 * 1000;
+
+function signFileToken(filename) {
+  const exp = Date.now() + FILE_TOKEN_TTL_MS;
+  const sig = crypto.createHmac('sha256', FILE_TOKEN_SECRET).update(filename + '.' + exp).digest('hex');
+  return { exp, sig };
+}
+
+function isValidFileToken(filename, exp, sig) {
+  const expNum = Number(exp);
+  if (!expNum || Date.now() > expNum) return false;
+  const expected = crypto.createHmac('sha256', FILE_TOKEN_SECRET).update(filename + '.' + expNum).digest('hex');
+  const sigStr = String(sig || '');
+  if (expected.length !== sigStr.length) return false;
+  return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(sigStr));
+}
+
 function uniqueSlug(base, products) {
   let slug = base;
   let n = 2;
@@ -1292,7 +1340,7 @@ const server = http.createServer(async (req, res) => {
       let idDocConsentAt = null;
       if (pendingReg.role === 'satici' && pendingReg.idDocDataUrl) {
         try {
-          idDocUrl = saveUploadedDoc(pendingReg.idDocDataUrl).url;
+          idDocUrl = saveSecureDoc(pendingReg.idDocDataUrl).filename;
           idDocConsentAt = new Date().toISOString();
         } catch (e) {
           return jsonResponse(res, 400, { error: e.message });
@@ -1831,7 +1879,7 @@ const server = http.createServer(async (req, res) => {
       if (!session) return;
       const { docUrl } = await readBody(req);
       const clean = String(docUrl || '').trim();
-      if (!isValidUploadedFile(clean)) return jsonResponse(res, 400, { error: 'Geçersiz belge. Önce /api/admin/upload-doc ile yükle.' });
+      if (!isValidSecureFilename(clean)) return jsonResponse(res, 400, { error: 'Geçersiz belge. Önce /api/admin/upload-doc ile (secure:true) yükle.' });
       const users = readJson(USERS_PATH, {});
       const user = users[session.phone];
       if (!user) return jsonResponse(res, 404, { error: 'Hesap bulunamadı' });
@@ -1850,7 +1898,7 @@ const server = http.createServer(async (req, res) => {
       if (!session) return;
       const { docUrl, idDocConsent } = await readBody(req);
       const clean = String(docUrl || '').trim();
-      if (!isValidUploadedFile(clean)) return jsonResponse(res, 400, { error: 'Geçersiz belge. Önce /api/admin/upload-doc ile yükle.' });
+      if (!isValidSecureFilename(clean)) return jsonResponse(res, 400, { error: 'Geçersiz belge. Önce /api/admin/upload-doc ile (secure:true) yükle.' });
       if (!idDocConsent) return jsonResponse(res, 400, { error: 'Kimlik belgeni kaydetmek için açık rıza vermelisin.' });
       const users = readJson(USERS_PATH, {});
       const user = users[session.phone];
@@ -2286,9 +2334,13 @@ const server = http.createServer(async (req, res) => {
     if (p === '/api/admin/upload-doc' && req.method === 'POST') {
       const session = requireRole(req, res, 'satici');
       if (!session) return;
-      const { dataUrl } = await readBody(req);
+      const { dataUrl, secure } = await readBody(req);
       try {
-        return jsonResponse(res, 200, saveUploadedDoc(dataUrl));
+        // Kimlik/vergi levhası/organik belgesi gibi hassas dosyalar secure:true ile
+        // gönderilir — statik sunucunun dışında saklanır, sadece imzalı bağlantıyla
+        // görüntülenir (bkz. saveSecureDoc). Sertifika gibi kasıtlı herkese açık
+        // dosyalar için secure gönderilmez, eskisi gibi genel /assets/uploads'a yazılır.
+        return jsonResponse(res, 200, secure ? saveSecureDoc(dataUrl) : saveUploadedDoc(dataUrl));
       } catch (e) {
         return jsonResponse(res, 400, { error: e.message });
       }
@@ -2336,7 +2388,7 @@ const server = http.createServer(async (req, res) => {
 
       const organic = !!body.organic;
       const organicDocUrl = organic ? String(body.organicDocUrl || '').trim() : '';
-      if (organic && !isValidUploadedFile(organicDocUrl)) {
+      if (organic && !isValidSecureFilename(organicDocUrl)) {
         return jsonResponse(res, 400, { error: 'Organik işaretlemek için önce bir organik belgesi yükle.' });
       }
       const certificateUrl = String(body.certificateUrl || '').trim();
@@ -2426,7 +2478,7 @@ const server = http.createServer(async (req, res) => {
       if (body.organic !== undefined) {
         const organic = !!body.organic;
         const organicDocUrl = organic ? String(body.organicDocUrl || prod.organicDocUrl || '').trim() : '';
-        if (organic && !isValidUploadedFile(organicDocUrl)) {
+        if (organic && !isValidSecureFilename(organicDocUrl)) {
           return jsonResponse(res, 400, { error: 'Organik işaretlemek için önce bir organik belgesi yükle.' });
         }
         prod.organic = organic;
@@ -2708,6 +2760,31 @@ const server = http.createServer(async (req, res) => {
       const all = Object.values(store.conversations).sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
       return jsonResponse(res, 200, { conversations: all });
     }
+
+    // Hassas belgeler (kimlik, vergi levhası, organik belgesi) doğrudan bir URL
+    // olarak saklanmaz — admin görüntülemek istediğinde burada 5 dakika geçerli,
+    // tek dosyaya özel imzalı bir bağlantı üretilir (bkz. GET /secure-uploads).
+    if (p === '/api/owner/sign-file-url' && req.method === 'POST') {
+      if (!requireAdmin(req, res)) return;
+      const { filename } = await readBody(req);
+      if (!isValidSecureFilename(filename)) return jsonResponse(res, 400, { error: 'Geçersiz dosya.' });
+      const { exp, sig } = signFileToken(filename);
+      return jsonResponse(res, 200, { url: `/secure-uploads/${filename}?exp=${exp}&sig=${sig}` });
+    }
+
+    // Kullanıcının kendi yüklediği kimlik/destekleyici belgeyi geri görüntülemesi —
+    // sadece kendi hesabına ait dosya için, admin yetkisi gerekmez.
+    if (p === '/api/auth/sign-own-file-url' && req.method === 'POST') {
+      const session = requireAuth(req, res);
+      if (!session) return;
+      const { filename } = await readBody(req);
+      if (!isValidSecureFilename(filename)) return jsonResponse(res, 400, { error: 'Geçersiz dosya.' });
+      if (session.user.idDocUrl !== filename && session.user.sellerDocUrl !== filename) {
+        return jsonResponse(res, 403, { error: 'Bu dosya sana ait değil.' });
+      }
+      const { exp, sig } = signFileToken(filename);
+      return jsonResponse(res, 200, { url: `/secure-uploads/${filename}?exp=${exp}&sig=${sig}` });
+    }
   } catch (e) {
     return jsonResponse(res, 502, { error: 'Veri alınamadı', detail: String(e) });
   }
@@ -2741,6 +2818,33 @@ const server = http.createServer(async (req, res) => {
     }
     res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
     res.end('404 Satıcı bulunamadı');
+    return;
+  }
+
+  // Hassas belgeler: sadece geçerli, süresi geçmemiş imzalı bir bağlantıyla
+  // servis edilir (bkz. /api/owner/sign-file-url, /api/auth/sign-own-file-url).
+  // Klasör statik sunucunun (koyludostu-tumsite/) dışında olduğundan buradan
+  // geçmeyen hiçbir istek bu dosyalara erişemez.
+  const secureMatch = p.match(/^\/secure-uploads\/([A-Za-z0-9_.-]+)$/);
+  if (secureMatch) {
+    const filename = secureMatch[1];
+    const exp = url.searchParams.get('exp');
+    const sig = url.searchParams.get('sig');
+    if (!isValidSecureFilename(filename) || !isValidFileToken(filename, exp, sig)) {
+      res.writeHead(403, { 'Content-Type': 'text/plain; charset=utf-8' });
+      res.end('403 Bağlantının süresi dolmuş ya da geçersiz.');
+      return;
+    }
+    const filePath = path.join(SECURE_UPLOADS_DIR, filename);
+    if (!fs.existsSync(filePath)) {
+      res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
+      res.end('404 Dosya bulunamadı');
+      return;
+    }
+    const mimeMap = { '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp', '.pdf': 'application/pdf' };
+    const mime = mimeMap[path.extname(filename).toLowerCase()] || 'application/octet-stream';
+    res.writeHead(200, { 'Content-Type': mime, 'Cache-Control': 'private, no-store' });
+    res.end(fs.readFileSync(filePath));
     return;
   }
 

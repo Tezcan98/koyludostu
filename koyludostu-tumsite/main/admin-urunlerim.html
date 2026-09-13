@@ -518,10 +518,10 @@
 
   document.getElementById('cancelEditBtn').addEventListener('click', resetForm);
 
-  function uploadDoc(dataUrl) {
+  function uploadDoc(dataUrl, secure) {
     return window.KDAuth.authedFetch('/api/admin/upload-doc', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ dataUrl: dataUrl }),
+      body: JSON.stringify({ dataUrl: dataUrl, secure: !!secure }),
     }).then(function (r) { return r.json(); });
   }
 
@@ -593,9 +593,9 @@
     }
     if (organicDocDataUrl) {
       chain = chain.then(function () {
-        return uploadDoc(organicDocDataUrl).then(function (d) {
+        return uploadDoc(organicDocDataUrl, true).then(function (d) {
           if (d.error) throw new Error(d.error);
-          payload.organicDocUrl = d.url;
+          payload.organicDocUrl = d.filename;
         });
       });
     }

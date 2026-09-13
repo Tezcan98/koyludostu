@@ -107,12 +107,12 @@
     if (!docDataUrl) { document.getElementById('docStatus').textContent = 'Önce bir dosya seç.'; return; }
     window.KDAuth.authedFetch('/api/admin/upload-doc', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ dataUrl: docDataUrl }),
+      body: JSON.stringify({ dataUrl: docDataUrl, secure: true }),
     }).then(function (r) { return r.json(); }).then(function (d) {
       if (d.error) { document.getElementById('docStatus').textContent = d.error; return; }
       return window.KDAuth.authedFetch('/api/auth/seller-application/doc', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ docUrl: d.url }),
+        body: JSON.stringify({ docUrl: d.filename }),
       }).then(function (r) { return r.json(); });
     }).then(function () {
       document.getElementById('docStatus').textContent = 'Belge yüklendi, admin inceleyecek.';
@@ -189,12 +189,12 @@
     }
     window.KDAuth.authedFetch('/api/admin/upload-doc', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ dataUrl: idDocDataUrl }),
+      body: JSON.stringify({ dataUrl: idDocDataUrl, secure: true }),
     }).then(function (r) { return r.json(); }).then(function (d) {
       if (d.error) { statusEl.textContent = d.error; return; }
       return window.KDAuth.authedFetch('/api/auth/seller-application/id-doc', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ docUrl: d.url, idDocConsent: true }),
+        body: JSON.stringify({ docUrl: d.filename, idDocConsent: true }),
       }).then(function (r) { return r.json(); });
     }).then(function () {
       statusEl.textContent = 'Kimlik belgesi kaydedildi, admin inceleyecek.';

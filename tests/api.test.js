@@ -32,12 +32,14 @@ async function uploadImage(token) {
   return r.url;
 }
 
+// Kimlik/vergi levhası/organik belgesi gibi hassas belgeler artık statik sunucunun
+// dışında (secure-uploads) saklanıyor, bu yüzden secure:true ile yükleyip bir
+// dosya adı (filename) döndürüyoruz — public bir URL değil.
 async function uploadDoc(token) {
   const r = await fetch(url('/api/admin/upload-doc'), {
-    method: 'POST', headers: authHeaders(token), body: JSON.stringify({ dataUrl: TINY_PDF_DATA_URL }),
+    method: 'POST', headers: authHeaders(token), body: JSON.stringify({ dataUrl: TINY_PDF_DATA_URL, secure: true }),
   }).then((r) => r.json());
-  uploadedFiles.push(r.url);
-  return r.url;
+  return r.filename;
 }
 
 async function newSeller(name) {
@@ -1571,19 +1573,19 @@ describe('Kimlik belgesi (opsiyonel, KVKK açık rıza gerekli)', () => {
 
   test('kaydolduktan sonra da kimlik belgesi rıza olmadan eklenemez', async () => {
     const seller = await newSeller('Sonradan Kimlik Satıcı');
-    const img = await uploadImage(seller.token);
+    const doc = await uploadDoc(seller.token);
 
     const noConsent = await fetch(url('/api/auth/seller-application/id-doc'), {
       method: 'POST', headers: authHeaders(seller.token),
-      body: JSON.stringify({ docUrl: img }),
+      body: JSON.stringify({ docUrl: doc }),
     });
     assert.equal(noConsent.status, 400);
 
     const withConsent = await fetch(url('/api/auth/seller-application/id-doc'), {
       method: 'POST', headers: authHeaders(seller.token),
-      body: JSON.stringify({ docUrl: img, idDocConsent: true }),
+      body: JSON.stringify({ docUrl: doc, idDocConsent: true }),
     }).then((r) => r.json());
-    assert.equal(withConsent.user.idDocUrl, img);
+    assert.equal(withConsent.user.idDocUrl, doc);
     assert.ok(withConsent.user.idDocConsentAt);
   });
 
