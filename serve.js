@@ -814,6 +814,56 @@ function findUserByIdentifier(identifier) {
   return user ? { phone: norm, user } : null;
 }
 
+// ---------- Google ile giriş: ID token'ı Google'ın açık anahtarlarına (JWKS) karşı
+// doğrular. Ek bir npm paketi kurmamak için (bkz. proje kuralı: bağımlılıksız backend)
+// bunu doğrudan Node'un crypto modülüyle yapıyoruz — bu, OpenID Connect'in standart,
+// dokümante edilmiş bir deseni (RS256 imza doğrulama + aud/iss/exp kontrolü),
+// uydurma ya da gözlemlenmemiş bir API değil. ----------
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
+let googleJwksCache = { keys: [], at: 0 };
+const GOOGLE_JWKS_TTL_MS = 60 * 60 * 1000;
+
+function base64urlDecode(str) {
+  return Buffer.from(String(str || '').replace(/-/g, '+').replace(/_/g, '/'), 'base64');
+}
+
+async function getGoogleJwks() {
+  if (googleJwksCache.keys.length && Date.now() - googleJwksCache.at < GOOGLE_JWKS_TTL_MS) {
+    return googleJwksCache.keys;
+  }
+  const r = await fetch('https://www.googleapis.com/oauth2/v3/certs');
+  const data = await r.json();
+  googleJwksCache = { keys: data.keys || [], at: Date.now() };
+  return googleJwksCache.keys;
+}
+
+async function verifyGoogleIdToken(token) {
+  const parts = String(token || '').split('.');
+  if (parts.length !== 3) throw new Error('Geçersiz token biçimi.');
+  const [headerB64, payloadB64, sigB64] = parts;
+  const header = JSON.parse(base64urlDecode(headerB64).toString('utf8'));
+  const payload = JSON.parse(base64urlDecode(payloadB64).toString('utf8'));
+  if (header.alg !== 'RS256') throw new Error('Desteklenmeyen imza algoritması.');
+
+  const keys = await getGoogleJwks();
+  const jwk = keys.find((k) => k.kid === header.kid);
+  if (!jwk) throw new Error('Doğrulama anahtarı bulunamadı.');
+
+  const publicKey = crypto.createPublicKey({ key: jwk, format: 'jwk' });
+  const signingInput = Buffer.from(headerB64 + '.' + payloadB64);
+  const signatureOk = crypto.verify('RSA-SHA256', signingInput, publicKey, base64urlDecode(sigB64));
+  if (!signatureOk) throw new Error('İmza doğrulanamadı.');
+
+  const now = Math.floor(Date.now() / 1000);
+  if (!payload.exp || payload.exp < now) throw new Error('Token süresi dolmuş.');
+  if (!GOOGLE_CLIENT_ID || payload.aud !== GOOGLE_CLIENT_ID) throw new Error('Bu uygulamaya ait olmayan bir token.');
+  if (payload.iss !== 'https://accounts.google.com' && payload.iss !== 'accounts.google.com') {
+    throw new Error('Geçersiz token kaynağı.');
+  }
+  if (!payload.email_verified) throw new Error('E-posta Google tarafından doğrulanmamış.');
+  return payload; // { email, name, sub, email_verified, ... }
+}
+
 // Ürün nesneleri satıcı bilgisini (ad/telefon) o an kaydedildiği haliyle taşır ama "rozetli
 // satıcı" durumu sonradan değişebildiği için canlı users.json'dan katılır — id -> boolean.
 function sellerVerifiedMap() {
@@ -1585,6 +1635,36 @@ const server = http.createServer(async (req, res) => {
       clearLoginAttempts(loginKey);
       const token = createSession(norm);
       const { passwordHash, ...safeUser } = user;
+      return jsonResponse(res, 200, { token, user: safeUser });
+    }
+
+    // Sayfanın Google butonunu gösterip göstermeyeceğine karar vermesi için —
+    // GOOGLE_CLIENT_ID ayarlanmadıysa buton hiç render edilmez.
+    if (p === '/api/auth/config' && req.method === 'GET') {
+      return jsonResponse(res, 200, { googleClientId: GOOGLE_CLIENT_ID || null });
+    }
+
+    // Google ile giriş — sadece Google'ın doğruladığı e-postayla eşleşen VAR OLAN bir
+    // hesaba giriş yaptırır (telefon/parola gerektirmez). Google kaydı kendi başına
+    // yeni bir hesap AÇMAZ, çünkü sistemdeki her hesap zaten SMS ile doğrulanmış bir
+    // telefon numarasına bağlı — Google'dan telefon numarası gelmez.
+    if (p === '/api/auth/google-login' && req.method === 'POST') {
+      if (!GOOGLE_CLIENT_ID) return jsonResponse(res, 501, { error: 'Google ile giriş henüz yapılandırılmadı.' });
+      const { credential } = await readBody(req);
+      let payload;
+      try {
+        payload = await verifyGoogleIdToken(credential);
+      } catch (e) {
+        return jsonResponse(res, 400, { error: 'Google doğrulaması başarısız: ' + e.message });
+      }
+      const found = findUserByEmail(payload.email);
+      if (!found) {
+        return jsonResponse(res, 404, {
+          error: `Bu Google hesabıyla (${payload.email}) eşleşen bir üyelik bulunamadı. Önce normal şekilde üye ol, sonra Hesap Ayarları'ndan bu e-postayı hesabına ekle.`,
+        });
+      }
+      const token = createSession(found.phone);
+      const { passwordHash, ...safeUser } = found.user;
       return jsonResponse(res, 200, { token, user: safeUser });
     }
 

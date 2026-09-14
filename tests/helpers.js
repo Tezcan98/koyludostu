@@ -34,7 +34,7 @@ async function waitForServer(baseUrl, timeoutMs) {
   throw new Error('Sunucu zaman aşımında ayağa kalkmadı: ' + baseUrl);
 }
 
-async function startServer() {
+async function startServer(extraEnv) {
   const port = await freePort();
   const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'kd-test-data-'));
   const child = spawn(process.execPath, ['serve.js'], {
@@ -44,6 +44,7 @@ async function startServer() {
       PORT: String(port),
       KD_DATA_DIR: dataDir,
       ADMIN_PASSWORD,
+      ...(extraEnv || {}),
     },
     stdio: 'ignore',
   });

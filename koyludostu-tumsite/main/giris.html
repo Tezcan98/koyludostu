@@ -36,6 +36,9 @@
   }
   .auth-btn:disabled{opacity:.5;cursor:default;}
   .auth-hint{font-size:12px;color:var(--muted);text-align:center;margin-top:14px;}
+  .auth-divider{display:flex;align-items:center;gap:10px;margin:0 0 14px;}
+  .auth-divider::before, .auth-divider::after{content:"";flex:1;height:1px;background:var(--line);}
+  .auth-divider span{font-size:11.5px;color:var(--muted);}
   .auth-hint b{color:var(--ring1);}
   .auth-error{font-size:12.5px;color:var(--ring3);text-align:center;min-height:18px;margin-top:10px;}
   .auth-back{display:block;text-align:center;font-size:12.5px;color:var(--muted);margin-top:18px;cursor:pointer;}
@@ -89,6 +92,13 @@
     <button class="auth-btn" id="loginBtn">Giriş Yap</button>
     <p class="auth-error" id="loginError"></p>
     <a class="auth-back" id="goForgotLink" style="display:block;margin-top:12px;">Şifremi unuttum</a>
+
+    <div id="googleSignInWrap" hidden style="margin-top:18px;">
+      <div class="auth-divider"><span>veya</span></div>
+      <div id="googleSignInBtn" style="display:flex;justify-content:center;"></div>
+      <p style="font-size:11px;color:var(--muted);text-align:center;margin:8px 0 0;">Google ile giriş, hesabına eklediğin e-postayla eşleşen bir üyeliğe girer — yeni hesap açmaz.</p>
+    </div>
+
     <p class="auth-hint">Hesabın yok mu? <a class="auth-back" id="goRegisterLink" style="display:inline;margin:0;color:var(--ring1);font-weight:700;">Üye Ol</a></p>
   </div>
 
@@ -341,6 +351,38 @@
       : explicitRedirect || (data.user.role === 'satici' ? '/admin-mesajlar.html' : '/index.html');
     location.href = dest;
   }
+
+  // ---- Google ile Giriş ----
+  // Buton, sadece sunucuda GOOGLE_CLIENT_ID ayarlıysa gösterilir — o zaman Google'ın
+  // script'ini yüklüyoruz (yapılandırılmamışken hiç yüklemiyoruz). Google kimlik
+  // doğrulaması "hesabında bu e-posta var mı" diye VAR OLAN bir hesaba giriş yaptırır —
+  // Google kendi başına yeni bir telefon numarası veremeyeceğinden yeni hesap açmaz.
+  fetch('/api/auth/config').then(function (r) { return r.json(); }).then(function (cfg) {
+    if (!cfg.googleClientId) return;
+    var script = document.createElement('script');
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.onload = function () {
+      if (!window.google || !window.google.accounts) return;
+      document.getElementById('googleSignInWrap').hidden = false;
+      google.accounts.id.initialize({
+        client_id: cfg.googleClientId,
+        callback: function (response) {
+          loginError.textContent = '';
+          fetch('/api/auth/google-login', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ credential: response.credential }),
+          }).then(function (r) { return r.json(); }).then(function (data) {
+            if (data.error) { loginError.textContent = data.error; return; }
+            finishLogin(data);
+          }).catch(function () { loginError.textContent = 'Bağlantı hatası, tekrar deneyin.'; });
+        },
+      });
+      google.accounts.id.renderButton(document.getElementById('googleSignInBtn'), {
+        theme: 'outline', size: 'large', width: 300, locale: 'tr', text: 'signin_with',
+      });
+    };
+    document.head.appendChild(script);
+  }).catch(function () {});
 
   // ---- Giriş Yap (telefon/e-posta + parola) ----
   document.getElementById('loginBtn').addEventListener('click', function () {

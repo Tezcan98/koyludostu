@@ -2117,3 +2117,45 @@ describe('Kayıt sırasında opsiyonel e-posta', () => {
     assert.equal(r.status, 400);
   });
 });
+
+describe('Google ile giriş', () => {
+  test('GOOGLE_CLIENT_ID ayarlanmadıysa /api/auth/config bunu bildirir ve giriş uç noktası 501 döner', async () => {
+    const cfg = await fetch(url('/api/auth/config')).then((r) => r.json());
+    assert.equal(cfg.googleClientId, null);
+
+    const r = await fetch(url('/api/auth/google-login'), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ credential: 'her-neyse' }),
+    });
+    assert.equal(r.status, 501);
+  });
+
+  test('GOOGLE_CLIENT_ID ayarlıyken bozuk/uydurma bir credential imza doğrulamasında reddedilir', async () => {
+    const googleServer = await startServer({ GOOGLE_CLIENT_ID: 'test-client-id.apps.googleusercontent.com' });
+    try {
+      const cfg = await fetch(googleServer.baseUrl + '/api/auth/config').then((r) => r.json());
+      assert.equal(cfg.googleClientId, 'test-client-id.apps.googleusercontent.com');
+
+      const notThreeParts = await fetch(googleServer.baseUrl + '/api/auth/google-login', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ credential: 'sadece-bir-parca' }),
+      });
+      assert.equal(notThreeParts.status, 400);
+
+      // Gerçek bir JWT şekli (3 parça) ama Google'ın imzalamadığı, uydurma bir token.
+      const fakeHeader = Buffer.from(JSON.stringify({ alg: 'RS256', kid: 'uydurma-kid' })).toString('base64url');
+      const fakePayload = Buffer.from(JSON.stringify({
+        aud: 'test-client-id.apps.googleusercontent.com', iss: 'https://accounts.google.com',
+        exp: Math.floor(Date.now() / 1000) + 3600, email: 'sahte@example.com', email_verified: true,
+      })).toString('base64url');
+      const fakeToken = fakeHeader + '.' + fakePayload + '.uydurma-imza';
+      const badSig = await fetch(googleServer.baseUrl + '/api/auth/google-login', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ credential: fakeToken }),
+      });
+      assert.equal(badSig.status, 400);
+    } finally {
+      await googleServer.stop();
+    }
+  });
+});
