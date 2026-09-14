@@ -3437,6 +3437,33 @@ const server = http.createServer(async (req, res) => {
       return jsonResponse(res, 200, { user: safeUser });
     }
 
+    // Admin'in bir satıcının IBAN'ını ve satıcı türünü (bireysel/şirket) elle
+    // düzenlemesi — ör. satıcı kendi ayarlamadıysa ya da bir hata düzeltilecekse.
+    // Satıcının kendi update-profile'ından farklı olarak burada owner yetkisi gerekir
+    // ve satıcı onayı beklenmez; IBAN yanlış girilirse gerçek paranın yanlış hesaba
+    // gitmesine yol açacağından format sıkı doğrulanır.
+    if (p === '/api/owner/sellers/update' && req.method === 'POST') {
+      if (!requireAdmin(req, res)) return;
+      const { phone, iban, sellerType } = await readBody(req);
+      const users = readJson(USERS_PATH, {});
+      const user = users[phone];
+      if (!user || user.role !== 'satici') return jsonResponse(res, 404, { error: 'Satıcı bulunamadı' });
+      if (iban !== undefined) {
+        const cleanIban = normalizeIban(iban);
+        if (cleanIban && !isValidIban(cleanIban)) {
+          return jsonResponse(res, 400, { error: 'Geçerli bir IBAN gir (TR ile başlayan 26 karakter) ya da boş bırak.' });
+        }
+        user.iban = cleanIban;
+      }
+      if (sellerType !== undefined) {
+        if (!VALID_SELLER_TYPES.includes(sellerType)) return jsonResponse(res, 400, { error: 'Geçersiz satıcı türü.' });
+        user.sellerType = sellerType;
+      }
+      writeJson(USERS_PATH, users);
+      const safeUser = redactUser(user);
+      return jsonResponse(res, 200, { user: safeUser });
+    }
+
     // Bildirimler: kanal başına genel açma/kapama anahtarı (kullanıcı tercihinden ayrı,
     // "sistem geneli SMS'i tamamen kapat" gibi bir acil durum anahtarı) ve gönderim geçmişi.
     if (p === '/api/owner/notification-settings' && req.method === 'GET') {

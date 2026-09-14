@@ -155,7 +155,10 @@
               ? '<div class="po-confirmed">✅ Ödemeyi gönderdiğini bildirdin (' + new Date(o.paymentSentAt).toLocaleDateString('tr-TR') + ')</div>'
               : '<button type="button" class="payment-sent-btn" data-id="' + o.id + '">Ödemeyi Gönderdim</button>') +
           '</div>'
-          : '';
+          // Satıcı henüz IBAN eklemediyse ödeme kutusu sessizce kaybolmasın — alıcı
+          // "ödemeyi nasıl yapacağım?" diye takılı kalmasın diye ne yapması gerektiğini söylüyoruz.
+          : '<div class="po-payment po-payment-missing">Satıcı henüz IBAN eklemedi. Ödeme detayları için ' +
+            '<a href="mesajlarim.html">Mesaj Kutusu</a> üzerinden satıcıyla iletişime geç.</div>';
         var receiptAction = o.buyerConfirmedAt
           ? '<div class="po-confirmed">✅ Teslim aldığını onayladın (' + new Date(o.buyerConfirmedAt).toLocaleDateString('tr-TR') + ')' +
             (o.buyerProofPhotoUrl ? '<br><img class="po-proof-thumb" src="' + o.buyerProofPhotoUrl + '" alt="Teslim fotoğrafın">' : '') + '</div>'

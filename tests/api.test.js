@@ -1278,6 +1278,69 @@ describe('Rozetli satıcı sistemi ve profil sayfası', () => {
   });
 });
 
+describe('Admin: satıcı IBAN/tür düzenleme', () => {
+  test('admin bir satıcının IBAN\'ını ve türünü değiştirebilir', async () => {
+    const seller = await newSeller('IBAN Düzenle');
+    const ownerToken = await ownerLogin(server.baseUrl, server.adminPassword);
+    const updated = await fetch(url('/api/owner/sellers/update'), {
+      method: 'POST', headers: authHeaders(ownerToken),
+      body: JSON.stringify({ phone: seller.phone, iban: 'TR330006100519786457841326', sellerType: 'sirket' }),
+    }).then((r) => r.json());
+    assert.equal(updated.user.iban, 'TR330006100519786457841326');
+    assert.equal(updated.user.sellerType, 'sirket');
+
+    const me = await fetch(url('/api/auth/me'), { headers: authHeaders(seller.token) }).then((r) => r.json());
+    assert.equal(me.user.iban, 'TR330006100519786457841326');
+    assert.equal(me.user.sellerType, 'sirket');
+  });
+
+  test('geçersiz IBAN reddedilir', async () => {
+    const seller = await newSeller('IBAN Geçersiz');
+    const ownerToken = await ownerLogin(server.baseUrl, server.adminPassword);
+    const r = await fetch(url('/api/owner/sellers/update'), {
+      method: 'POST', headers: authHeaders(ownerToken),
+      body: JSON.stringify({ phone: seller.phone, iban: 'gecersiz-iban' }),
+    });
+    assert.equal(r.status, 400);
+  });
+
+  test('yetkisiz erişime kapalı', async () => {
+    const r = await fetch(url('/api/owner/sellers/update'), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: '5900000001', sellerType: 'sirket' }),
+    });
+    assert.equal(r.status, 401);
+  });
+
+  test('siparişte satıcının güncel IBAN\'ı görünür (mark-payment-sent akışı için)', async () => {
+    const seller = await newSeller('IBAN Sipariş Akışı');
+    const buyer = await newBuyer('IBAN Sipariş Alıcı');
+    const product = await createProduct(seller.token, {});
+    const order = await fetch(url('/api/product-orders'), {
+      method: 'POST', headers: authHeaders(buyer.token),
+      body: JSON.stringify({ productSlug: product.slug, quantity: 1, city: 'Test Şehir', district: 'Test İlçe', termsAccepted: true }),
+    }).then((r) => r.json());
+
+    // newSeller() varsayılan olarak sabit bir test IBAN'ı ile kayıt olur (satıcı kaydında
+    // IBAN artık zorunlu) — burada admin'in IBAN'ı DEĞİŞTİRMESİNİN siparişe hemen
+    // yansıdığını doğruluyoruz (satıcının IBAN'ı siparişte sabitlenmez, her okumada
+    // güncel halinden katılır, bkz. /api/product-orders/mine).
+    const beforeIban = await fetch(url('/api/product-orders/mine'), { headers: authHeaders(buyer.token) })
+      .then((r) => r.json()).then((d) => d.orders.find((o) => o.id === order.id).sellerIban);
+    assert.equal(beforeIban, 'TR330006100519786457841326');
+
+    const ownerToken = await ownerLogin(server.baseUrl, server.adminPassword);
+    await fetch(url('/api/owner/sellers/update'), {
+      method: 'POST', headers: authHeaders(ownerToken),
+      body: JSON.stringify({ phone: seller.phone, iban: 'TR640001200945897069872637' }),
+    });
+
+    const afterIban = await fetch(url('/api/product-orders/mine'), { headers: authHeaders(buyer.token) })
+      .then((r) => r.json()).then((d) => d.orders.find((o) => o.id === order.id).sellerIban);
+    assert.equal(afterIban, 'TR640001200945897069872637');
+  });
+});
+
 describe('Kategoriye özel filtre: Baklava kategorisi backend desteği', () => {
   test('Baklava kategorisinde İç Malzeme özelliği kabul edilir', async () => {
     const seller = await newSeller('Seller Baklava');
