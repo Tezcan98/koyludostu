@@ -147,6 +147,22 @@ function esc(s) {
   return String(s || '').replace(/[<>&"]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c]));
 }
 
+// Satıcı avatarı: gerçek bir fotoğrafımız yok, bunun yerine adından türetilen
+// baş harf + markanın kendi paletinden (isme göre sabit, her seferinde aynı)
+// bir arka plan rengiyle "kişiselleştirilmiş" bir rozet gösteriyoruz — düz gri
+// bir kişi ikonu yerine sayfayı daha canlı ve ürün ürün ayırt edilebilir kılıyor.
+const AVATAR_PALETTE = ['#4E6B3A', '#C08A2E', '#8E3B46', '#2E6EC0', '#6B4E9E', '#3F8C7A'];
+function sellerAvatarColor(name) {
+  const s = String(name || '');
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return AVATAR_PALETTE[h % AVATAR_PALETTE.length];
+}
+function sellerInitial(name) {
+  const s = String(name || '').trim();
+  return s ? s[0].toLocaleUpperCase('tr') : '?';
+}
+
 // Satıcının /admin-urunlerim.html üzerinden eklediği, statik bir HTML dosyası
 // bulunmayan ürünler için sunucu tarafında üretilen ürün sayfası. Mevcut 25 ürünün
 // statik dosyaları öncelikli kalır (bkz. aşağıdaki yönlendirme), bu sadece yeni
@@ -161,7 +177,10 @@ function renderProductPage(product, allProducts) {
   const relatedHtml = related ? `<div class="related"><h3>Benzer Ürünler</h3><div class="related-grid"><a href="${related.slug}.html"><img src="${esc(productImgUrl(related.img))}" alt="${esc(related.title)}"><div class="rt-title">${esc(related.title)}</div></a></div></div>` : '';
   const unitWord = esc(product.unit).replace(/^\/\s*/, '');
   const qtyLine = product.minQty && product.maxQty
-    ? `<div class="qty-range">Tedarik miktarı: ${product.minQty} ${unitWord} – ${product.maxQty} ${unitWord}</div>` : '';
+    ? (product.minQty === product.maxQty
+      ? `<div class="qty-range">Tedarik miktarı: ${product.minQty} ${unitWord}</div>`
+      : `<div class="qty-range">Tedarik miktarı: ${product.minQty} ${unitWord} – ${product.maxQty} ${unitWord}</div>`)
+    : '';
   const storageLine = product.storageConditions
     ? `<div class="storage-box"><b>Saklama Koşulları:</b> ${esc(product.storageConditions)}</div>` : '';
   const stockLine = product.stock === null || product.stock === undefined
@@ -189,11 +208,13 @@ function renderProductPage(product, allProducts) {
   const thumbsHtml = galleryPhotos.length > 1
     ? `<div class="product-thumbs">${galleryPhotos.map((src) => `<img src="${esc(productImgUrl(src, 150))}" alt="" onclick="document.getElementById('mainProductImg').src=this.src.replace('w=150','w=900')">`).join('')}</div>`
     : '';
-  const footerCtas = isActive
-    ? `<button class="fav-cta" data-id="${esc(product.slug)}">🤍</button>
-      <button class="msg-cta" data-slug="${esc(product.slug)}" data-title="${esc(product.title)}">💬 Satıcıya Mesaj Yaz</button>
-      <button class="order-cta" data-slug="${esc(product.slug)}" data-title="${esc(product.title)}">📦 Sipariş Talebi Gönder</button>`
-    : `<button class="fav-cta" data-id="${esc(product.slug)}">🤍</button>`;
+  const orderCtaIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8v13H3V8"/><path d="M1 3h22v5H1z"/><path d="M10 12h4"/></svg>`;
+  const productActions = isActive
+    ? `<div class="product-actions">
+        <button class="msg-cta" data-slug="${esc(product.slug)}" data-title="${esc(product.title)}">💬 Satıcıya Mesaj Yaz</button>
+        <button class="order-cta" data-slug="${esc(product.slug)}" data-title="${esc(product.title)}">${orderCtaIcon}Sipariş Talebi Gönder</button>
+      </div>`
+    : '';
 
   return `<!DOCTYPE html>
 <html lang="tr">
@@ -260,14 +281,14 @@ function renderProductPage(product, allProducts) {
     <div class="product-info">
       <div class="product-cat">${esc(product.cat)}</div>
       <h1>${esc(product.title)}</h1>
-      <div class="producer-box">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>
-        <div>
+      <div class="seller-card">
+        <div class="seller-card-avatar" style="background:${sellerAvatarColor(product.sellerName)}">${esc(sellerInitial(product.sellerName))}</div>
+        <div class="seller-card-info">
           <div class="producer-name"><a href="../satici/${esc(product.sellerId)}.html">${esc(product.sellerName)}</a>${sellerVerified ? ' <span class="seller-badge" title="Güvenilir Satıcı">✅</span>' : ''}</div>
           <div class="producer-loc">${esc(product.city)}</div>
         </div>
+        <button class="fav-seller-cta" data-id="${esc(product.sellerId)}">☆ Takip Et</button>
       </div>
-      <button class="fav-seller-cta" data-id="${esc(product.sellerId)}">☆ Satıcıyı Takip Et</button>
       <p class="product-desc">${esc(product.description)}</p>
       ${organicLine}
       ${inactiveLine}
@@ -279,9 +300,12 @@ function renderProductPage(product, allProducts) {
       ${storageLine}
       ${certLine}
       <div class="product-footer">
-        <div class="product-price">${esc(product.price)} <small>${esc(product.unit)}</small></div>
-        ${footerCtas}
-</div>
+        <div class="price-row">
+          <div class="product-price">${esc(product.price)} <small>${esc(product.unit)}</small></div>
+          <button class="fav-cta" data-id="${esc(product.slug)}">🤍</button>
+        </div>
+        ${productActions}
+      </div>
     </div>
   </div>
 

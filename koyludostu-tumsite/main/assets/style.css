@@ -201,12 +201,16 @@ button{font-family:inherit;}
 .product-thumbs img:hover{opacity:1;border-color:var(--ring1);}
 .product-cat{font-size:12px;font-weight:700;color:var(--ring1);text-transform:uppercase;letter-spacing:.03em;margin-bottom:6px;}
 .product-info h1{font-size:24px;margin:0 0 16px;font-weight:800;}
-.producer-box{
-  display:flex;gap:10px;align-items:center;margin-bottom:18px;padding-bottom:18px;
-  border-bottom:1px solid var(--line);
+.seller-card{
+  display:flex;gap:12px;align-items:center;margin-bottom:18px;padding:12px 14px;
+  background:var(--card);border:1px solid var(--line);border-radius:14px;
 }
-.producer-box svg{width:30px;height:30px;flex-shrink:0;color:var(--muted);}
-.producer-name{font-weight:700;font-size:14px;}
+.seller-card-avatar{
+  width:42px;height:42px;border-radius:50%;flex-shrink:0;color:#fff;font-size:17px;font-weight:800;
+  display:flex;align-items:center;justify-content:center;
+}
+.seller-card-info{flex:1;min-width:0;}
+.producer-name{font-weight:700;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .producer-name a:hover{text-decoration:underline;}
 .seller-badge{font-size:12px;}
 .producer-loc{font-size:12.5px;color:var(--muted);}
@@ -225,7 +229,8 @@ button{font-family:inherit;}
   margin-bottom:16px;line-height:1.5;
 }
 .storage-box b{color:var(--ink);}
-.product-footer{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:10px;}
+.product-footer{margin-bottom:10px;}
+.price-row{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:14px;}
 .product-price{font-size:22px;font-weight:800;}
 .product-price small{font-size:12px;font-weight:500;color:var(--muted);}
 .fav-cta{
@@ -235,11 +240,19 @@ button{font-family:inherit;}
 .fav-cta.active{border-color:var(--ring3);}
 .fav-seller-cta{
   margin-top:8px;background:transparent;border:1.5px solid var(--line);color:var(--muted);
-  font-size:12px;font-weight:700;padding:7px 14px;border-radius:16px;cursor:pointer;font-family:inherit;
+  font-size:12px;font-weight:700;padding:7px 14px;border-radius:16px;cursor:pointer;font-family:inherit;flex-shrink:0;
 }
 .fav-seller-cta.active{border-color:#c08a2e;color:#c08a2e;background:#fbf3e3;}
+.seller-card .fav-seller-cta{margin-top:0;}
 .seller-cta-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;}
 .seller-cta-row .fav-seller-cta{margin-top:0;}
+
+/* Ürün sayfası ana aksiyonları: mesaj (ikincil, çerçeveli) üstte, sipariş talebi
+   (birincil, dolu) altta — yan yana pill'lerin metne göre sarılıp düzeni bozmasındansa
+   ikisi de tam genişlik, dikey istiflenmiş; başparmakla erişimi kolay, tutarlı hizalı. */
+.product-actions{display:flex;flex-direction:column;gap:10px;}
+.product-actions .msg-cta, .product-actions .order-cta{width:100%;justify-content:center;padding:13px 18px;}
+.product-actions .order-cta svg{width:17px;height:17px;}
 .seller-cta-row .msg-cta{padding:7px 14px;font-size:12px;border-radius:16px;}
 
 /* Reviews */
