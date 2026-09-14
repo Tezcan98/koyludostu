@@ -25,6 +25,9 @@ const NOTIFICATIONS_PATH = path.join(DATA_DIR, 'notifications.json');
 const PACKAGING_PATH = path.join(DATA_DIR, 'packaging.json');
 const PACKAGING_ORDERS_PATH = path.join(DATA_DIR, 'packaging_orders.json');
 const PRODUCT_ORDERS_PATH = path.join(DATA_DIR, 'product_orders.json');
+// Şirket satıcıların sipariş başına kestiği fatura taslaklarının sıra numarası — satıcı
+// başına, hiç geriye sarmadan artar; aynı sipariş için tekrar istenirse aynı numara döner.
+const INVOICE_COUNTERS_PATH = path.join(DATA_DIR, 'invoice_counters.json');
 // Kimlik/vergi levhası/destekleyici belge gibi hassas dosyalar, ürün fotoğrafı ve
 // sertifika gibi kasıtlı olarak herkese açık dosyalardan farklı olarak, statik
 // sunucunun (koyludostu-tumsite/) DIŞINDA, imzalı URL olmadan hiç erişilemeyen ayrı
@@ -736,6 +739,18 @@ function isValidTaxIdForType(id, sellerType) {
   return /^\d{11}$/.test(digits);
 }
 
+// Satıcı başına artan, hiç geriye sarmayan fatura sıra numarası üretir — ör. "2026/000007".
+// Aynı yıl içinde satıcı başına sıfırlanmaz (basit ve çakışmasız kalsın diye), sadece
+// görüntülenen numaranın başındaki yıl, numaranın ilk üretildiği yılı gösterir.
+function nextInvoiceNo(sellerId) {
+  const counters = readJson(INVOICE_COUNTERS_PATH, {});
+  const next = (counters[sellerId] || 0) + 1;
+  counters[sellerId] = next;
+  writeJson(INVOICE_COUNTERS_PATH, counters);
+  const year = new Date().getFullYear();
+  return `${year}/${String(next).padStart(6, '0')}`;
+}
+
 // Türkiye IBAN'ı: TR + 24 hane (toplam 26 karakter). Gerçek IBAN checksum
 // doğrulaması yapmıyoruz, sadece format kontrolü — banka zaten geçersiz bir
 // IBAN'a transferi kabul etmeyecektir.
@@ -866,15 +881,18 @@ async function verifyGoogleIdToken(token) {
 
 // Ürün nesneleri satıcı bilgisini (ad/telefon) o an kaydedildiği haliyle taşır ama "rozetli
 // satıcı" durumu sonradan değişebildiği için canlı users.json'dan katılır — id -> boolean.
-function sellerVerifiedMap() {
+function sellerInfoMap() {
   const users = readJson(USERS_PATH, {});
   const map = {};
-  Object.values(users).forEach((u) => { if (u.role === 'satici') map[u.id] = !!u.verifiedSeller; });
+  Object.values(users).forEach((u) => {
+    if (u.role === 'satici') map[u.id] = { verified: !!u.verifiedSeller, sellerType: u.sellerType || 'bireysel' };
+  });
   return map;
 }
 
-function withSellerBadge(product, verifiedMap) {
-  return Object.assign({}, product, { sellerVerified: !!verifiedMap[product.sellerId] });
+function withSellerBadge(product, infoMap) {
+  const info = infoMap[product.sellerId] || {};
+  return Object.assign({}, product, { sellerVerified: !!info.verified, sellerType: info.sellerType || 'bireysel' });
 }
 
 function getSession(req) {
@@ -1895,6 +1913,61 @@ const server = http.createServer(async (req, res) => {
       return jsonResponse(res, 200, order);
     }
 
+    // Şirket/vergi mükellefi satıcının bir sipariş için fatura taslağı üretmesi. Gerçek
+    // bir e-Fatura/e-Arşiv entegrasyonu değildir (GİB entegratörü gerektirir) — satıcının
+    // kendi e-Fatura sistemine girerken kullanabileceği, satıcı/alıcı/kalem bilgileri hazır
+    // doldurulmuş, yazdırılabilir bir taslak sunar. Aynı sipariş için tekrar çağrılırsa
+    // daha önce atanmış fatura numarasını değiştirmeden aynı taslağı döner (idempotent).
+    if (p === '/api/admin/product-orders/invoice' && req.method === 'POST') {
+      const session = requireRole(req, res, 'satici');
+      if (!session) return;
+      if (session.user.sellerType !== 'sirket') {
+        return jsonResponse(res, 403, { error: 'Fatura taslağı sadece şirket/vergi mükellefi satıcılar için sunulur.' });
+      }
+      const { id } = await readBody(req);
+      const orders = readJson(PRODUCT_ORDERS_PATH, {});
+      const order = orders[id];
+      if (!order || order.sellerId !== session.user.id) return jsonResponse(res, 404, { error: 'Sipariş bulunamadı' });
+      if (order.status !== 'confirmed' && order.status !== 'completed') {
+        return jsonResponse(res, 400, { error: 'Fatura, onaylanmış ya da tamamlanmış siparişler için oluşturulabilir.' });
+      }
+      if (!order.invoiceNo) {
+        order.invoiceNo = nextInvoiceNo(session.user.id);
+        order.invoicedAt = new Date().toISOString();
+        writeJson(PRODUCT_ORDERS_PATH, orders);
+      }
+
+      const products = readJson(PRODUCTS_PATH, {});
+      const product = products[order.productSlug] || null;
+      const unitPrice = product ? Number(String(product.price).replace(/[^\d.,]/g, '').replace(',', '.')) || 0 : null;
+      const unit = product ? product.unit : '';
+
+      return jsonResponse(res, 200, {
+        invoiceNo: order.invoiceNo,
+        issuedAt: order.invoicedAt,
+        seller: {
+          legalName: session.user.companyLegalName || session.user.businessInfo || session.user.name,
+          taxOffice: session.user.taxOffice || '',
+          taxId: session.user.taxId || '',
+          address: session.user.invoiceAddress || [session.user.neighborhood, session.user.district, session.user.city].filter(Boolean).join(' / '),
+          iban: session.user.iban || '',
+          phone: session.phone,
+        },
+        buyer: {
+          name: order.buyerName,
+          phone: order.buyerPhone,
+          address: order.address || [order.district, order.city].filter(Boolean).join(' / '),
+        },
+        item: {
+          title: order.productTitle,
+          quantity: order.quantity,
+          unit: unit || '',
+          unitPrice,
+          lineTotal: unitPrice !== null ? Math.round(unitPrice * order.quantity * 100) / 100 : null,
+        },
+      });
+    }
+
     // Alıcının "teslim aldım" onayı — durum makinesinden bağımsız, opsiyonel bir
     // fotoğrafla birlikte kaydedilir. Satıcının durumu ne olursa olsun alıcı istediği
     // an teslim aldığını işaretleyebilir (isteyen ekler, zorunlu değil).
@@ -2201,7 +2274,7 @@ const server = http.createServer(async (req, res) => {
     if (p === '/api/auth/update-profile' && req.method === 'POST') {
       const session = requireAuth(req, res);
       if (!session) return;
-      const { name, city, district, neighborhood, email, iban } = await readBody(req);
+      const { name, city, district, neighborhood, email, iban, companyLegalName, taxOffice, invoiceAddress } = await readBody(req);
       const cleanName = String(name || '').trim().slice(0, 60);
       const cleanCity = String(city || '').trim().slice(0, 60);
       if (cleanName.length < 2) return jsonResponse(res, 400, { error: 'Lütfen adını gir.' });
@@ -2235,6 +2308,11 @@ const server = http.createServer(async (req, res) => {
       if (neighborhood !== undefined) user.neighborhood = String(neighborhood).trim().slice(0, 80);
       if (email !== undefined) user.email = String(email || '').trim().slice(0, 120);
       if (iban !== undefined) user.iban = normalizeIban(iban);
+      // Fatura taslağında kullanılan, "İşletme/Üretim Açıklaması"ndan ayrı, resmi
+      // şirket bilgileri — sadece şirket/vergi mükellefi satıcılar için anlamlı.
+      if (companyLegalName !== undefined) user.companyLegalName = String(companyLegalName || '').trim().slice(0, 150);
+      if (taxOffice !== undefined) user.taxOffice = String(taxOffice || '').trim().slice(0, 100);
+      if (invoiceAddress !== undefined) user.invoiceAddress = String(invoiceAddress || '').trim().slice(0, 300);
       writeJson(USERS_PATH, users);
       const { passwordHash, ...safeUser } = user;
       return jsonResponse(res, 200, { user: safeUser });
@@ -2788,8 +2866,8 @@ const server = http.createServer(async (req, res) => {
 
     if (p === '/api/products' && req.method === 'GET') {
       const products = readJson(PRODUCTS_PATH, {});
-      const verifiedMap = sellerVerifiedMap();
-      const list = Object.values(products).filter((prod) => prod.active !== false).map((prod) => withSellerBadge(prod, verifiedMap));
+      const infoMap = sellerInfoMap();
+      const list = Object.values(products).filter((prod) => prod.active !== false).map((prod) => withSellerBadge(prod, infoMap));
       return jsonResponse(res, 200, { products: list });
     }
 

@@ -126,6 +126,16 @@
     <p class="acc-msg" id="ibanMsg"></p>
   </div>
 
+  <div class="acc-card" id="invoiceInfoCard" style="display:none;">
+    <h2>Fatura Bilgileri</h2>
+    <p style="font-size:12.5px;color:var(--muted);margin:0 0 12px;">Gelen Siparişler sayfasındaki "Fatura Oluştur" ile üretilen taslakta kullanılır.</p>
+    <div class="acc-field"><label>Şirket Unvanı</label><input type="text" id="companyLegalNameField" placeholder="ör. Örnek Tarım Ürünleri Ltd. Şti."></div>
+    <div class="acc-field"><label>Vergi Dairesi</label><input type="text" id="taxOfficeField" placeholder="ör. Darıca Vergi Dairesi"></div>
+    <div class="acc-field"><label>Fatura Adresi</label><textarea id="invoiceAddressField" rows="2" style="width:100%;padding:11px 13px;border-radius:10px;border:1.5px solid var(--line);font-family:inherit;font-size:14px;background:var(--bg);resize:vertical;"></textarea></div>
+    <button class="acc-btn" id="saveInvoiceInfoBtn">Kaydet</button>
+    <p class="acc-msg" id="invoiceInfoMsg"></p>
+  </div>
+
   <div class="acc-card">
     <h2>Parola Değiştir</h2>
     <div class="acc-field"><label>Mevcut Parola</label><input type="password" id="curPassField"></div>
@@ -245,7 +255,35 @@
     var prefs = data.user.notifyPrefs || {};
     document.getElementById('notifySms').checked = !!prefs.sms;
     document.getElementById('notifyEmail').checked = !!prefs.email;
+    if (data.user.role === 'satici' && data.user.sellerType === 'sirket') {
+      document.getElementById('invoiceInfoCard').style.display = 'block';
+      document.getElementById('companyLegalNameField').value = data.user.companyLegalName || '';
+      document.getElementById('taxOfficeField').value = data.user.taxOffice || '';
+      document.getElementById('invoiceAddressField').value = data.user.invoiceAddress || '';
+    }
   }).catch(function () {});
+
+  document.getElementById('saveInvoiceInfoBtn').addEventListener('click', function () {
+    var msg = document.getElementById('invoiceInfoMsg');
+    var btn = document.getElementById('saveInvoiceInfoBtn');
+    msg.className = 'acc-msg'; msg.textContent = '';
+    btn.disabled = true;
+    window.KDAuth.authedFetch('/api/auth/update-profile', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: document.getElementById('nameField').value.trim(),
+        city: document.getElementById('cityField').value,
+        companyLegalName: document.getElementById('companyLegalNameField').value.trim(),
+        taxOffice: document.getElementById('taxOfficeField').value.trim(),
+        invoiceAddress: document.getElementById('invoiceAddressField').value.trim(),
+      }),
+    }).then(function (r) { return r.json(); }).then(function (data) {
+      btn.disabled = false;
+      if (data.error) { msg.className = 'acc-msg err'; msg.textContent = data.error; return; }
+      msg.className = 'acc-msg ok';
+      msg.textContent = 'Kaydedildi.';
+    }).catch(function () { btn.disabled = false; msg.className = 'acc-msg err'; msg.textContent = 'Bağlantı hatası, tekrar dene.'; });
+  });
 
   document.getElementById('saveProfileBtn').addEventListener('click', function () {
     var msg = document.getElementById('profileMsg');

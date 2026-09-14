@@ -19,6 +19,7 @@
     var attrGroup = document.getElementById('attrGroup');
     var attrWrap = document.getElementById('attrChecks');
     var deliveryRadios = Array.prototype.slice.call(document.querySelectorAll('input[name="delivery"]'));
+    var sellerTypeRadios = Array.prototype.slice.call(document.querySelectorAll('input[name="sellerType"]'));
     var organicCheckbox = document.getElementById('fOrganicOnly');
     var verifiedCheckbox = document.getElementById('fVerifiedOnly');
     var minSellerRatingSelect = document.getElementById('fMinSellerRating');
@@ -93,11 +94,13 @@
       var onlyVerified = verifiedCheckbox.checked;
       var deliveryEl = deliveryRadios.filter(function (r) { return r.checked; })[0];
       var delivery = deliveryEl ? deliveryEl.value : '__all__';
+      var sellerTypeEl = sellerTypeRadios.filter(function (r) { return r.checked; })[0];
+      var sellerType = sellerTypeEl ? sellerTypeEl.value : '__all__';
       var minSellerRating = parseFloat(minSellerRatingSelect.value) || 0;
       var minSellerSales = parseInt(minSellerSalesSelect.value, 10) || 0;
 
       var activeCount = cats.length + cities.length + attrVals.length + (onlyOrganic ? 1 : 0) + (onlyVerified ? 1 : 0) +
-        (delivery !== '__all__' ? 1 : 0) + (minSellerRating > 0 ? 1 : 0) + (minSellerSales > 0 ? 1 : 0);
+        (delivery !== '__all__' ? 1 : 0) + (sellerType !== '__all__' ? 1 : 0) + (minSellerRating > 0 ? 1 : 0) + (minSellerSales > 0 ? 1 : 0);
       badge.hidden = activeCount === 0;
       badge.textContent = activeCount;
 
@@ -111,12 +114,13 @@
         var okAttrs = attrVals.every(function (v) { return pAttrVals.indexOf(v) !== -1; });
         var okOrganic = !onlyOrganic || (p.organic && p.organicApproved);
         var okVerified = !onlyVerified || p.sellerVerified;
+        var okSellerType = sellerType === '__all__' || p.sellerType === sellerType;
         var sStat = sellerStats[p.sellerId] || { avgRating: null, salesCount: 0 };
         var okSellerRating = minSellerRating <= 0 || (sStat.avgRating !== null && sStat.avgRating >= minSellerRating);
         var okSellerSales = minSellerSales <= 0 || sStat.salesCount >= minSellerSales;
         var okSearch = !query || [p.title, p.cat, p.city, p.sellerName, p.description]
           .join(' ').toLocaleLowerCase('tr').indexOf(query) !== -1;
-        return okCat && okCity && okDelivery && okAttrs && okOrganic && okVerified && okSellerRating && okSellerSales && okSearch;
+        return okCat && okCity && okDelivery && okAttrs && okOrganic && okVerified && okSellerType && okSellerRating && okSellerSales && okSearch;
       });
 
       var sortVal = sort.value;
@@ -154,6 +158,7 @@
     minSellerRatingSelect.addEventListener('change', apply);
     minSellerSalesSelect.addEventListener('change', apply);
     deliveryRadios.forEach(function (r) { r.addEventListener('change', apply); });
+    sellerTypeRadios.forEach(function (r) { r.addEventListener('change', apply); });
     sort.addEventListener('change', apply);
     searchInput.addEventListener('input', apply);
 
@@ -165,6 +170,7 @@
       minSellerRatingSelect.value = '0';
       minSellerSalesSelect.value = '0';
       deliveryRadios.forEach(function (r) { r.checked = r.value === '__all__'; });
+      sellerTypeRadios.forEach(function (r) { r.checked = r.value === '__all__'; });
       sort.value = 'default';
       searchInput.value = '';
       renderAttrFilters();

@@ -31,6 +31,8 @@
   .po-status-tag.rejected{background:rgba(200,60,60,.12);color:var(--ring3);}
   .po-status-tag.completed{background:rgba(78,107,58,.12);color:var(--ring1);}
   .adm-empty{padding:30px;text-align:center;color:var(--muted);font-size:13px;}
+  .po-invoice-btn{margin-top:8px;margin-left:8px;padding:7px 16px;border-radius:9px;background:#fff;color:var(--ink);border:1.5px solid var(--line);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;text-decoration:none;display:inline-block;}
+  .po-invoice-btn:hover{background:var(--bg);}
 </style>
 </head>
 <body>
@@ -95,6 +97,7 @@
   document.getElementById('sellerName').textContent = '· ' + window.KDAuth.name();
 
   var STATUS_LABELS = { requested: 'Talep Alındı', confirmed: 'Onaylandı', rejected: 'Reddedildi', completed: 'Tamamlandı' };
+  var isCompanySeller = false;
 
   function timeStr(iso) {
     var d = new Date(iso);
@@ -136,6 +139,9 @@
             ? '<label class="order-terms-row"><input type="checkbox" class="po-terms-check"> <span>Onaylarken/tamamlarken <a href="javascript:;" class="order-terms-link">Sipariş Şartları\'nı</a> kabul ediyorum.</span></label>'
             : '') +
           '<button type="button" class="po-save-btn" data-id="' + o.id + '">Güncelle</button>' +
+          (isCompanySeller && (o.status === 'confirmed' || o.status === 'completed')
+            ? '<a href="/fatura.html?id=' + encodeURIComponent(o.id) + '" target="_blank" class="po-invoice-btn">🧾 ' + (o.invoiceNo ? 'Faturayı Görüntüle' : 'Fatura Oluştur') + '</a>'
+            : '') +
           '<p class="po-save-msg"></p>' +
         '</div>';
       }).join('');
@@ -183,7 +189,9 @@
     });
   }
 
-  loadOrders();
+  window.KDAuth.authedFetch('/api/auth/me').then(function (r) { return r.json(); }).then(function (data) {
+    isCompanySeller = !!(data.user && data.user.sellerType === 'sirket');
+  }).catch(function () {}).then(loadOrders);
 })();
 </script>
 <script>if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("/sw.js").catch(function(){});});}</script>

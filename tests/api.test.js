@@ -61,6 +61,35 @@ async function newBuyer(name) {
   return registerUser(server.baseUrl, { name, city: 'Test Şehir', password: 'test1234', role: 'alici', phone });
 }
 
+// registerUser yardımcısı sellerType göndermiyor (her zaman bireysel varsayılan) — fatura
+// taslağı testleri şirket/vergi mükellefi bir satıcı gerektirdiğinden ayrı bir yardımcı.
+async function newCompanySeller(name) {
+  const phone = nextTestPhone();
+  const base = {
+    name, city: 'Test Şehir', district: 'Test İlçe', password: 'test1234',
+    role: 'satici', termsAccepted: true, sellerType: 'sirket',
+    businessInfo: 'Şirket olarak sebze meyve üretip satıyoruz, otomatik test kaydı.',
+    taxId: '1234567890', iban: 'TR330006100519786457841326',
+    idDocDataUrl: TINY_PNG_DATA_URL, idDocConsent: true,
+  };
+  const reg = await fetch(url('/api/auth/register-start'), {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(base),
+  }).then((r) => r.json());
+  await fetch(url('/api/auth/request-code'), {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone }),
+  });
+  const ver = await fetch(url('/api/auth/verify'), {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ phone, code: '0000', regToken: reg.regToken }),
+  }).then((r) => r.json());
+  const ownerToken = await ownerLogin(server.baseUrl, server.adminPassword);
+  await fetch(url('/api/owner/sellers/approve'), {
+    method: 'POST', headers: authHeaders(ownerToken),
+    body: JSON.stringify({ phone, status: 'approved' }),
+  });
+  return { token: ver.token, phone, user: ver.user };
+}
+
 async function createProduct(token, overrides) {
   const img = await uploadImage(token);
   const body = Object.assign({
@@ -2157,5 +2186,91 @@ describe('Google ile giriş', () => {
     } finally {
       await googleServer.stop();
     }
+  });
+});
+
+describe('Ürün listesinde satıcı türü (köylü/işletme filtresi için)', () => {
+  test('bireysel ve şirket satıcıların ürünleri kendi sellerType\'ıyla döner', async () => {
+    const bireysel = await newSeller('Filtre Köylü');
+    const sirket = await newCompanySeller('Filtre İşletme');
+    const p1 = await createProduct(bireysel.token, {});
+    const p2 = await createProduct(sirket.token, {});
+
+    const list = await fetch(url('/api/products')).then((r) => r.json());
+    const found1 = list.products.find((p) => p.slug === p1.slug);
+    const found2 = list.products.find((p) => p.slug === p2.slug);
+    assert.equal(found1.sellerType, 'bireysel');
+    assert.equal(found2.sellerType, 'sirket');
+  });
+});
+
+describe('Şirket satıcı için fatura taslağı', () => {
+  test('bireysel satıcı fatura taslağı isteyemez (403)', async () => {
+    const seller = await newSeller('Fatura Bireysel');
+    const buyer = await newBuyer('Fatura Alıcı 1');
+    const product = await createProduct(seller.token, {});
+    const order = await completePurchase(buyer.token, seller.token, product.slug);
+
+    const r = await fetch(url('/api/admin/product-orders/invoice'), {
+      method: 'POST', headers: authHeaders(seller.token), body: JSON.stringify({ id: order.id }),
+    });
+    assert.equal(r.status, 403);
+  });
+
+  test('henüz onaylanmamış (requested) sipariş için fatura oluşturulamaz', async () => {
+    const seller = await newCompanySeller('Fatura Şirket Erken');
+    const buyer = await newBuyer('Fatura Alıcı 2');
+    const product = await createProduct(seller.token, {});
+    const order = await fetch(url('/api/product-orders'), {
+      method: 'POST', headers: authHeaders(buyer.token),
+      body: JSON.stringify({ productSlug: product.slug, quantity: 1, city: 'Test Şehir', district: 'Test İlçe', termsAccepted: true }),
+    }).then((r) => r.json());
+
+    const r = await fetch(url('/api/admin/product-orders/invoice'), {
+      method: 'POST', headers: authHeaders(seller.token), body: JSON.stringify({ id: order.id }),
+    });
+    assert.equal(r.status, 400);
+  });
+
+  test('tamamlanmış sipariş için doğru bilgilerle bir fatura taslağı üretilir ve tekrar istenince aynı numarayı döner', async () => {
+    const seller = await newCompanySeller('Fatura Şirket Tam');
+    await fetch(url('/api/auth/update-profile'), {
+      method: 'POST', headers: authHeaders(seller.token),
+      body: JSON.stringify({
+        name: seller.user.name, city: 'Test Şehir',
+        companyLegalName: 'Örnek Tarım Ltd. Şti.', taxOffice: 'Test Vergi Dairesi', invoiceAddress: 'Test Mah. Test Sk. No:1',
+      }),
+    });
+    const buyer = await newBuyer('Fatura Alıcı 3');
+    const product = await createProduct(seller.token, { price: '100', unit: '/ kg' });
+    const order = await completePurchase(buyer.token, seller.token, product.slug);
+
+    const first = await fetch(url('/api/admin/product-orders/invoice'), {
+      method: 'POST', headers: authHeaders(seller.token), body: JSON.stringify({ id: order.id }),
+    }).then((r) => r.json());
+    assert.match(first.invoiceNo, /^\d{4}\/\d{6}$/);
+    assert.equal(first.seller.legalName, 'Örnek Tarım Ltd. Şti.');
+    assert.equal(first.seller.taxOffice, 'Test Vergi Dairesi');
+    assert.equal(first.buyer.name, buyer.user.name);
+    assert.equal(first.item.unitPrice, 100);
+    assert.equal(first.item.lineTotal, 100);
+
+    const second = await fetch(url('/api/admin/product-orders/invoice'), {
+      method: 'POST', headers: authHeaders(seller.token), body: JSON.stringify({ id: order.id }),
+    }).then((r) => r.json());
+    assert.equal(second.invoiceNo, first.invoiceNo);
+  });
+
+  test('başka bir satıcının siparişi için fatura istenemez', async () => {
+    const seller = await newCompanySeller('Fatura Şirket Sahip');
+    const otherSeller = await newCompanySeller('Fatura Şirket Başkası');
+    const buyer = await newBuyer('Fatura Alıcı 4');
+    const product = await createProduct(seller.token, {});
+    const order = await completePurchase(buyer.token, seller.token, product.slug);
+
+    const r = await fetch(url('/api/admin/product-orders/invoice'), {
+      method: 'POST', headers: authHeaders(otherSeller.token), body: JSON.stringify({ id: order.id }),
+    });
+    assert.equal(r.status, 404);
   });
 });

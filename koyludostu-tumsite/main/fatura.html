@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fatura Taslağı — Köylü Dostu</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  body{background:var(--bg);}
+  .fat-wrap{max-width:640px;margin:0 auto;padding:24px 16px 60px;}
+  .fat-toolbar{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:16px;}
+  .fat-toolbar a{font-size:12.5px;color:var(--muted);text-decoration:none;}
+  .fat-print-btn{padding:9px 18px;border-radius:10px;background:var(--ink);color:#fff;border:none;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;}
+  .fat-note{font-size:11.5px;color:var(--muted);background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 14px;margin-bottom:16px;line-height:1.6;}
+  .fat-doc{background:#fff;border:1px solid var(--line);border-radius:14px;padding:28px;color:#1a2030;}
+  .fat-head{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #1a2030;padding-bottom:16px;margin-bottom:20px;}
+  .fat-head h1{font-size:18px;font-weight:800;margin:0;}
+  .fat-head .fat-meta{text-align:right;font-size:12px;color:#555;}
+  .fat-head .fat-meta b{display:block;font-size:14px;color:#1a2030;}
+  .fat-parties{display:flex;gap:20px;margin-bottom:22px;flex-wrap:wrap;}
+  .fat-party{flex:1;min-width:220px;}
+  .fat-party h2{font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:#888;margin:0 0 8px;}
+  .fat-party p{font-size:13px;margin:0 0 3px;line-height:1.5;}
+  table.fat-items{width:100%;border-collapse:collapse;margin-bottom:20px;}
+  table.fat-items th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.03em;color:#888;border-bottom:1.5px solid #1a2030;padding:8px 6px;}
+  table.fat-items td{font-size:13.5px;padding:10px 6px;border-bottom:1px solid #eee;}
+  table.fat-items td.num, table.fat-items th.num{text-align:right;font-variant-numeric:tabular-nums;}
+  .fat-total-row td{font-weight:800;font-size:15px;border-bottom:none;padding-top:14px;}
+  .fat-foot{font-size:11px;color:#999;margin-top:20px;line-height:1.6;}
+  .fat-empty{padding:40px;text-align:center;color:var(--muted);font-size:13px;}
+  @media print {
+    .topbar, .drawer, .drawer-overlay, .fat-toolbar, .fat-note { display:none !important; }
+    body{background:#fff;}
+    .fat-wrap{padding:0;max-width:none;}
+    .fat-doc{border:none;border-radius:0;padding:0;}
+  }
+</style>
+</head>
+<body>
+<div class="topbar">
+  <button class="hamburger-btn" onclick="document.getElementById('kdDrawer').classList.add('open');document.getElementById('kdOverlay').classList.add('open');" aria-label="Menü">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+  </button>
+  <a href="/index.html" class="avatar-ring">
+    <div class="avatar"><img src="/assets/logo-icon.jpg" alt="Köylü Dostu" style="width:92%;height:92%;object-fit:contain;"></div>
+  </a>
+  <a href="/index.html" class="brand-info" style="text-decoration:none;">
+    <h1>köylüdostu</h1>
+    <p>Fatura Taslağı</p>
+  </a>
+  <div id="authSlot"></div>
+</div>
+<div class="drawer-overlay" id="kdOverlay" onclick="document.getElementById('kdDrawer').classList.remove('open');this.classList.remove('open');"></div>
+<div class="drawer" id="kdDrawer">
+  <div class="drawer-head">
+    <div class="avatar-ring" style="width:40px;height:40px;">
+      <div class="avatar"><img src="/assets/logo-icon.jpg" alt="Köylü Dostu" style="width:92%;height:92%;object-fit:contain;"></div>
+    </div>
+    <div class="brand-info"><h1>köylüdostu</h1></div>
+    <button class="drawer-close" onclick="document.getElementById('kdDrawer').classList.remove('open');document.getElementById('kdOverlay').classList.remove('open');" aria-label="Kapat">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+  </div>
+  <nav class="drawer-nav">
+    <a href="/admin-siparisler.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h2l2.4 12.4a2 2 0 0 0 2 1.6h9.2a2 2 0 0 0 2-1.6L22 6H6"/><circle cx="9" cy="21" r="1"/><circle cx="18" cy="21" r="1"/></svg>Gelen Siparişler</a>
+    <a href="/hesap-ayarlarim.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/></svg>Hesap Ayarları</a>
+  </nav>
+</div>
+
+<div class="fat-wrap">
+  <div class="fat-toolbar">
+    <a href="/admin-siparisler.html">← Siparişlere dön</a>
+    <button type="button" class="fat-print-btn" id="printBtn">🖨️ Yazdır / PDF Kaydet</button>
+  </div>
+  <div class="fat-note">Bu, resmî bir e-Fatura/e-Arşiv belgesi değildir — GİB entegratörü gerektirmeyen, kendi fatura kesim aracına (e-Fatura, e-Arşiv ya da matbu) girerken kullanabileceğin, bilgileri hazır doldurulmuş bir <b>taslaktır</b>.</div>
+  <div id="fatBody"><div class="fat-empty">Yükleniyor…</div></div>
+</div>
+
+<script src="assets/auth.js"></script>
+<script>
+(function () {
+  if (!window.KDAuth.requireApprovedSeller('/fatura.html')) return;
+
+  var id = new URLSearchParams(location.search).get('id');
+  var body = document.getElementById('fatBody');
+  if (!id) { body.innerHTML = '<div class="fat-empty">Sipariş belirtilmedi.</div>'; return; }
+
+  function fmtMoney(n) {
+    if (n === null || n === undefined) return '—';
+    return n.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ₺';
+  }
+  function fmtDate(iso) {
+    return new Date(iso).toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  }
+
+  window.KDAuth.authedFetch('/api/admin/product-orders/invoice', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id: id }),
+  }).then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
+    .then(function (res) {
+      if (!res.ok || res.data.error) {
+        body.innerHTML = '<div class="fat-empty">' + window.KDAuth.esc(res.data.error || 'Fatura taslağı oluşturulamadı.') + '</div>';
+        return;
+      }
+      var d = res.data;
+      var qty = d.item.quantity + ' ' + (d.item.unit || 'adet').replace('/', '').trim();
+      body.innerHTML =
+        '<div class="fat-doc">' +
+          '<div class="fat-head">' +
+            '<h1>Fatura Taslağı</h1>' +
+            '<div class="fat-meta"><b>' + window.KDAuth.esc(d.invoiceNo) + '</b>' + fmtDate(d.issuedAt) + '</div>' +
+          '</div>' +
+          '<div class="fat-parties">' +
+            '<div class="fat-party"><h2>Satıcı</h2>' +
+              '<p><b>' + window.KDAuth.esc(d.seller.legalName) + '</b></p>' +
+              (d.seller.taxOffice ? '<p>Vergi Dairesi: ' + window.KDAuth.esc(d.seller.taxOffice) + '</p>' : '') +
+              (d.seller.taxId ? '<p>Vergi No: ' + window.KDAuth.esc(d.seller.taxId) + '</p>' : '') +
+              (d.seller.address ? '<p>' + window.KDAuth.esc(d.seller.address) + '</p>' : '') +
+              '<p>Tel: ' + window.KDAuth.esc(window.KDAuth.fmtPhone(d.seller.phone)) + '</p>' +
+              (d.seller.iban ? '<p>IBAN: ' + window.KDAuth.esc(d.seller.iban) + '</p>' : '') +
+            '</div>' +
+            '<div class="fat-party"><h2>Alıcı</h2>' +
+              '<p><b>' + window.KDAuth.esc(d.buyer.name) + '</b></p>' +
+              (d.buyer.address ? '<p>' + window.KDAuth.esc(d.buyer.address) + '</p>' : '') +
+              '<p>Tel: ' + window.KDAuth.esc(window.KDAuth.fmtPhone(d.buyer.phone)) + '</p>' +
+            '</div>' +
+          '</div>' +
+          '<table class="fat-items">' +
+            '<thead><tr><th>Ürün</th><th class="num">Miktar</th><th class="num">Birim Fiyat</th><th class="num">Tutar</th></tr></thead>' +
+            '<tbody>' +
+              '<tr><td>' + window.KDAuth.esc(d.item.title) + '</td><td class="num">' + window.KDAuth.esc(qty) + '</td>' +
+              '<td class="num">' + fmtMoney(d.item.unitPrice) + '</td><td class="num">' + fmtMoney(d.item.lineTotal) + '</td></tr>' +
+              '<tr class="fat-total-row"><td colspan="3">Toplam</td><td class="num">' + fmtMoney(d.item.lineTotal) + '</td></tr>' +
+            '</tbody>' +
+          '</table>' +
+          '<div class="fat-foot">Bu taslak Köylü Dostu platformundaki sipariş kayıtlarına göre otomatik oluşturulmuştur; KDV ve diğer yasal unsurları kendi fatura kesim aracında tamamlaman gerekir. Fiyat, platformdaki güncel ürün fiyatına göre hesaplanmıştır.</div>' +
+        '</div>';
+    })
+    .catch(function () { body.innerHTML = '<div class="fat-empty">Bağlantı hatası, tekrar dene.</div>'; });
+
+  document.getElementById('printBtn').addEventListener('click', function () { window.print(); });
+})();
+</script>
+</body>
+</html>
