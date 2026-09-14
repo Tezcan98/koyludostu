@@ -1,6 +1,11 @@
 (function () {
   var mineCache = null;
 
+  // Emoji kalp (🤍/❤️) yerine, sitenin geri kalanındaki çizgi-ikon dilini kullanan
+  // bir SVG kalp — dolgu/anahat durumu emoji yerine CSS (.active) ile değişir,
+  // farklı işletim sistemlerinde farklı (ve "resim gibi duran") emoji görünümü yerine.
+  var HEART_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>';
+
   function loadMine() {
     if (mineCache) return Promise.resolve(mineCache);
     if (!window.KDAuth.isLoggedIn()) return Promise.resolve({ products: [], sellers: [] });
@@ -31,8 +36,11 @@
     var isSeller = btn.classList.contains('fav-seller-cta');
     if (isSeller) {
       btn.textContent = active ? '★ Takip Ediliyor' : '☆ Satıcıyı Takip Et';
-    } else {
-      btn.textContent = active ? '❤️' : '🤍';
+    } else if (!btn.querySelector('svg')) {
+      // İlk render'da hâlâ eski emoji ya da boşsa (statik urun/*.html sayfaları,
+      // sunucu şablonları) SVG'yi bir kere yerleştir — sonrası sadece .active
+      // class'ıyla (yukarıdaki CSS) renk/dolgu değişir, DOM'a tekrar dokunmaz.
+      btn.innerHTML = HEART_SVG;
     }
   }
 

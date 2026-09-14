@@ -77,7 +77,7 @@
           '<div class="pin-cat">' + esc(p.cat) + ' · ' + esc(p.sellerName) + sellerBadge + '</div>' +
           '<div class="pin-title">' + titleAttr + '</div>' +
           '<div class="pin-foot"><div class="pin-price">' + esc(p.price) + '<br><small>' + esc(p.unit) + '</small></div>' +
-        '<button type="button" class="fav-cta pin-fav" data-id="' + esc(p.slug) + '">🤍</button></div>' +
+        '<button type="button" class="fav-cta pin-fav" data-id="' + esc(p.slug) + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg></button></div>' +
         '</div>' +
       '</a>';
     }
