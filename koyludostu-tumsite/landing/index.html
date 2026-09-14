@@ -11,11 +11,9 @@
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
   :root{
-    --ink:#17190F; --cream:#FBF6EA; --paper:#FFFDF7;
-    --green:#3F5B2C; --green-dark:#26381A; --green-soft:#E7EEDD;
-    --gold:#D69A2D; --gold-dark:#9C6B14;
-    --rust:#B4472C;
-    --muted:#6B6656; --line:#E9E2CE;
+    --ink:#1A1210; --cream:#FFFBF7; --paper:#FFFFFF;
+    --red:#E30A17; --red-dark:#A10D1C; --red-soft:#FDE6E4;
+    --muted:#7A716B; --line:#F0E3DF;
   }
   *,*::before,*::after{box-sizing:border-box;}
   html{scroll-behavior:smooth;}
@@ -34,96 +32,96 @@
   .brand{display:flex;align-items:center;gap:11px;}
   .logo-ring{
     width:42px;height:42px;border-radius:50%;flex-shrink:0;padding:2px;
-    background:conic-gradient(from 220deg,var(--green),var(--gold),var(--rust),var(--green));
+    background:conic-gradient(from 220deg,var(--red),var(--ink),var(--red-dark),var(--red));
   }
   .logo-ring div{width:100%;height:100%;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden;}
   .logo-ring img{width:92%;height:92%;object-fit:contain;}
   .brand-name{font-size:16px;font-weight:800;letter-spacing:-.01em;}
   .header-cta{
-    display:inline-flex;align-items:center;gap:7px;background:var(--ink);color:var(--cream);
+    display:inline-flex;align-items:center;gap:7px;background:var(--ink);color:#fff;
     padding:10px 18px;border-radius:100px;font-size:13px;font-weight:700;text-decoration:none;white-space:nowrap;
+    border:none;cursor:pointer;font-family:inherit;
   }
-  .header-cta:hover{background:var(--green-dark);}
-  @media (max-width:520px){.header-cta span.long{display:none;}}
+  .header-cta:hover{background:var(--red-dark);}
 
   /* ================= HERO (renkli blok) ================= */
   .hero{
     position:relative;overflow:hidden;
-    background:var(--green);color:var(--cream);
+    background:var(--red);color:#fff;
     margin:24px 16px 0;border-radius:32px;
     padding:clamp(40px,8vw,72px) clamp(20px,6vw,56px) clamp(48px,9vw,80px);
     text-align:center;
   }
   .hero::before{
-    content:"";position:absolute;inset:0;opacity:.5;pointer-events:none;
-    background-image:radial-gradient(circle at 14% 20%, rgba(255,255,255,.10) 0, transparent 40%),
-      radial-gradient(circle at 86% 78%, rgba(214,154,45,.28) 0, transparent 45%),
-      radial-gradient(circle at 92% 12%, rgba(180,71,44,.22) 0, transparent 38%);
+    content:"";position:absolute;inset:0;opacity:.6;pointer-events:none;
+    background-image:radial-gradient(circle at 12% 18%, rgba(255,255,255,.14) 0, transparent 40%),
+      radial-gradient(circle at 88% 82%, rgba(0,0,0,.16) 0, transparent 45%),
+      radial-gradient(circle at 92% 10%, rgba(255,255,255,.10) 0, transparent 38%);
+  }
+  .flag-mark{
+    position:absolute;top:clamp(10px,3vw,26px);right:clamp(14px,4vw,34px);
+    font-size:clamp(26px,5vw,40px);opacity:.9;filter:drop-shadow(0 2px 6px rgba(0,0,0,.18));
   }
   .hero-inner{position:relative;}
   .slogan-badge{
-    display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.12);
-    border:1px solid rgba(255,255,255,.28);color:var(--cream);
+    display:inline-flex;align-items:center;gap:9px;background:rgba(255,255,255,.16);
+    border:1px solid rgba(255,255,255,.35);color:#fff;
     padding:8px 18px;border-radius:100px;font-size:12.5px;font-weight:800;
     letter-spacing:.06em;text-transform:uppercase;margin-bottom:26px;
     backdrop-filter:blur(2px);
   }
-  .slogan-badge svg{width:14px;height:14px;flex-shrink:0;}
   h1{
     font-size:clamp(32px,7vw,58px);font-weight:800;line-height:1.08;margin:0 0 18px;letter-spacing:-.02em;
     text-wrap:balance;
   }
-  h1 .accent{color:var(--gold);}
+  h1 .accent{color:var(--ink);-webkit-text-stroke:0;}
   .hero p.lede{
-    font-size:clamp(15px,2.4vw,18px);color:rgba(251,246,234,.82);max-width:540px;margin:0 auto 32px;line-height:1.65;
+    font-size:clamp(15px,2.4vw,18px);color:rgba(255,255,255,.88);max-width:540px;margin:0 auto 32px;line-height:1.65;
   }
   .hero-cta-row{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;}
   .btn{
-    display:inline-flex;align-items:center;gap:8px;padding:15px 26px;border-radius:100px;
-    font-size:14.5px;font-weight:800;text-decoration:none;cursor:pointer;border:1.5px solid transparent;
+    display:inline-flex;align-items:center;gap:8px;padding:16px 30px;border-radius:100px;
+    font-size:15px;font-weight:800;text-decoration:none;cursor:pointer;border:1.5px solid transparent;
     font-family:inherit;
   }
-  .btn-gold{background:var(--gold);color:var(--green-dark);}
-  .btn-gold:hover{background:#E4AC44;}
-  .btn-outline{background:transparent;color:var(--cream);border-color:rgba(251,246,234,.4);}
-  .btn-outline:hover{border-color:var(--cream);}
+  .btn-white{background:#fff;color:var(--red);}
+  .btn-white:hover{background:#FFEDEC;}
 
   /* ---- Kayan ürün şeridi (canlılık) ---- */
   .marquee{
-    margin-top:clamp(32px,6vw,52px);border-top:1px solid rgba(251,246,234,.18);
+    margin-top:clamp(32px,6vw,52px);border-top:1px solid rgba(255,255,255,.22);
     padding-top:22px;overflow:hidden;position:relative;
   }
   .marquee-track{display:flex;width:max-content;gap:40px;animation:scroll 26s linear infinite;}
   .marquee span{
-    font-size:14px;font-weight:700;color:rgba(251,246,234,.65);white-space:nowrap;
+    font-size:14px;font-weight:700;color:rgba(255,255,255,.75);white-space:nowrap;
     display:flex;align-items:center;gap:10px;
   }
-  .marquee span::after{content:"·";color:var(--gold);font-weight:900;}
+  .marquee span::after{content:"·";color:#fff;opacity:.6;font-weight:900;}
   @keyframes scroll{from{transform:translateX(0);}to{transform:translateX(-50%);}}
-  @media (prefers-reduced-motion:reduce){.marquee-track{animation:none;}}
 
   /* ================= GERİ SAYIM ================= */
   .cd-section{padding:clamp(48px,9vw,76px) 0 clamp(28px,5vw,40px);text-align:center;}
-  .cd-label{font-size:12.5px;font-weight:800;color:var(--gold-dark);margin:0 0 6px;letter-spacing:.05em;text-transform:uppercase;}
+  .cd-label{font-size:12.5px;font-weight:800;color:var(--red);margin:0 0 6px;letter-spacing:.05em;text-transform:uppercase;}
   .cd-title{font-size:clamp(20px,3.4vw,28px);font-weight:800;margin:0 0 30px;}
   .countdown{
     display:grid;grid-template-columns:repeat(4,1fr);gap:clamp(8px,2vw,16px);
     max-width:580px;margin:0 auto 18px;
   }
   .cd-box{
-    background:var(--ink);color:var(--cream);border-radius:20px;
+    background:var(--ink);color:#fff;border-radius:20px;
     padding:clamp(16px,3.2vw,26px) 6px;text-align:center;position:relative;overflow:hidden;
+    border:1.5px solid var(--ink);
   }
-  .cd-box:nth-child(2){background:var(--green-dark);}
-  .cd-box:nth-child(3){background:var(--rust);}
-  .cd-box:nth-child(4){background:var(--gold-dark);}
+  .cd-box:nth-child(odd){background:var(--red);border-color:var(--red);}
+  .cd-box:nth-child(even){background:#fff;color:var(--ink);border-color:var(--line);}
   .cd-num{
     font-size:clamp(28px,6.8vw,46px);font-weight:900;line-height:1;font-variant-numeric:tabular-nums;
   }
-  .cd-unit{font-size:clamp(9.5px,1.8vw,11.5px);font-weight:700;margin-top:7px;text-transform:uppercase;letter-spacing:.05em;opacity:.75;}
+  .cd-unit{font-size:clamp(9.5px,1.8vw,11.5px);font-weight:700;margin-top:7px;text-transform:uppercase;letter-spacing:.05em;opacity:.7;}
   .target-date{font-size:13.5px;color:var(--muted);}
   .target-date b{color:var(--ink);font-weight:800;}
-  .launched-msg{display:none;font-size:16px;font-weight:800;color:var(--green);margin-bottom:20px;}
+  .launched-msg{display:none;font-size:16px;font-weight:800;color:var(--red);margin-bottom:20px;}
 
   /* ================= ÖZELLİKLER ================= */
   .features{padding:clamp(20px,5vw,36px) 0 clamp(48px,9vw,72px);}
@@ -131,54 +129,48 @@
   @media (max-width:720px){.features-grid{grid-template-columns:1fr;}}
   .feature{
     border-radius:22px;padding:26px 24px;position:relative;overflow:hidden;
+    background:#fff;border:1.5px solid var(--line);
   }
-  .feature:nth-child(1){background:var(--green-soft);}
-  .feature:nth-child(2){background:#FBEBDD;}
-  .feature:nth-child(3){background:#F3E3E0;}
   .feature .ico{
-    width:44px;height:44px;border-radius:13px;background:var(--paper);
+    width:44px;height:44px;border-radius:13px;background:var(--red-soft);color:var(--red);
     display:flex;align-items:center;justify-content:center;margin-bottom:18px;
   }
-  .feature:nth-child(1) .ico{color:var(--green);}
-  .feature:nth-child(2) .ico{color:var(--gold-dark);}
-  .feature:nth-child(3) .ico{color:var(--rust);}
   .feature .ico svg{width:23px;height:23px;}
   .feature h3{font-size:16px;font-weight:800;margin:0 0 8px;}
   .feature p{font-size:13.5px;color:#3d3a2f;line-height:1.6;margin:0;}
 
   /* ================= ÖN KAYIT ================= */
   .prereg{
-    background:var(--ink);color:var(--cream);border-radius:32px;margin:0 16px clamp(48px,9vw,72px);
+    background:var(--ink);color:#fff;border-radius:32px;margin:0 16px clamp(48px,9vw,72px);
     padding:clamp(36px,7vw,60px) clamp(20px,6vw,52px);
   }
   .prereg-head{text-align:center;max-width:520px;margin:0 auto 32px;}
-  .prereg-head .cd-label{color:var(--gold);}
+  .prereg-head .cd-label{color:var(--red);}
   .prereg-head h2{font-size:clamp(22px,4vw,32px);font-weight:800;margin:8px 0 12px;text-wrap:balance;}
-  .prereg-head p{font-size:14.5px;color:rgba(251,246,234,.72);line-height:1.6;margin:0;}
+  .prereg-head p{font-size:14.5px;color:rgba(255,255,255,.72);line-height:1.6;margin:0;}
   .prereg-form{
     display:flex;flex-wrap:wrap;gap:10px;max-width:640px;margin:0 auto;
   }
   .prereg-form input{
-    flex:1;min-width:180px;padding:15px 18px;border-radius:100px;border:1.5px solid rgba(251,246,234,.25);
-    background:rgba(251,246,234,.08);color:var(--cream);font-family:inherit;font-size:14.5px;
+    flex:1;min-width:180px;padding:15px 18px;border-radius:100px;border:1.5px solid rgba(255,255,255,.28);
+    background:rgba(255,255,255,.08);color:#fff;font-family:inherit;font-size:14.5px;
   }
-  .prereg-form input::placeholder{color:rgba(251,246,234,.45);}
-  .prereg-form input:focus{outline:none;border-color:var(--gold);background:rgba(251,246,234,.13);}
+  .prereg-form input::placeholder{color:rgba(255,255,255,.48);}
+  .prereg-form input:focus{outline:none;border-color:var(--red);background:rgba(255,255,255,.13);}
   .prereg-form button{
-    padding:15px 28px;border-radius:100px;background:var(--gold);color:var(--green-dark);
+    padding:15px 28px;border-radius:100px;background:var(--red);color:#fff;
     border:none;font-family:inherit;font-size:14.5px;font-weight:800;cursor:pointer;white-space:nowrap;
   }
-  .prereg-form button:hover{background:#E4AC44;}
+  .prereg-form button:hover{background:#C60914;}
   .prereg-form button:disabled{opacity:.6;cursor:default;}
-  .prereg-msg{text-align:center;font-size:13px;margin-top:14px;min-height:18px;color:rgba(251,246,234,.75);}
-  .prereg-msg.err{color:#F0A090;}
-  .prereg-msg.ok{color:#B9E29A;font-weight:700;}
-  .prereg-count{text-align:center;font-size:12.5px;color:rgba(251,246,234,.55);margin-top:18px;}
-  .prereg-count b{color:var(--gold);}
+  .prereg-msg{text-align:center;font-size:13px;margin-top:14px;min-height:18px;color:rgba(255,255,255,.8);}
+  .prereg-msg.err{color:#FF9B92;}
+  .prereg-msg.ok{color:#8FE0A8;font-weight:700;}
+  .prereg-count{text-align:center;font-size:12.5px;color:rgba(255,255,255,.55);margin-top:18px;}
+  .prereg-count b{color:#fff;}
 
   /* ================= FOOTER ================= */
   footer{text-align:center;font-size:12px;color:var(--muted);padding:0 22px 40px;}
-  footer a{color:var(--muted);text-decoration:underline;text-underline-offset:2px;}
 
   @media (prefers-reduced-motion:reduce){.marquee-track{animation:none;}}
 </style>
@@ -190,22 +182,19 @@
       <div class="logo-ring"><div><img src="/logo-icon.jpg" alt="Köylü Dostu"></div></div>
       <div class="brand-name">köylüdostu</div>
     </div>
-    <a class="header-cta" href="https://beta.koyludostu.com" target="_blank" rel="noopener">
-      <span class="long">Beta'yı Dene</span><span>→</span>
-    </a>
+    <a class="header-cta" href="#onkayit">Ön Kayıt Ol</a>
   </header>
 
   <section class="hero">
+    <span class="flag-mark" aria-hidden="true">🇹🇷</span>
     <div class="hero-inner">
       <span class="slogan-badge">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>
-        Türkiye'nin Tek Gıda Pazaryeri
+        🇹🇷 Türkiye'nin Tek Gıda Pazaryeri
       </span>
       <h1>Üreticiden sofrana,<br><span class="accent">aracısız.</span></h1>
       <p class="lede">Köylü Dostu, çiftçiyi ve küçük üreticiyi doğrudan seninle buluşturan Türkiye'deki tek gıda odaklı pazar yeri. Taze, güvenilir, adil — ve çok yakında herkese açık.</p>
       <div class="hero-cta-row">
-        <a class="btn btn-gold" href="https://beta.koyludostu.com" target="_blank" rel="noopener">Beta Sürümünü Şimdi Dene →</a>
-        <a class="btn btn-outline" href="#onkayit">Ön Kayıt Ol</a>
+        <a class="btn btn-white" href="#onkayit">Ön Kayıt Ol →</a>
       </div>
 
       <div class="marquee" aria-hidden="true">
@@ -255,7 +244,7 @@
       <div class="prereg-head">
         <div class="cd-label">Erken Erişim</div>
         <h2>Açılışta ilk sen haberdar ol</h2>
-        <p>Ön kayıt ol, 29 Ekim'de kapılarımızı açtığımızda sana özel bir bildirim gönderelim. Spam yok, sadece açılış haberi.</p>
+        <p>Ön kayıt ol, 29 Ekim'de kapılarımızı açtığımızda sana özel bir bildirim gönderelim.</p>
       </div>
       <form class="prereg-form" id="preregForm">
         <input type="text" id="preregName" placeholder="Adın Soyadın" autocomplete="name" required>
@@ -268,7 +257,7 @@
   </div>
 
   <footer>
-    <b>Köylü Dostu</b> · Türkiye'nin tek gıda pazaryeri · <a href="https://beta.koyludostu.com" target="_blank" rel="noopener">beta.koyludostu.com</a>
+    <b>Köylü Dostu</b> · Türkiye'nin tek gıda pazaryeri 🇹🇷
   </footer>
 
 <script>
@@ -332,7 +321,7 @@
       btn.disabled = false;
       if (data.error) { msg.className = 'prereg-msg err'; msg.textContent = data.error; return; }
       msg.className = 'prereg-msg ok';
-      msg.textContent = data.alreadyRegistered ? 'Zaten ön kayıtlısın — görüşmek üzere! 🌾' : 'Ön kaydın alındı — açılışta ilk seni haberdar edeceğiz! 🌾';
+      msg.textContent = data.alreadyRegistered ? 'Zaten ön kayıtlısın — görüşmek üzere! 🇹🇷' : 'Ön kaydın alındı — açılışta ilk seni haberdar edeceğiz! 🇹🇷';
       document.getElementById('preregForm').reset();
       loadCount();
     }).catch(function () {
