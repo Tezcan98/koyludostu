@@ -598,6 +598,7 @@ body.vitrin-body{margin:0;background:#000;overflow:hidden;}
 .reel-progress span{flex:1;height:3px;border-radius:2px;background:rgba(255,255,255,.3);overflow:hidden;}
 .reel-progress span i{display:block;height:100%;width:0;background:#fff;border-radius:2px;}
 .reel-progress span.done i{width:100%;}
+@keyframes reelfill{from{width:0;}to{width:100%;}}
 .reel-close{
   width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.15);color:#fff;flex-shrink:0;
   display:flex;align-items:center;justify-content:center;border:none;cursor:pointer;

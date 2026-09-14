@@ -1618,6 +1618,12 @@ const server = http.createServer(async (req, res) => {
       const products = readJson(PRODUCTS_PATH, {});
       const product = products[body.productSlug];
       if (!product) return jsonResponse(res, 400, { error: 'Ürün bulunamadı' });
+      // Bir satıcı kendi ürününe sipariş açıp "tamamlandı" işaretleyerek satın alma
+      // şartı arayan yorum sistemini (bkz. /api/reviews) kendi ürününe sahte, doğrulanmış
+      // görünen bir yorum eklemek için kullanamasın diye burada da engelliyoruz.
+      if (product.sellerId === session.user.id) {
+        return jsonResponse(res, 400, { error: 'Kendi ürününe sipariş talebi oluşturamazsın.' });
+      }
 
       const quantity = Math.max(1, Math.floor(Number(body.quantity)) || 1);
       const city = String(body.city || '').trim().slice(0, 60);
@@ -1818,7 +1824,51 @@ const server = http.createServer(async (req, res) => {
       return jsonResponse(res, 200, stats);
     }
 
+    // Satıcı bazında ortalama puan + tamamlanmış satış sayısı — anasayfada "satıcı
+    // puanına göre sırala" ve "en az N satış yapmış, puanı Y üzeri satıcılar" gibi
+    // filtreler için (bkz. main/assets/filter.js). Ürün bazlı /api/reviews/stats'tan
+    // farklı olarak buradaki puan, satıcının TÜM ürünlerindeki onaylı yorumların ortalamasıdır.
+    if (p === '/api/sellers/stats' && req.method === 'GET') {
+      const products = readJson(PRODUCTS_PATH, {});
+      const reviewStore = readJson(REVIEWS_PATH, {});
+      const orders = readJson(PRODUCT_ORDERS_PATH, {});
+      const slugToSeller = {};
+      Object.values(products).forEach((prod) => { slugToSeller[prod.slug] = prod.sellerId; });
+
+      const ratingBySeller = {}; // sellerId -> { sum, count }
+      for (const slug of Object.keys(reviewStore)) {
+        const sellerId = slugToSeller[slug];
+        if (!sellerId) continue;
+        const list = (reviewStore[slug] || []).filter((rv) => rv.status !== 'pending' && rv.status !== 'rejected');
+        if (!list.length) continue;
+        const entry = ratingBySeller[sellerId] || { sum: 0, count: 0 };
+        list.forEach((rv) => { entry.sum += rv.rating; entry.count += 1; });
+        ratingBySeller[sellerId] = entry;
+      }
+
+      const salesBySeller = {};
+      Object.values(orders).forEach((o) => {
+        if (o.status !== 'completed') return;
+        salesBySeller[o.sellerId] = (salesBySeller[o.sellerId] || 0) + 1;
+      });
+
+      const sellerIds = new Set([...Object.keys(ratingBySeller), ...Object.keys(salesBySeller)]);
+      const stats = {};
+      sellerIds.forEach((sellerId) => {
+        const r = ratingBySeller[sellerId];
+        stats[sellerId] = {
+          avgRating: r ? r.sum / r.count : null,
+          reviewCount: r ? r.count : 0,
+          salesCount: salesBySeller[sellerId] || 0,
+        };
+      });
+      return jsonResponse(res, 200, stats);
+    }
+
     // Yorum onay kuralı: 4-5 yıldız (olumlu) doğrudan yayınlanır; 1-3 yıldız admin onayına düşer.
+    // Sadece bu üründen tamamlanmış (ya da alıcının teslim aldığını onayladığı) bir
+    // siparişi olan hesaplar yorum yapabilir — aksi halde hiç almadığın bir ürüne
+    // yorum yazabilirdin, bu da hem sahte olumlu hem kötü niyetli olumsuz yorumlara açık kapı olurdu.
     if (p === '/api/reviews' && req.method === 'POST') {
       const session = requireAuth(req, res);
       if (!session) return;
@@ -1828,6 +1878,19 @@ const server = http.createServer(async (req, res) => {
       if (!productSlug || !r || r < 1 || r > 5 || !clean) {
         return jsonResponse(res, 400, { error: 'Ürün, puan (1-5) ve yorum metni gerekli' });
       }
+      const product = readJson(PRODUCTS_PATH, {})[productSlug];
+      if (!product) return jsonResponse(res, 400, { error: 'Ürün bulunamadı' });
+      if (product.sellerId === session.user.id) {
+        return jsonResponse(res, 400, { error: 'Kendi ürününe yorum yapamazsın.' });
+      }
+      const orders = readJson(PRODUCT_ORDERS_PATH, {});
+      const hasPurchase = Object.values(orders).some((o) => (
+        o.buyerId === session.user.id && o.productSlug === productSlug &&
+        (o.status === 'completed' || !!o.buyerConfirmedAt)
+      ));
+      if (!hasPurchase) {
+        return jsonResponse(res, 403, { error: 'Bu ürünü satın almadan yorum yapamazsın. Sipariş tamamlandıktan sonra değerlendirebilirsin.' });
+      }
       const store = readJson(REVIEWS_PATH, {});
       store[productSlug] = store[productSlug] || [];
       const status = r >= 4 ? 'approved' : 'pending';
@@ -1835,16 +1898,16 @@ const server = http.createServer(async (req, res) => {
       if (mine) {
         mine.rating = r; mine.text = clean; mine.createdAt = new Date().toISOString(); mine.status = status;
         mine.sellerReply = null;
+        mine.dispute = null;
       } else {
         store[productSlug].push({
           id: 'r_' + randomToken().slice(0, 10), userId: session.user.id, name: session.user.name,
           role: session.user.role, rating: r, text: clean, createdAt: new Date().toISOString(),
-          status, sellerReply: null,
+          status, sellerReply: null, dispute: null,
         });
       }
       writeJson(REVIEWS_PATH, store);
 
-      const product = readJson(PRODUCTS_PATH, {})[productSlug];
       if (product) {
         notifyUser(product.sellerPhone, 'new_review', status === 'approved'
           ? `"${product.title}" için yeni bir yorum aldın (${r}/5).`
@@ -1869,6 +1932,30 @@ const server = http.createServer(async (req, res) => {
       if (!review) return jsonResponse(res, 404, { error: 'Yorum bulunamadı' });
       if (review.status !== 'approved') return jsonResponse(res, 400, { error: 'Sadece onaylı yorumlara yanıt yazılabilir.' });
       review.sellerReply = { text: clean, at: new Date().toISOString() };
+      writeJson(REVIEWS_PATH, store);
+      return jsonResponse(res, 200, review);
+    }
+
+    // Satıcının kendi ürününe gelen (yayında olan) haksız/kötü niyetli bulduğu bir yoruma
+    // itiraz etmesi — bir yanıt yazmaktan farklı: burada admin'den yorumu incelemesini ve
+    // gerekirse kaldırmasını istiyor. Bir yoruma aynı anda sadece bir açık itiraz olabilir.
+    if (p === '/api/admin/reviews/dispute' && req.method === 'POST') {
+      const session = requireRole(req, res, 'satici');
+      if (!session) return;
+      const { productSlug, reviewId, text } = await readBody(req);
+      const clean = String(text || '').trim().slice(0, 1000);
+      if (!clean) return jsonResponse(res, 400, { error: 'İtiraz gerekçeni yaz.' });
+      const products = readJson(PRODUCTS_PATH, {});
+      const product = products[productSlug];
+      if (!product || product.sellerId !== session.user.id) return jsonResponse(res, 404, { error: 'Ürün bulunamadı' });
+      const store = readJson(REVIEWS_PATH, {});
+      const review = (store[productSlug] || []).find((rv) => rv.id === reviewId);
+      if (!review) return jsonResponse(res, 404, { error: 'Yorum bulunamadı' });
+      if (review.status !== 'approved') return jsonResponse(res, 400, { error: 'Sadece yayındaki yorumlara itiraz edilebilir.' });
+      if (review.dispute && review.dispute.status === 'pending') {
+        return jsonResponse(res, 400, { error: 'Bu yorum için zaten incelemesi süren bir itirazın var.' });
+      }
+      review.dispute = { text: clean, createdAt: new Date().toISOString(), status: 'pending', resolvedAt: null, adminNote: '' };
       writeJson(REVIEWS_PATH, store);
       return jsonResponse(res, 200, review);
     }
@@ -2780,6 +2867,35 @@ const server = http.createServer(async (req, res) => {
       if (!review) return jsonResponse(res, 404, { error: 'Yorum bulunamadı' });
       review.status = status;
       writeJson(REVIEWS_PATH, store);
+      return jsonResponse(res, 200, review);
+    }
+
+    // Satıcının bir yoruma açtığı itirazı admin sonuçlandırır: "haklı" bulunursa yorum
+    // yayından kaldırılır (rejected — bkz. GET /api/reviews filtresi, artık halka açık
+    // görünmez ve istatistiklere girmez); "haksız" bulunursa yorum olduğu gibi kalır.
+    if (p === '/api/owner/reviews/dispute/resolve' && req.method === 'POST') {
+      if (!requireAdmin(req, res)) return;
+      const { productSlug, reviewId, status, adminNote } = await readBody(req);
+      if (!['upheld', 'rejected'].includes(status)) return jsonResponse(res, 400, { error: 'Geçersiz durum.' });
+      const store = readJson(REVIEWS_PATH, {});
+      const review = (store[productSlug] || []).find((rv) => rv.id === reviewId);
+      if (!review) return jsonResponse(res, 404, { error: 'Yorum bulunamadı' });
+      if (!review.dispute || review.dispute.status !== 'pending') {
+        return jsonResponse(res, 400, { error: 'Bu yorum için bekleyen bir itiraz yok.' });
+      }
+      review.dispute.status = status;
+      review.dispute.resolvedAt = new Date().toISOString();
+      review.dispute.adminNote = String(adminNote || '').trim().slice(0, 500);
+      if (status === 'upheld') review.status = 'rejected';
+      writeJson(REVIEWS_PATH, store);
+
+      const products = readJson(PRODUCTS_PATH, {});
+      const product = products[productSlug];
+      if (product) {
+        notifyUser(product.sellerPhone, 'review_dispute_resolved', status === 'upheld'
+          ? `"${product.title}" ürünündeki yoruma itirazın haklı bulundu, yorum kaldırıldı.`
+          : `"${product.title}" ürünündeki yoruma itirazın incelendi, yorum yayında kalmaya devam ediyor.`);
+      }
       return jsonResponse(res, 200, review);
     }
 

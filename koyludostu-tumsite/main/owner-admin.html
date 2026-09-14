@@ -404,13 +404,19 @@
     content.innerHTML = '<div class="own-empty">Yükleniyor…</div>';
     authedFetch('/api/owner/reviews').then(function (r) { return r.json(); }).then(function (d) {
       var reviews = d.reviews || [];
+      var disputed = reviews.filter(function (r) { return r.dispute && r.dispute.status === 'pending'; });
       var pending = reviews.filter(function (r) { return r.status === 'pending'; });
-      var rest = reviews.filter(function (r) { return r.status !== 'pending'; });
+      var rest = reviews.filter(function (r) { return r.status !== 'pending' && !(r.dispute && r.dispute.status === 'pending'); });
       var html = '';
-      html += '<p style="font-size:12px;color:var(--muted);margin:0 0 10px;">' + pending.length + ' yorum onay bekliyor.</p>';
+      html += '<p style="font-size:12px;color:var(--muted);margin:0 0 10px;">' + disputed.length + ' satıcı itirazı, ' + pending.length + ' yorum onay bekliyor.</p>';
+      if (disputed.length) {
+        html += '<p style="font-size:12px;color:var(--muted);margin:0 0 10px;font-weight:700;">Satıcı İtirazları</p>';
+        html += disputed.map(disputeRow).join('');
+      }
       if (pending.length) {
+        html += '<p style="font-size:12px;color:var(--muted);margin:18px 0 10px;font-weight:700;">Onay Bekleyen Yorumlar</p>';
         html += pending.map(reviewRow).join('');
-      } else {
+      } else if (!disputed.length) {
         html += '<div class="own-empty">Onay bekleyen yorum yok.</div>';
       }
       if (rest.length) {
@@ -426,14 +432,40 @@
           }).then(function () { renderReviewsTab(content); }).catch(function () {});
         });
       });
+      content.querySelectorAll('[data-dispute-resolve]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var note = prompt('Admin notu (opsiyonel, satıcıya iletilmez, sadece kayıt için):') || '';
+          authedFetch('/api/owner/reviews/dispute/resolve', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              productSlug: btn.dataset.slug, reviewId: btn.dataset.review,
+              status: btn.dataset.disputeResolve, adminNote: note,
+            }),
+          }).then(function () { renderReviewsTab(content); }).catch(function () {});
+        });
+      });
     }).catch(function () {
       content.innerHTML = '<div class="own-empty">Yorumlar yüklenemedi.</div>';
     });
+
+    function disputeRow(r) {
+      return '<div class="own-row">' +
+        '<div class="own-body"><div class="own-title">' + esc(r.productTitle) + ' · ' + r.rating + '★</div>' +
+        '<div class="own-sub">Yorum: ' + esc(r.name) + ': ' + esc(r.text) + '</div>' +
+        '<div class="own-sub"><b>Satıcı itirazı:</b> ' + esc(r.dispute.text) + '</div></div>' +
+        '<button class="own-approve-btn" data-dispute-resolve="upheld" data-slug="' + r.productSlug + '" data-review="' + r.id + '">İtiraz Haklı</button>' +
+        '<button class="own-reject-btn" data-dispute-resolve="rejected" data-slug="' + r.productSlug + '" data-review="' + r.id + '">İtiraz Haksız</button>' +
+      '</div>';
+    }
 
     function reviewRow(r) {
       var statusBadge = r.status === 'pending' ? '<span class="own-badge">Bekliyor</span>'
         : r.status === 'rejected' ? '<span class="own-badge" style="background:rgba(200,60,60,.12);color:#8e3b46;">Reddedildi</span>'
         : '<span class="own-badge" style="background:rgba(78,107,58,.12);color:#4e6b3a;">Onaylı</span>';
+      var disputeBadge = r.dispute
+        ? (r.dispute.status === 'upheld' ? '<span class="own-badge" style="background:rgba(78,107,58,.12);color:#4e6b3a;">İtiraz Haklı Bulundu</span>'
+          : r.dispute.status === 'rejected' ? '<span class="own-badge" style="background:rgba(200,60,60,.12);color:#8e3b46;">İtiraz Haksız Bulundu</span>' : '')
+        : '';
       var actions = r.status === 'pending'
         ? '<button class="own-approve-btn" data-mod="approved" data-slug="' + r.productSlug + '" data-review="' + r.id + '">Onayla</button>' +
           '<button class="own-reject-btn" data-mod="rejected" data-slug="' + r.productSlug + '" data-review="' + r.id + '">Reddet</button>'
@@ -441,7 +473,7 @@
       return '<div class="own-row">' +
         '<div class="own-body"><div class="own-title">' + esc(r.productTitle) + ' · ' + r.rating + '★</div>' +
         '<div class="own-sub">' + esc(r.name) + ': ' + esc(r.text) + '</div></div>' +
-        statusBadge + actions +
+        statusBadge + disputeBadge + actions +
       '</div>';
     }
   }

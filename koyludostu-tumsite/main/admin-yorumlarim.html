@@ -105,21 +105,33 @@
       var items = data.reviews || [];
       if (!items.length) { list.innerHTML = '<div class="adm-empty">Ürünlerine henüz yorum yapılmamış.</div>'; return; }
       list.innerHTML = items.map(function (r) {
-        var statusBadge = r.status === 'pending' ? '<span class="rev-status pending">ONAY BEKLİYOR</span>' : '';
-        var body;
+        var statusBadge = r.status === 'pending' ? '<span class="rev-status pending">ONAY BEKLİYOR</span>'
+          : r.status === 'rejected' ? '<span class="rev-status pending" style="background:rgba(200,60,60,.12);color:#8e3b46;">KALDIRILDI</span>' : '';
+        var disputeBadge = '';
+        if (r.dispute) {
+          if (r.dispute.status === 'pending') disputeBadge = '<span class="rev-status pending">İTİRAZ İNCELENİYOR</span>';
+          else if (r.dispute.status === 'upheld') disputeBadge = '<span class="rev-status pending" style="background:rgba(78,107,58,.12);color:#4e6b3a;">İTİRAZ HAKLI BULUNDU</span>';
+          else if (r.dispute.status === 'rejected') disputeBadge = '<span class="rev-status pending" style="background:rgba(200,60,60,.12);color:#8e3b46;">İTİRAZ REDDEDİLDİ</span>';
+        }
+        var body = '';
         if (r.sellerReply) {
-          body = '<div class="rev-reply-box"><b>Yanıtın:</b> ' + r.sellerReply.text.replace(/[<>]/g, '') + '</div>';
+          body += '<div class="rev-reply-box"><b>Yanıtın:</b> ' + window.KDAuth.esc(r.sellerReply.text) + '</div>';
         } else if (r.status === 'approved') {
-          body = '<div class="rev-reply-form"><input type="text" maxlength="500" placeholder="Bu yoruma yanıt yaz…" data-review="' + r.id + '" data-product="' + r.productSlug + '">' +
+          body += '<div class="rev-reply-form"><input type="text" maxlength="500" placeholder="Bu yoruma yanıt yaz…" data-review="' + r.id + '" data-product="' + r.productSlug + '">' +
             '<button data-reply-btn="' + r.id + '">Yanıtla</button></div>';
-        } else {
-          body = '';
+        }
+        if (r.status === 'approved' && (!r.dispute || r.dispute.status === 'rejected')) {
+          body += '<div class="rev-reply-form"><input type="text" maxlength="500" placeholder="Bu yorumun haksız olduğunu düşünüyorsan gerekçeni yaz…" data-dispute-review="' + r.id + '" data-dispute-product="' + r.productSlug + '">' +
+            '<button data-dispute-btn="' + r.id + '" style="background:#8e3b46;">İtiraz Et</button></div>';
+        } else if (r.dispute && (r.dispute.status === 'pending' || r.dispute.adminNote)) {
+          body += '<div class="rev-reply-box"><b>İtirazın:</b> ' + window.KDAuth.esc(r.dispute.text) +
+            (r.dispute.adminNote ? '<br><b>Admin notu:</b> ' + window.KDAuth.esc(r.dispute.adminNote) : ' <i>(inceleniyor)</i>') + '</div>';
         }
         return '<div class="rev-item">' +
           '<div class="rev-top"><a class="rev-product" href="urun/' + encodeURIComponent(r.productSlug) + '.html">' + window.KDAuth.esc(r.productTitle) + '</a>' +
           '<span class="rev-stars">' + starsHtml(r.rating) + '</span></div>' +
-          '<div class="rev-name">' + r.name.replace(/[<>]/g, '') + statusBadge + '</div>' +
-          '<div class="rev-text">' + r.text.replace(/[<>]/g, '') + '</div>' +
+          '<div class="rev-name">' + window.KDAuth.esc(r.name) + statusBadge + disputeBadge + '</div>' +
+          '<div class="rev-text">' + window.KDAuth.esc(r.text) + '</div>' +
           '<div class="rev-time">' + timeStr(r.createdAt) + '</div>' +
           body +
         '</div>';
@@ -136,6 +148,23 @@
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ productSlug: input.dataset.product, reviewId: id, text: text }),
           }).then(function (r) { return r.json(); }).then(function () { load(); }).catch(function () { btn.disabled = false; });
+        });
+      });
+
+      list.querySelectorAll('[data-dispute-btn]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var id = btn.dataset.disputeBtn;
+          var input = list.querySelector('input[data-dispute-review="' + id + '"]');
+          var text = input.value.trim();
+          if (!text) return;
+          btn.disabled = true;
+          window.KDAuth.authedFetch('/api/admin/reviews/dispute', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ productSlug: input.dataset.disputeProduct, reviewId: id, text: text }),
+          }).then(function (r) { return r.json(); }).then(function (d) {
+            if (d.error) { btn.disabled = false; alert(d.error); return; }
+            load();
+          }).catch(function () { btn.disabled = false; });
         });
       });
     }).catch(function () {

@@ -73,6 +73,22 @@ async function createProduct(token, overrides) {
   }).then((r) => r.json());
 }
 
+// Yorum bırakabilmek artık o üründen tamamlanmış bir siparişi olmayı gerektiriyor
+// (bkz. /api/reviews doğrulaması) — testlerde yorum atmadan önce bunu kurmak için.
+async function completePurchase(buyerToken, sellerToken, productSlug) {
+  const order = await fetch(url('/api/product-orders'), {
+    method: 'POST', headers: authHeaders(buyerToken),
+    body: JSON.stringify({
+      productSlug, quantity: 1, city: 'Test Şehir', district: 'Test İlçe', termsAccepted: true,
+    }),
+  }).then((r) => r.json());
+  await fetch(url('/api/admin/product-orders/update'), {
+    method: 'POST', headers: authHeaders(sellerToken),
+    body: JSON.stringify({ id: order.id, status: 'completed', termsAccepted: true }),
+  });
+  return order;
+}
+
 describe('Ürün: temel CRUD, stok, pasife alma', () => {
   test('fotoğrafsız ürün oluşturma reddedilir', async () => {
     const seller = await newSeller('Seller Foto');
@@ -231,6 +247,7 @@ describe('Yorum onay akışı', () => {
     const seller = await newSeller('Seller Rev High');
     const buyer = await newBuyer('Buyer Rev High');
     const p = await createProduct(seller.token);
+    await completePurchase(buyer.token, seller.token, p.slug);
 
     const posted = await fetch(url('/api/reviews'), {
       method: 'POST', headers: authHeaders(buyer.token),
@@ -246,6 +263,7 @@ describe('Yorum onay akışı', () => {
     const seller = await newSeller('Seller Rev Low');
     const buyer = await newBuyer('Buyer Rev Low');
     const p = await createProduct(seller.token);
+    await completePurchase(buyer.token, seller.token, p.slug);
 
     const posted = await fetch(url('/api/reviews'), {
       method: 'POST', headers: authHeaders(buyer.token),
@@ -269,6 +287,7 @@ describe('Yorum onay akışı', () => {
     const seller = await newSeller('Seller Rev Mod');
     const buyer = await newBuyer('Buyer Rev Mod');
     const p = await createProduct(seller.token);
+    await completePurchase(buyer.token, seller.token, p.slug);
     const ownerToken = await ownerLogin(server.baseUrl, server.adminPassword);
 
     const posted = await fetch(url('/api/reviews'), {
@@ -306,6 +325,7 @@ describe('Yorum onay akışı', () => {
     const intruder = await newSeller('Seller Rev Intruder');
     const buyer = await newBuyer('Buyer Rev Owner');
     const p = await createProduct(seller.token);
+    await completePurchase(buyer.token, seller.token, p.slug);
     const posted = await fetch(url('/api/reviews'), {
       method: 'POST', headers: authHeaders(buyer.token),
       body: JSON.stringify({ productSlug: p.slug, rating: 5, text: 'Süper' }),
@@ -529,6 +549,7 @@ describe('Bildirim tercihleri (SMS/E-posta)', () => {
     const seller = await newSeller('Seller Notify On');
     const buyer = await newBuyer('Buyer Notify On');
     const p = await createProduct(seller.token);
+    await completePurchase(buyer.token, seller.token, p.slug);
 
     await fetch(url('/api/auth/update-profile'), {
       method: 'POST', headers: authHeaders(seller.token),
@@ -854,7 +875,8 @@ describe('Kullanıcı senaryosu: yeni satıcının uçtan uca yolculuğu', () =>
     const thread = await fetch(url('/api/messages/thread?productSlug=' + product.slug), { headers: authHeaders(buyer.token) }).then((r) => r.json());
     assert.equal(thread.messages[thread.messages.length - 1].from, 'seller');
 
-    // 8) Alıcı 5 yıldız veriyor, satıcı yanıtlıyor.
+    // 8) Alıcı 5 yıldız veriyor, satıcı yanıtlıyor (yorum için önce tamamlanmış bir sipariş gerekir).
+    await completePurchase(buyer.token, seller.token, product.slug);
     const review = await fetch(url('/api/reviews'), {
       method: 'POST', headers: authHeaders(buyer.token),
       body: JSON.stringify({ productSlug: product.slug, rating: 5, text: 'Harika, tam zamanında geldi.' }),
@@ -899,6 +921,7 @@ describe('Kullanıcı senaryosu: alıcı düşük puan verir, admin reddeder', (
     const seller = await newSeller('Seller Reject Flow');
     const buyer = await newBuyer('Buyer Reject Flow');
     const p = await createProduct(seller.token);
+    await completePurchase(buyer.token, seller.token, p.slug);
     const ownerToken = await ownerLogin(server.baseUrl, server.adminPassword);
 
     const posted = await fetch(url('/api/reviews'), {
@@ -1180,6 +1203,7 @@ describe('Rozetli satıcı sistemi ve profil sayfası', () => {
     const seller = await newSeller('Seller Profile Page');
     const buyer = await newBuyer('Buyer Profile Page');
     const p = await createProduct(seller.token, { cat: 'Kuruyemiş' });
+    await completePurchase(buyer.token, seller.token, p.slug);
     const me = await fetch(url('/api/auth/me'), { headers: authHeaders(seller.token) }).then((r) => r.json());
 
     await fetch(url('/api/reviews'), {
@@ -1684,15 +1708,20 @@ describe('Siber güvenlik sertleştirmeleri', () => {
   });
 
   test('yönetici parolası çok sayıda hatalı denemeden sonra kilitlenir', async () => {
+    // Kilitleme IP bazlı — burada X-Forwarded-For ile kendine özgü sahte bir IP
+    // kullanıyoruz (sunucu loopback'ten gelen bu başlığa güveniyor, bkz. getClientIp),
+    // yoksa bu testin tükettiği deneme hakkı, dosyadaki diğer tüm testlerin kullandığı
+    // paylaşılan 127.0.0.1 anahtarını da kilitleyip sonraki ownerLogin() çağrılarını bozardı.
+    const fakeIp = '203.0.113.' + (1 + Math.floor(Math.random() * 254));
     for (let i = 0; i < 10; i++) {
       const r = await fetch(url('/api/owner/login'), {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Forwarded-For': fakeIp },
         body: JSON.stringify({ password: 'yanlis-parola-' + i }),
       });
       assert.equal(r.status, 401);
     }
     const lockedOut = await fetch(url('/api/owner/login'), {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Forwarded-For': fakeIp },
       body: JSON.stringify({ password: server.adminPassword }),
     });
     assert.equal(lockedOut.status, 429);
@@ -1719,5 +1748,195 @@ describe('Siber güvenlik sertleştirmeleri', () => {
     assert.equal(r.headers.get('x-content-type-options'), 'nosniff');
     assert.equal(r.headers.get('x-frame-options'), 'DENY');
     assert.equal(r.headers.get('referrer-policy'), 'strict-origin-when-cross-origin');
+  });
+});
+
+describe('Satın alma doğrulaması olmadan yorum yapılamaz', () => {
+  test('ürünü satın almamış bir alıcı yorum yapamaz', async () => {
+    const seller = await newSeller('Seller No Purchase');
+    const buyer = await newBuyer('Buyer No Purchase');
+    const p = await createProduct(seller.token);
+
+    const r = await fetch(url('/api/reviews'), {
+      method: 'POST', headers: authHeaders(buyer.token),
+      body: JSON.stringify({ productSlug: p.slug, rating: 5, text: 'Hiç almadım ama yorum yapmaya çalışıyorum' }),
+    });
+    assert.equal(r.status, 403);
+  });
+
+  test('sadece "requested" durumundaki (henüz tamamlanmamış) sipariş yorum yapmaya yetmez', async () => {
+    const seller = await newSeller('Seller Requested Only');
+    const buyer = await newBuyer('Buyer Requested Only');
+    const p = await createProduct(seller.token);
+    await fetch(url('/api/product-orders'), {
+      method: 'POST', headers: authHeaders(buyer.token),
+      body: JSON.stringify({ productSlug: p.slug, quantity: 1, city: 'Test Şehir', district: 'Test İlçe', termsAccepted: true }),
+    });
+    const r = await fetch(url('/api/reviews'), {
+      method: 'POST', headers: authHeaders(buyer.token),
+      body: JSON.stringify({ productSlug: p.slug, rating: 5, text: 'Sipariş henüz tamamlanmadı' }),
+    });
+    assert.equal(r.status, 403);
+  });
+
+  test('alıcının teslim aldığını onaylaması da (satıcı "completed" işaretlemese dahi) yorum hakkı verir', async () => {
+    const seller = await newSeller('Seller Receipt Confirmed');
+    const buyer = await newBuyer('Buyer Receipt Confirmed');
+    const p = await createProduct(seller.token);
+    const order = await fetch(url('/api/product-orders'), {
+      method: 'POST', headers: authHeaders(buyer.token),
+      body: JSON.stringify({ productSlug: p.slug, quantity: 1, city: 'Test Şehir', district: 'Test İlçe', termsAccepted: true }),
+    }).then((r) => r.json());
+    await fetch(url('/api/product-orders/confirm-receipt'), {
+      method: 'POST', headers: authHeaders(buyer.token), body: JSON.stringify({ id: order.id }),
+    });
+    const r = await fetch(url('/api/reviews'), {
+      method: 'POST', headers: authHeaders(buyer.token),
+      body: JSON.stringify({ productSlug: p.slug, rating: 5, text: 'Teslim aldım, çok iyiydi' }),
+    });
+    assert.equal(r.status, 200);
+  });
+
+  test('satıcı kendi ürününe sipariş açamaz, kendi ürününe yorum yapamaz', async () => {
+    const seller = await newSeller('Seller Self Buy');
+    const p = await createProduct(seller.token);
+
+    const orderAttempt = await fetch(url('/api/product-orders'), {
+      method: 'POST', headers: authHeaders(seller.token),
+      body: JSON.stringify({ productSlug: p.slug, quantity: 1, city: 'Test Şehir', district: 'Test İlçe', termsAccepted: true }),
+    });
+    assert.equal(orderAttempt.status, 400);
+
+    const reviewAttempt = await fetch(url('/api/reviews'), {
+      method: 'POST', headers: authHeaders(seller.token),
+      body: JSON.stringify({ productSlug: p.slug, rating: 5, text: 'Kendi ürünüme sahte yorum' }),
+    });
+    assert.equal(reviewAttempt.status, 400);
+  });
+});
+
+describe('Satıcı yorum itirazı', () => {
+  test('itiraz haklı bulunursa yorum yayından kalkar', async () => {
+    const seller = await newSeller('Seller Dispute Upheld');
+    const buyer = await newBuyer('Buyer Dispute Upheld');
+    const p = await createProduct(seller.token);
+    await completePurchase(buyer.token, seller.token, p.slug);
+    const ownerToken = await ownerLogin(server.baseUrl, server.adminPassword);
+
+    const posted = await fetch(url('/api/reviews'), {
+      method: 'POST', headers: authHeaders(buyer.token),
+      body: JSON.stringify({ productSlug: p.slug, rating: 5, text: 'Hakaret içeren sahte bir yorum gibi davranalım' }),
+    }).then((r) => r.json());
+    const reviewId = posted.reviews[0].id;
+
+    const dispute = await fetch(url('/api/admin/reviews/dispute'), {
+      method: 'POST', headers: authHeaders(seller.token),
+      body: JSON.stringify({ productSlug: p.slug, reviewId, text: 'Bu kişi ürünümü hiç almadı, itiraz ediyorum.' }),
+    }).then((r) => r.json());
+    assert.equal(dispute.dispute.status, 'pending');
+
+    // İkinci bir itiraz, ilki sonuçlanmadan açılamaz.
+    const secondDispute = await fetch(url('/api/admin/reviews/dispute'), {
+      method: 'POST', headers: authHeaders(seller.token),
+      body: JSON.stringify({ productSlug: p.slug, reviewId, text: 'Tekrar itiraz' }),
+    });
+    assert.equal(secondDispute.status, 400);
+
+    const resolved = await fetch(url('/api/owner/reviews/dispute/resolve'), {
+      method: 'POST', headers: authHeaders(ownerToken),
+      body: JSON.stringify({ productSlug: p.slug, reviewId, status: 'upheld', adminNote: 'Sipariş kaydı yok.' }),
+    }).then((r) => r.json());
+    assert.equal(resolved.status, 'rejected'); // itiraz haklı -> yorum "rejected" sayılır, yayından kalkar
+    assert.equal(resolved.dispute.status, 'upheld');
+
+    const publicList = await fetch(url('/api/reviews?product=' + p.slug)).then((r) => r.json());
+    assert.equal(publicList.reviews.length, 0);
+
+    const stats = await fetch(url('/api/reviews/stats')).then((r) => r.json());
+    assert.equal(stats[p.slug], undefined);
+  });
+
+  test('itiraz haksız bulunursa yorum yayında kalır', async () => {
+    const seller = await newSeller('Seller Dispute Rejected');
+    const buyer = await newBuyer('Buyer Dispute Rejected');
+    const p = await createProduct(seller.token);
+    await completePurchase(buyer.token, seller.token, p.slug);
+    const ownerToken = await ownerLogin(server.baseUrl, server.adminPassword);
+
+    const posted = await fetch(url('/api/reviews'), {
+      method: 'POST', headers: authHeaders(buyer.token),
+      body: JSON.stringify({ productSlug: p.slug, rating: 4, text: 'Ürün gerçekten geç geldi.' }),
+    }).then((r) => r.json());
+    const reviewId = posted.reviews[0].id;
+
+    await fetch(url('/api/admin/reviews/dispute'), {
+      method: 'POST', headers: authHeaders(seller.token),
+      body: JSON.stringify({ productSlug: p.slug, reviewId, text: 'Zamanında gönderdim, haksız.' }),
+    });
+    const resolved = await fetch(url('/api/owner/reviews/dispute/resolve'), {
+      method: 'POST', headers: authHeaders(ownerToken),
+      body: JSON.stringify({ productSlug: p.slug, reviewId, status: 'rejected', adminNote: 'Kargo takip kaydı zamanında gönderildiğini gösteriyor.' }),
+    }).then((r) => r.json());
+    assert.equal(resolved.status, 'approved'); // itiraz haksız -> yorum olduğu gibi kalır
+    assert.equal(resolved.dispute.status, 'rejected');
+
+    const publicList = await fetch(url('/api/reviews?product=' + p.slug)).then((r) => r.json());
+    assert.equal(publicList.reviews.length, 1);
+  });
+
+  test('ürünün sahibi olmayan satıcı itiraz açamaz, onay bekleyen yoruma itiraz edilemez', async () => {
+    const seller = await newSeller('Seller Dispute Owner');
+    const intruder = await newSeller('Seller Dispute Intruder');
+    const buyer = await newBuyer('Buyer Dispute Owner');
+    const p = await createProduct(seller.token);
+    await completePurchase(buyer.token, seller.token, p.slug);
+
+    const posted = await fetch(url('/api/reviews'), {
+      method: 'POST', headers: authHeaders(buyer.token),
+      body: JSON.stringify({ productSlug: p.slug, rating: 1, text: 'Kötü' }),
+    }).then((r) => r.json());
+    const reviewId = posted.reviews[0].id;
+
+    const intruderAttempt = await fetch(url('/api/admin/reviews/dispute'), {
+      method: 'POST', headers: authHeaders(intruder.token),
+      body: JSON.stringify({ productSlug: p.slug, reviewId, text: 'Ele geçirme girişimi' }),
+    });
+    assert.equal(intruderAttempt.status, 404);
+
+    // 1 yıldız -> "pending" (henüz onaylı değil), onaylı olmayan yoruma itiraz edilemez.
+    const pendingDisputeAttempt = await fetch(url('/api/admin/reviews/dispute'), {
+      method: 'POST', headers: authHeaders(seller.token),
+      body: JSON.stringify({ productSlug: p.slug, reviewId, text: 'Onaylanmamış yoruma itiraz' }),
+    });
+    assert.equal(pendingDisputeAttempt.status, 400);
+  });
+});
+
+describe('Satıcı bazlı istatistikler (anasayfa sıralama/filtre için)', () => {
+  test('/api/sellers/stats ortalama puanı ve tamamlanmış satış sayısını doğru hesaplar', async () => {
+    const seller = await newSeller('Seller Stats');
+    const buyerA = await newBuyer('Buyer Stats A');
+    const buyerB = await newBuyer('Buyer Stats B');
+    const p = await createProduct(seller.token);
+
+    await completePurchase(buyerA.token, seller.token, p.slug);
+    await completePurchase(buyerB.token, seller.token, p.slug);
+    // İkisi de 4-5 yıldız: doğrudan yayınlanır, istatistiğe hemen girer (1-3 yıldız admin
+    // onayı bekleyeceğinden buradaki ortalama hesaplamasını karmaşıklaştırmamak için).
+    await fetch(url('/api/reviews'), {
+      method: 'POST', headers: authHeaders(buyerA.token),
+      body: JSON.stringify({ productSlug: p.slug, rating: 5, text: 'Mükemmel' }),
+    });
+    await fetch(url('/api/reviews'), {
+      method: 'POST', headers: authHeaders(buyerB.token),
+      body: JSON.stringify({ productSlug: p.slug, rating: 4, text: 'İyiydi' }),
+    });
+
+    const me = await fetch(url('/api/auth/me'), { headers: authHeaders(seller.token) }).then((r) => r.json());
+    const stats = await fetch(url('/api/sellers/stats')).then((r) => r.json());
+    const mine = stats[me.user.id];
+    assert.ok(mine);
+    assert.equal(mine.avgRating, 4.5); // (5+4)/2
+    assert.equal(mine.salesCount, 2);
   });
 });

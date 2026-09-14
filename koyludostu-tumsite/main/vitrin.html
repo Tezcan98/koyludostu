@@ -119,18 +119,59 @@ var PRODUCTS = [
         container.scrollTop = targetTop;
         requestAnimationFrame(function () { container.style.scrollBehavior = ''; });
       });
-      Array.prototype.forEach.call(dots, function (d, di) { d.classList.toggle('done', di <= idx); });
     }
+  }
+
+  // ---- Hikaye tarzı otomatik ilerleme: üstteki segment çubuğu (Instagram/WhatsApp
+  // Durumları gibi) görsel olarak "kendiliğinden dolup ilerleyecek" izlenimi veriyordu
+  // ama hiçbir zamanlayıcıya bağlı değildi — kullanıcı basınca da (mobilde ok
+  // düğmeleri 760px altında zaten gizli) hiçbir şey olmuyordu. Şimdi her üründe
+  // SLIDE_DURATION_MS kadar bekleyip otomatik bir sonrakine geçiyor; ekrana
+  // dokunup basılı tutmak duraklatıyor, bırakınca kaldığı üründen devam ediyor,
+  // hafif bir dokunuş (Hikayeler'deki gibi) sağ/sol yarıya göre ileri/geri alıyor.
+  var SLIDE_DURATION_MS = 6000;
+  var autoTimer = null;
+  var currentDotI = null;
+
+  function clearAutoAdvance() {
+    if (autoTimer) { clearTimeout(autoTimer); autoTimer = null; }
+  }
+
+  function renderDots(activeIdx) {
+    Array.prototype.forEach.call(dots, function (d, di) {
+      var i = d.querySelector('i');
+      i.style.animation = 'none';
+      i.style.width = di < activeIdx ? '100%' : '0%';
+      d.classList.toggle('done', di < activeIdx);
+      if (di === activeIdx) {
+        void i.offsetWidth; // reflow'u zorla ki animasyon her seferinde baştan başlasın
+        i.style.animation = 'reelfill ' + SLIDE_DURATION_MS + 'ms linear forwards';
+        currentDotI = i;
+      }
+    });
+  }
+
+  function startAutoAdvance() {
+    clearAutoAdvance();
+    renderDots(current);
+    if (current >= slides.length - 1) return; // son üründe otomatik ilerleme durur
+    autoTimer = setTimeout(function () { goTo(current + 1); }, SLIDE_DURATION_MS);
+  }
+
+  function pauseAutoAdvance() {
+    clearAutoAdvance();
+    if (currentDotI) currentDotI.style.animationPlayState = 'paused';
+  }
+
+  function resumeAutoAdvance() {
+    startAutoAdvance();
   }
 
   var observer = new IntersectionObserver(function (entries) {
     entries.forEach(function (entry) {
       if (entry.isIntersecting && entry.intersectionRatio > 0.6) {
-        var i = Number(entry.target.dataset.i);
-        current = i;
-        Array.prototype.forEach.call(dots, function (d, di) {
-          d.classList.toggle('done', di <= i);
-        });
+        current = Number(entry.target.dataset.i);
+        startAutoAdvance();
       }
     });
   }, { root: container, threshold: [0.6] });
@@ -149,6 +190,36 @@ var PRODUCTS = [
     if (e.key === 'ArrowDown') { e.preventDefault(); goTo(current + 1); }
     if (e.key === 'Escape') { location.href = 'index.html'; }
   });
+
+  // Dokunma/tıklama: beğen düğmesi, "Ürüne Git" ve aksiyon çubuğu hariç, ekranın
+  // sağ tarafına kısa bir dokunuş bir sonraki ürüne, sol tarafı bir öncekine geçer;
+  // basılı tutmak (Hikayeler'deki gibi) otomatik ilerlemeyi duraklatır.
+  var TAP_MAX_MOVE = 10, TAP_MAX_TIME = 300;
+  var pointerActive = false, pointerStartX = 0, pointerStartY = 0, pointerStartT = 0;
+
+  container.addEventListener('pointerdown', function (e) {
+    if (e.target.closest('.like-btn, .reel-go, .reel-actions')) return;
+    pointerActive = true;
+    pointerStartX = e.clientX; pointerStartY = e.clientY; pointerStartT = Date.now();
+    pauseAutoAdvance();
+  });
+
+  function onPointerRelease(e) {
+    if (!pointerActive) return;
+    pointerActive = false;
+    var dx = Math.abs(e.clientX - pointerStartX);
+    var dy = Math.abs(e.clientY - pointerStartY);
+    var dt = Date.now() - pointerStartT;
+    if (dx < TAP_MAX_MOVE && dy < TAP_MAX_MOVE && dt < TAP_MAX_TIME) {
+      var rect = container.getBoundingClientRect();
+      var relX = (e.clientX - rect.left) / rect.width;
+      if (relX < 0.3) goTo(current - 1); else goTo(current + 1);
+      return; // goTo -> kesişim değişimi -> startAutoAdvance zaten tetiklenecek
+    }
+    resumeAutoAdvance();
+  }
+  container.addEventListener('pointerup', onPointerRelease);
+  container.addEventListener('pointercancel', function () { pointerActive = false; resumeAutoAdvance(); });
 })();
 </script>
 

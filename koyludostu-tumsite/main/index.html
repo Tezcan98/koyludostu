@@ -104,6 +104,7 @@
     <option value="price-asc">Fiyat: Artan</option>
     <option value="price-desc">Fiyat: Azalan</option>
     <option value="name-asc">İsim: A-Z</option>
+    <option value="seller-rating-desc">Satıcı Puanı: Yüksek</option>
   </select>
 </div>
 <div class="filter-panel" id="filterPanel" hidden>
@@ -124,6 +125,22 @@
     <div class="filter-checks">
       <label class="check-chip"><input type="checkbox" id="fOrganicOnly"> 🌱 Sadece Organik</label>
       <label class="check-chip"><input type="checkbox" id="fVerifiedOnly"> ✅ Rozetli Satıcılar</label>
+    </div>
+  </div>
+  <div class="filter-group">
+    <div class="filter-group-title">Satıcı Performansı</div>
+    <div class="filter-checks">
+      <select id="fMinSellerRating" class="filter-input">
+        <option value="0">Satıcı puanı: farketmez</option>
+        <option value="4">Satıcı puanı: 4+ ★</option>
+        <option value="4.5">Satıcı puanı: 4.5+ ★</option>
+      </select>
+      <select id="fMinSellerSales" class="filter-input">
+        <option value="0">Satıcı satışı: farketmez</option>
+        <option value="5">En az 5 satış</option>
+        <option value="10">En az 10 satış</option>
+        <option value="20">En az 20 satış</option>
+      </select>
     </div>
   </div>
   <div class="filter-group">

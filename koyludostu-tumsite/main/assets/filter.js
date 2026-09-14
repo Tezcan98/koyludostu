@@ -21,6 +21,8 @@
     var deliveryRadios = Array.prototype.slice.call(document.querySelectorAll('input[name="delivery"]'));
     var organicCheckbox = document.getElementById('fOrganicOnly');
     var verifiedCheckbox = document.getElementById('fVerifiedOnly');
+    var minSellerRatingSelect = document.getElementById('fMinSellerRating');
+    var minSellerSalesSelect = document.getElementById('fMinSellerSales');
     var searchInput = document.getElementById('fSearch');
     var sort = document.getElementById('fSort');
     var resetBtn = document.getElementById('fReset');
@@ -33,6 +35,7 @@
 
     var allProducts = [];
     var reviewStats = {};
+    var sellerStats = {}; // sellerId -> { avgRating, reviewCount, salesCount } — bkz. GET /api/sellers/stats
 
     // ---------- "Öne Çıkanlar" (varsayılan) sıralama algoritması ----------
     // Varsayılan sıralama şu sinyalleri birleştiren bir puana göre yapılır:
@@ -90,8 +93,11 @@
       var onlyVerified = verifiedCheckbox.checked;
       var deliveryEl = deliveryRadios.filter(function (r) { return r.checked; })[0];
       var delivery = deliveryEl ? deliveryEl.value : '__all__';
+      var minSellerRating = parseFloat(minSellerRatingSelect.value) || 0;
+      var minSellerSales = parseInt(minSellerSalesSelect.value, 10) || 0;
 
-      var activeCount = cats.length + cities.length + attrVals.length + (onlyOrganic ? 1 : 0) + (onlyVerified ? 1 : 0) + (delivery !== '__all__' ? 1 : 0);
+      var activeCount = cats.length + cities.length + attrVals.length + (onlyOrganic ? 1 : 0) + (onlyVerified ? 1 : 0) +
+        (delivery !== '__all__' ? 1 : 0) + (minSellerRating > 0 ? 1 : 0) + (minSellerSales > 0 ? 1 : 0);
       badge.hidden = activeCount === 0;
       badge.textContent = activeCount;
 
@@ -105,9 +111,12 @@
         var okAttrs = attrVals.every(function (v) { return pAttrVals.indexOf(v) !== -1; });
         var okOrganic = !onlyOrganic || (p.organic && p.organicApproved);
         var okVerified = !onlyVerified || p.sellerVerified;
+        var sStat = sellerStats[p.sellerId] || { avgRating: null, salesCount: 0 };
+        var okSellerRating = minSellerRating <= 0 || (sStat.avgRating !== null && sStat.avgRating >= minSellerRating);
+        var okSellerSales = minSellerSales <= 0 || sStat.salesCount >= minSellerSales;
         var okSearch = !query || [p.title, p.cat, p.city, p.sellerName, p.description]
           .join(' ').toLocaleLowerCase('tr').indexOf(query) !== -1;
-        return okCat && okCity && okDelivery && okAttrs && okOrganic && okVerified && okSearch;
+        return okCat && okCity && okDelivery && okAttrs && okOrganic && okVerified && okSellerRating && okSellerSales && okSearch;
       });
 
       var sortVal = sort.value;
@@ -115,6 +124,11 @@
         if (sortVal === 'price-asc') return (parseInt(String(a.price).replace(/\D/g, ''), 10) || 0) - (parseInt(String(b.price).replace(/\D/g, ''), 10) || 0);
         if (sortVal === 'price-desc') return (parseInt(String(b.price).replace(/\D/g, ''), 10) || 0) - (parseInt(String(a.price).replace(/\D/g, ''), 10) || 0);
         if (sortVal === 'name-asc') return a.title.localeCompare(b.title, 'tr');
+        if (sortVal === 'seller-rating-desc') {
+          var ra = (sellerStats[a.sellerId] || {}).avgRating || 0;
+          var rb = (sellerStats[b.sellerId] || {}).avgRating || 0;
+          return rb - ra;
+        }
         return defaultScore(b) - defaultScore(a);
       });
 
@@ -137,6 +151,8 @@
     attrWrap.addEventListener('change', apply);
     organicCheckbox.addEventListener('change', apply);
     verifiedCheckbox.addEventListener('change', apply);
+    minSellerRatingSelect.addEventListener('change', apply);
+    minSellerSalesSelect.addEventListener('change', apply);
     deliveryRadios.forEach(function (r) { r.addEventListener('change', apply); });
     sort.addEventListener('change', apply);
     searchInput.addEventListener('input', apply);
@@ -146,6 +162,8 @@
       cityWrap.querySelectorAll('input').forEach(function (c) { c.checked = false; });
       organicCheckbox.checked = false;
       verifiedCheckbox.checked = false;
+      minSellerRatingSelect.value = '0';
+      minSellerSalesSelect.value = '0';
       deliveryRadios.forEach(function (r) { r.checked = r.value === '__all__'; });
       sort.value = 'default';
       searchInput.value = '';
@@ -182,9 +200,11 @@
     Promise.all([
       fetch('/api/products').then(function (r) { return r.json(); }),
       fetch('/api/reviews/stats').then(function (r) { return r.json(); }).catch(function () { return {}; }),
+      fetch('/api/sellers/stats').then(function (r) { return r.json(); }).catch(function () { return {}; }),
     ]).then(function (results) {
       allProducts = results[0].products || [];
       reviewStats = results[1] || {};
+      sellerStats = results[2] || {};
 
       var cats = [];
       allProducts.forEach(function (p) { if (cats.indexOf(p.cat) === -1) cats.push(p.cat); });
