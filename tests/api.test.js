@@ -2108,14 +2108,14 @@ describe('Telefon/e-posta ile giriş ve şifremi unuttum', () => {
     assert.equal(attempt.status, 400);
   });
 
-  test('şifremi unuttum: var olmayan hesap için de aynı genel mesaj döner (numara sızdırılmaz)', async () => {
+  test('şifremi unuttum: var olmayan hesap için "bulunamadı" hatası döner (kullanıcı isteğiyle: genel/belirsiz mesaj yerine net hata)', async () => {
     const r = await fetch(url('/api/auth/forgot-password'), {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ identifier: '5559999999' }),
-    }).then((r) => r.json());
-    assert.equal(r.ok, true);
-    assert.ok(r.message);
-    assert.equal(r.devToken, undefined); // hesap yok, token da yok
+    });
+    assert.equal(r.status, 404);
+    const body = await r.json();
+    assert.match(body.error, /bulunamadı/);
   });
 
   test('şifremi unuttum → sıfırlama bağlantısı → yeni parolayla giriş, eski parola artık çalışmaz', async () => {

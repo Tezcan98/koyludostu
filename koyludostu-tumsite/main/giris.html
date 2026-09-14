@@ -466,7 +466,7 @@
     }).then(function (r) { return r.json(); }).then(function (data) {
       btn.disabled = false;
       if (data.error) { errorEl.textContent = data.error; return; }
-      successEl.textContent = data.message || 'Bu bilgilerle kayıtlı bir hesap varsa, şifre sıfırlama bağlantısı gönderildi.';
+      successEl.textContent = data.message || 'Şifre sıfırlama bağlantısı gönderildi.';
       successEl.hidden = false;
     }).catch(function () { btn.disabled = false; errorEl.textContent = 'Bağlantı hatası, tekrar deneyin.'; });
   });

@@ -2558,20 +2558,25 @@ const server = http.createServer(async (req, res) => {
         return jsonResponse(res, 429, { error: 'Çok fazla deneme. Lütfen biraz sonra tekrar dene.' });
       }
       recordFailedLogin(rateKey); // her deneme sayılır (başarılı olsa da) — bağlantı isteği tekrar tekrar tetiklenemesin diye
-      const genericMsg = { ok: true, message: 'Bu bilgilerle kayıtlı bir hesap varsa, şifre sıfırlama bağlantısı gönderildi.' };
-      if (!rawIdentifier) return jsonResponse(res, 200, genericMsg);
+      // NOT: Bu uç nokta bilerek hesabın var olup olmadığını netçe söylüyor (kullanıcı
+      // isteği üzerine — "bulunamadı" demesi gerekiyor) — çoğu sitenin tercih ettiği
+      // "varsa gönderildi" belirsiz mesajı burada KASITLI olarak kullanılmıyor. Bunun
+      // bedeli: biri rastgele telefon/e-posta deneyerek hangilerinin kayıtlı olduğunu
+      // öğrenebilir (hesap numaralandırma). Zaten var olan genel hız sınırlaması
+      // (isLoginRateLimited) bunu tamamen engellemez, sadece yavaşlatır.
+      if (!rawIdentifier) return jsonResponse(res, 400, { error: 'Telefon numaranı ya da e-postanı gir.' });
       const found = findUserByIdentifier(rawIdentifier);
-      if (found) {
-        const token = randomToken();
-        passwordResetTokens.set(token, { phone: found.phone, at: Date.now() });
-        const proto = req.headers['x-forwarded-proto'] || 'http';
-        const link = `${proto}://${req.headers.host}/sifremi-sifirla.html?token=${token}`;
-        sendPasswordResetLink(found.user, found.phone, link).catch(() => {});
-        // Testler gerçek bir SMS/e-posta alamayacağından (bkz. IS_TEST_ENV), token'ı
-        // sadece izole test ortamında yanıta da ekliyoruz — production'da asla.
-        if (IS_TEST_ENV) genericMsg.devToken = token;
-      }
-      return jsonResponse(res, 200, genericMsg);
+      if (!found) return jsonResponse(res, 404, { error: 'Bu bilgilerle kayıtlı bir hesap bulunamadı.' });
+      const token = randomToken();
+      passwordResetTokens.set(token, { phone: found.phone, at: Date.now() });
+      const proto = req.headers['x-forwarded-proto'] || 'http';
+      const link = `${proto}://${req.headers.host}/sifremi-sifirla.html?token=${token}`;
+      sendPasswordResetLink(found.user, found.phone, link).catch(() => {});
+      const okMsg = { ok: true, message: 'Şifre sıfırlama bağlantısı gönderildi.' };
+      // Testler gerçek bir SMS/e-posta alamayacağından (bkz. IS_TEST_ENV), token'ı
+      // sadece izole test ortamında yanıta da ekliyoruz — production'da asla.
+      if (IS_TEST_ENV) okMsg.devToken = token;
+      return jsonResponse(res, 200, okMsg);
     }
 
     if (p === '/api/auth/reset-password' && req.method === 'POST') {
