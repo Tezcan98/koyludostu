@@ -332,6 +332,7 @@
     tabLoginBtn.classList.remove('active');
     tabRegisterBtn.classList.add('active');
     tabLogin.hidden = true;
+    tabForgot.hidden = true;
     var pending = loadPendingReg();
     if (pending && pending.phone) {
       regToken = pending.regToken;
