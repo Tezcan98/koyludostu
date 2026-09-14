@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#4E6B3A">
+<link rel="apple-touch-icon" href="/assets/logo-icon.jpg">
+<title>Yeni Şifre Belirle — Köylü Dostu</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  .auth-wrap{max-width:420px;margin:0 auto;padding:64px 24px 60px;min-height:100dvh;display:flex;flex-direction:column;justify-content:center;}
+  .auth-logo{width:64px;height:64px;border-radius:50%;background:conic-gradient(from 220deg, var(--ring1), var(--ring2), var(--ring3), var(--ring1));padding:3px;margin:0 auto 18px;}
+  .auth-logo div{width:100%;height:100%;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden;}
+  .auth-logo img{width:92%;height:92%;object-fit:contain;}
+  .auth-wrap h1{font-size:20px;font-weight:800;text-align:center;margin:0 0 6px;}
+  .auth-wrap p.sub{font-size:13px;color:var(--muted);text-align:center;margin:0 0 24px;}
+  .auth-field{margin-bottom:14px;}
+  .auth-field label{font-size:12px;font-weight:700;color:var(--muted);display:block;margin-bottom:6px;}
+  .auth-field input{
+    width:100%;padding:13px 14px;border-radius:12px;border:1.5px solid var(--line);
+    font-family:inherit;font-size:16px;background:var(--card);letter-spacing:.02em;
+  }
+  .auth-field input:focus{outline:none;border-color:var(--ring1);}
+  .auth-btn{
+    width:100%;padding:14px;border-radius:14px;background:var(--ink);color:#fff;border:none;
+    font-size:14.5px;font-weight:700;cursor:pointer;margin-top:6px;
+  }
+  .auth-btn:disabled{opacity:.5;cursor:default;}
+  .auth-error{font-size:12.5px;color:var(--ring3);text-align:center;min-height:18px;margin-top:10px;}
+  .auth-hint{font-size:12px;color:var(--muted);text-align:center;margin-top:14px;}
+  .auth-hint a{color:var(--ring1);font-weight:700;}
+  .auth-success{font-size:13.5px;color:var(--ring1);text-align:center;font-weight:600;line-height:1.6;}
+  .auth-success a{color:var(--ring1);}
+</style>
+</head>
+<body>
+<div class="auth-wrap">
+  <div class="auth-logo"><div><img src="/assets/logo-icon.jpg" alt="Köylü Dostu"></div></div>
+
+  <div id="invalidState" hidden>
+    <h1>Bağlantı Geçersiz</h1>
+    <p class="sub">Bu şifre sıfırlama bağlantısının süresi dolmuş ya da geçersiz olabilir.</p>
+    <a class="auth-btn" style="display:block;text-align:center;text-decoration:none;box-sizing:border-box;" href="/giris.html">Girişe Dön</a>
+  </div>
+
+  <div id="formState" hidden>
+    <h1>Yeni Şifre Belirle</h1>
+    <p class="sub">Hesabın için yeni bir parola belirle.</p>
+    <div class="auth-field">
+      <label for="newPassword">Yeni Parola</label>
+      <input type="password" id="newPassword" autocomplete="new-password">
+      <p style="font-size:11.5px;color:var(--muted);margin:6px 0 0;">En az 8 karakter, en az bir harf ve bir rakam içermeli.</p>
+    </div>
+    <div class="auth-field">
+      <label for="newPassword2">Yeni Parola (Tekrar)</label>
+      <input type="password" id="newPassword2" autocomplete="new-password">
+    </div>
+    <button class="auth-btn" id="resetBtn">Parolayı Güncelle</button>
+    <p class="auth-error" id="resetError"></p>
+  </div>
+
+  <div id="doneState" hidden>
+    <h1>Hazır!</h1>
+    <p class="auth-success">Şifren güncellendi. Artık yeni parolanla giriş yapabilirsin.<br><br><a href="/giris.html">Girişe git →</a></p>
+  </div>
+</div>
+
+<script>
+(function () {
+  var params = new URLSearchParams(location.search);
+  var token = params.get('token');
+  var invalidState = document.getElementById('invalidState');
+  var formState = document.getElementById('formState');
+  var doneState = document.getElementById('doneState');
+
+  if (!token) {
+    invalidState.hidden = false;
+    return;
+  }
+  formState.hidden = false;
+
+  document.getElementById('resetBtn').addEventListener('click', function () {
+    var errorEl = document.getElementById('resetError');
+    var btn = document.getElementById('resetBtn');
+    errorEl.textContent = '';
+    var pass = document.getElementById('newPassword').value;
+    var pass2 = document.getElementById('newPassword2').value;
+    var passOk = pass.length >= 8 && /[a-zA-Z]/.test(pass) && /[0-9]/.test(pass);
+    if (!passOk) { errorEl.textContent = 'Parola en az 8 karakter olmalı, en az bir harf ve bir rakam içermeli.'; return; }
+    if (pass !== pass2) { errorEl.textContent = 'Parolalar eşleşmiyor.'; return; }
+    btn.disabled = true;
+    fetch('/api/auth/reset-password', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: token, password: pass }),
+    }).then(function (r) { return r.json(); }).then(function (data) {
+      btn.disabled = false;
+      if (data.error) {
+        errorEl.textContent = data.error;
+        return;
+      }
+      formState.hidden = true;
+      doneState.hidden = false;
+    }).catch(function () { btn.disabled = false; errorEl.textContent = 'Bağlantı hatası, tekrar deneyin.'; });
+  });
+})();
+</script>
+<script>if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("/sw.js").catch(function(){});});}</script>
+</body>
+</html>

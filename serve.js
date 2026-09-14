@@ -792,6 +792,28 @@ function findUserById(id) {
   return null;
 }
 
+function findUserByEmail(email) {
+  const clean = String(email || '').trim().toLowerCase();
+  if (!clean) return null;
+  const users = readJson(USERS_PATH, {});
+  for (const phone of Object.keys(users)) {
+    if ((users[phone].email || '').toLowerCase() === clean) return { phone, user: users[phone] };
+  }
+  return null;
+}
+
+// Giriş ve "şifremi unuttum" ekranları tek bir kutuya telefon ya da e-posta kabul
+// eder — '@' varsa e-posta, yoksa telefon numarası olarak yorumlanır.
+function findUserByIdentifier(identifier) {
+  const raw = String(identifier || '').trim();
+  if (!raw) return null;
+  if (raw.includes('@')) return findUserByEmail(raw);
+  const norm = normalizePhone(raw);
+  const users = readJson(USERS_PATH, {});
+  const user = users[norm];
+  return user ? { phone: norm, user } : null;
+}
+
 // Ürün nesneleri satıcı bilgisini (ad/telefon) o an kaydedildiği haliyle taşır ama "rozetli
 // satıcı" durumu sonradan değişebildiği için canlı users.json'dan katılır — id -> boolean.
 function sellerVerifiedMap() {
@@ -1213,6 +1235,31 @@ setInterval(() => {
   }
 }, 5 * 60 * 1000).unref();
 
+// ---------- şifremi unuttum: token -> { phone, at } ----------
+// Kayıt SMS kodları gibi belleğe tutulur (sunucu yeniden başlarsa bekleyen
+// sıfırlama bağlantıları geçersiz kalır) — kısa ömürlü olduklarından kabul edilebilir.
+const passwordResetTokens = new Map();
+const RESET_TOKEN_TTL_MS = 30 * 60 * 1000;
+
+setInterval(() => {
+  const now = Date.now();
+  for (const [token, entry] of passwordResetTokens) {
+    if (now - entry.at > RESET_TOKEN_TTL_MS) passwordResetTokens.delete(token);
+  }
+}, 5 * 60 * 1000).unref();
+
+async function sendPasswordResetLink(user, phone, link) {
+  const message = `Köylü Dostu: Şifreni sıfırlamak için bu bağlantıya git (30 dakika geçerli): ${link}\n\nBu isteği sen yapmadıysan yok sayabilirsin.`;
+  // Şifre sıfırlama kullanıcının kendi başlattığı, güvenlik açısından kritik bir işlem
+  // olduğundan notifyUser()'ın aksine kullanıcının bildirim tercihlerine bakılmaksızın
+  // her zaman gönderilir — SMS her zaman (telefon zaten zorunlu), e-posta varsa ayrıca.
+  const smsTarget = NOTIFICATION_CHANNELS.sms.formatTarget(user);
+  NOTIFICATION_CHANNELS.sms.send(smsTarget, message).catch(() => {});
+  if (user.email) {
+    sendMailViaLocalRelay({ to: user.email, subject: 'Köylü Dostu — Şifre Sıfırlama', text: message }).catch(() => {});
+  }
+}
+
 // ---------- server ----------
 
 const server = http.createServer(async (req, res) => {
@@ -1500,18 +1547,23 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (p === '/api/auth/login' && req.method === 'POST') {
-      const { phone, password } = await readBody(req);
-      const norm = normalizePhone(phone);
-      const loginKey = 'user:' + clientIp + ':' + norm;
+      const { identifier, phone, password } = await readBody(req);
+      // "identifier" telefon ya da e-posta olabilir (bkz. findUserByIdentifier);
+      // eski "phone" alanı geriye dönük uyumluluk için hâlâ kabul edilir.
+      const rawIdentifier = String(identifier || phone || '').trim();
+      // Kilit anahtarını normalize ediyoruz ki aynı telefon "0555...", "555...",
+      // "+90555..." gibi farklı yazımlarla denenerek kaba kuvvet kilidi atlatılamasın.
+      const normalizedKey = rawIdentifier.includes('@') ? rawIdentifier.toLowerCase() : normalizePhone(rawIdentifier);
+      const loginKey = 'user:' + clientIp + ':' + normalizedKey;
       if (isLoginRateLimited(loginKey)) {
         return jsonResponse(res, 429, { error: 'Çok fazla hatalı deneme. Lütfen biraz sonra tekrar dene.' });
       }
-      const users = readJson(USERS_PATH, {});
-      const user = users[norm];
-      if (!user) return jsonResponse(res, 404, { error: 'Bu numara kayıtlı değil. Önce üye ol.' });
+      const found = findUserByIdentifier(rawIdentifier);
+      if (!found) return jsonResponse(res, 404, { error: 'Bu telefon numarası ya da e-posta kayıtlı değil. Önce üye ol.' });
+      const { phone: norm, user } = found;
       if (!verifyPassword(String(password || ''), user.passwordHash)) {
         recordFailedLogin(loginKey);
-        return jsonResponse(res, 401, { error: 'Telefon veya parola hatalı.' });
+        return jsonResponse(res, 401, { error: 'Telefon/e-posta ya da parola hatalı.' });
       }
       clearLoginAttempts(loginKey);
       const token = createSession(norm);
@@ -2065,6 +2117,14 @@ const server = http.createServer(async (req, res) => {
         if (cleanEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
           return jsonResponse(res, 400, { error: 'Geçerli bir e-posta adresi gir.' });
         }
+        // E-posta ile de giriş yapılabildiğinden (bkz. /api/auth/login) tekil olmalı —
+        // aksi halde hangi hesaba girileceği belirsizleşirdi.
+        if (cleanEmail) {
+          const owner = findUserByEmail(cleanEmail);
+          if (owner && owner.phone !== session.phone) {
+            return jsonResponse(res, 400, { error: 'Bu e-posta adresi başka bir hesapta kayıtlı.' });
+          }
+        }
       }
       if (iban !== undefined && normalizeIban(iban) && !isValidIban(iban)) {
         return jsonResponse(res, 400, { error: 'Geçerli bir IBAN gir (TR ile başlayan 26 karakter).' });
@@ -2150,6 +2210,61 @@ const server = http.createServer(async (req, res) => {
       if (!isValidPassword(next)) return jsonResponse(res, 400, { error: 'Yeni parola en az 8 karakter olmalı, en az bir harf ve bir rakam içermeli.' });
       user.passwordHash = hashPassword(next);
       writeJson(USERS_PATH, users);
+      return jsonResponse(res, 200, { ok: true });
+    }
+
+    // Şifremi unuttum — telefon ya da e-posta ile bir sıfırlama bağlantısı ister.
+    // Hesabın var olup olmadığını sızdırmamak için sonuç her zaman aynı genel
+    // mesajla döner; bağlantı sadece eşleşen bir hesap bulunursa gerçekten gönderilir.
+    if (p === '/api/auth/forgot-password' && req.method === 'POST') {
+      const { identifier } = await readBody(req);
+      const rawIdentifier = String(identifier || '').trim();
+      const rateKey = 'forgot:' + clientIp + ':' + (rawIdentifier.includes('@') ? rawIdentifier.toLowerCase() : normalizePhone(rawIdentifier));
+      if (isLoginRateLimited(rateKey)) {
+        return jsonResponse(res, 429, { error: 'Çok fazla deneme. Lütfen biraz sonra tekrar dene.' });
+      }
+      recordFailedLogin(rateKey); // her deneme sayılır (başarılı olsa da) — bağlantı isteği tekrar tekrar tetiklenemesin diye
+      const genericMsg = { ok: true, message: 'Bu bilgilerle kayıtlı bir hesap varsa, şifre sıfırlama bağlantısı gönderildi.' };
+      if (!rawIdentifier) return jsonResponse(res, 200, genericMsg);
+      const found = findUserByIdentifier(rawIdentifier);
+      if (found) {
+        const token = randomToken();
+        passwordResetTokens.set(token, { phone: found.phone, at: Date.now() });
+        const proto = req.headers['x-forwarded-proto'] || 'http';
+        const link = `${proto}://${req.headers.host}/sifremi-sifirla.html?token=${token}`;
+        sendPasswordResetLink(found.user, found.phone, link).catch(() => {});
+        // Testler gerçek bir SMS/e-posta alamayacağından (bkz. IS_TEST_ENV), token'ı
+        // sadece izole test ortamında yanıta da ekliyoruz — production'da asla.
+        if (IS_TEST_ENV) genericMsg.devToken = token;
+      }
+      return jsonResponse(res, 200, genericMsg);
+    }
+
+    if (p === '/api/auth/reset-password' && req.method === 'POST') {
+      const { token, password } = await readBody(req);
+      const entry = passwordResetTokens.get(String(token || ''));
+      if (!entry || Date.now() - entry.at > RESET_TOKEN_TTL_MS) {
+        return jsonResponse(res, 400, { error: 'Bağlantının süresi dolmuş ya da geçersiz. Şifremi unuttum\'u yeniden dene.' });
+      }
+      const next = String(password || '');
+      if (!isValidPassword(next)) {
+        return jsonResponse(res, 400, { error: 'Yeni parola en az 8 karakter olmalı, en az bir harf ve bir rakam içermeli.' });
+      }
+      const users = readJson(USERS_PATH, {});
+      const user = users[entry.phone];
+      if (!user) return jsonResponse(res, 404, { error: 'Hesap bulunamadı' });
+      user.passwordHash = hashPassword(next);
+      writeJson(USERS_PATH, users);
+      passwordResetTokens.delete(String(token));
+
+      // Şifre sıfırlanınca, hesabı ele geçirmiş biri varsa onu da çıkarmak için
+      // bu hesabın tüm açık oturumlarını kapatıyoruz — yeniden giriş yapman gerekecek.
+      const sessions = readJson(SESSIONS_PATH, {});
+      for (const t of Object.keys(sessions)) {
+        if (sessions[t].phone === entry.phone) delete sessions[t];
+      }
+      writeJson(SESSIONS_PATH, sessions);
+
       return jsonResponse(res, 200, { ok: true });
     }
 

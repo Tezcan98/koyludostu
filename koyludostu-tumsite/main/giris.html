@@ -74,13 +74,13 @@
     <button type="button" class="auth-tab" id="tabRegisterBtn">Üye Ol</button>
   </div>
 
-  <!-- ===== GİRİŞ YAP (dönen üye: telefon + parola) ===== -->
+  <!-- ===== GİRİŞ YAP (dönen üye: telefon/e-posta + parola) ===== -->
   <div id="tabLogin">
     <h1>Tekrar Hoş Geldin</h1>
-    <p class="sub">Telefon numaran ve parolanla giriş yap.</p>
+    <p class="sub">Telefon numaran ya da e-postanla, parolanla giriş yap.</p>
     <div class="auth-field">
-      <label for="loginPhone">Telefon Numarası</label>
-      <input type="tel" id="loginPhone" placeholder="05XX XXX XX XX" autocomplete="tel" inputmode="numeric">
+      <label for="loginPhone">Telefon Numarası ya da E-posta</label>
+      <input type="text" id="loginPhone" placeholder="05XX XXX XX XX ya da e-posta" autocomplete="username">
     </div>
     <div class="auth-field">
       <label for="loginPassword">Parola</label>
@@ -88,7 +88,22 @@
     </div>
     <button class="auth-btn" id="loginBtn">Giriş Yap</button>
     <p class="auth-error" id="loginError"></p>
+    <a class="auth-back" id="goForgotLink" style="display:block;margin-top:12px;">Şifremi unuttum</a>
     <p class="auth-hint">Hesabın yok mu? <a class="auth-back" id="goRegisterLink" style="display:inline;margin:0;color:var(--ring1);font-weight:700;">Üye Ol</a></p>
+  </div>
+
+  <!-- ===== ŞİFREMİ UNUTTUM ===== -->
+  <div id="tabForgot" hidden>
+    <h1>Şifremi Unuttum</h1>
+    <p class="sub">Telefon numaranı ya da e-postanı gir, sana bir şifre sıfırlama bağlantısı gönderelim.</p>
+    <div class="auth-field">
+      <label for="forgotIdentifier">Telefon Numarası ya da E-posta</label>
+      <input type="text" id="forgotIdentifier" placeholder="05XX XXX XX XX ya da e-posta" autocomplete="username">
+    </div>
+    <button class="auth-btn" id="forgotSendBtn">Sıfırlama Bağlantısı Gönder</button>
+    <p class="auth-error" id="forgotError"></p>
+    <p class="auth-hint" id="forgotSuccess" hidden style="color:var(--ring1);font-weight:600;"></p>
+    <a class="auth-back" id="backToLoginFromForgot">← Girişe dön</a>
   </div>
 
   <!-- ===== ÜYE OL — adım 1: ad, şehir, parola, hesap türü ===== -->
@@ -246,6 +261,7 @@
   var tabLoginBtn = document.getElementById('tabLoginBtn');
   var tabRegisterBtn = document.getElementById('tabRegisterBtn');
   var tabLogin = document.getElementById('tabLogin');
+  var tabForgot = document.getElementById('tabForgot');
   var stepInfo = document.getElementById('stepInfo');
   var stepPhone = document.getElementById('stepPhone');
   var stepCode = document.getElementById('stepCode');
@@ -275,9 +291,17 @@
     tabRegisterBtn.classList.remove('active');
     tabLoginBtn.classList.add('active');
     tabLogin.hidden = false;
+    tabForgot.hidden = true;
     stepInfo.hidden = true;
     stepPhone.hidden = true;
     stepCode.hidden = true;
+  }
+  function showForgotFlow() {
+    tabLogin.hidden = true;
+    tabForgot.hidden = false;
+    document.getElementById('forgotError').textContent = '';
+    document.getElementById('forgotSuccess').hidden = true;
+    document.getElementById('forgotIdentifier').value = document.getElementById('loginPhone').value;
   }
   function goRegStep(step) {
     stepInfo.hidden = step !== 'info';
@@ -291,6 +315,8 @@
   document.getElementById('backToLoginBtn').addEventListener('click', showLoginFlow);
   document.getElementById('backToInfoBtn').addEventListener('click', function () { goRegStep('info'); });
   document.getElementById('backBtn').addEventListener('click', function () { goRegStep('phone'); });
+  document.getElementById('goForgotLink').addEventListener('click', showForgotFlow);
+  document.getElementById('backToLoginFromForgot').addEventListener('click', showLoginFlow);
 
   var termsModal = document.getElementById('termsModal');
   document.getElementById('termsLink').addEventListener('click', function () { termsModal.hidden = false; });
@@ -311,20 +337,44 @@
     location.href = dest;
   }
 
-  // ---- Giriş Yap (telefon + parola) ----
+  // ---- Giriş Yap (telefon/e-posta + parola) ----
   document.getElementById('loginBtn').addEventListener('click', function () {
     loginError.textContent = '';
-    var phone = document.getElementById('loginPhone').value;
+    var identifier = document.getElementById('loginPhone').value.trim();
     var password = document.getElementById('loginPassword').value;
-    if (phone.replace(/\D/g, '').length < 10) { loginError.textContent = 'Lütfen geçerli bir telefon numarası girin.'; return; }
+    var isEmail = identifier.indexOf('@') !== -1;
+    if (!isEmail && identifier.replace(/\D/g, '').length < 10) {
+      loginError.textContent = 'Lütfen geçerli bir telefon numarası ya da e-posta gir.'; return;
+    }
     if (!password) { loginError.textContent = 'Lütfen parolanı gir.'; return; }
     fetch('/api/auth/login', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone: phone, password: password }),
+      body: JSON.stringify({ identifier: identifier, password: password }),
     }).then(function (r) { return r.json(); }).then(function (data) {
       if (data.error) { loginError.textContent = data.error; return; }
       finishLogin(data);
     }).catch(function () { loginError.textContent = 'Bağlantı hatası, tekrar deneyin.'; });
+  });
+
+  // ---- Şifremi Unuttum ----
+  document.getElementById('forgotSendBtn').addEventListener('click', function () {
+    var errorEl = document.getElementById('forgotError');
+    var successEl = document.getElementById('forgotSuccess');
+    var btn = document.getElementById('forgotSendBtn');
+    errorEl.textContent = '';
+    successEl.hidden = true;
+    var identifier = document.getElementById('forgotIdentifier').value.trim();
+    if (!identifier) { errorEl.textContent = 'Telefon numaranı ya da e-postanı gir.'; return; }
+    btn.disabled = true;
+    fetch('/api/auth/forgot-password', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ identifier: identifier }),
+    }).then(function (r) { return r.json(); }).then(function (data) {
+      btn.disabled = false;
+      if (data.error) { errorEl.textContent = data.error; return; }
+      successEl.textContent = data.message || 'Bu bilgilerle kayıtlı bir hesap varsa, şifre sıfırlama bağlantısı gönderildi.';
+      successEl.hidden = false;
+    }).catch(function () { btn.disabled = false; errorEl.textContent = 'Bağlantı hatası, tekrar deneyin.'; });
   });
 
   // ---- Kimlik belgesi: yükleme (opsiyonel) + deneysel OCR ----

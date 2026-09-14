@@ -1940,3 +1940,133 @@ describe('Satıcı bazlı istatistikler (anasayfa sıralama/filtre için)', () =
     assert.equal(mine.salesCount, 2);
   });
 });
+
+describe('Telefon/e-posta ile giriş ve şifremi unuttum', () => {
+  test('e-posta ekleyen bir kullanıcı telefonla da e-postayla da giriş yapabilir', async () => {
+    const buyer = await newBuyer('Login Test Buyer');
+    await fetch(url('/api/auth/update-profile'), {
+      method: 'POST', headers: authHeaders(buyer.token),
+      body: JSON.stringify({ name: 'Login Test Buyer', city: 'Test Şehir', email: 'login-test@example.com' }),
+    });
+
+    const byPhone = await fetch(url('/api/auth/login'), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ identifier: buyer.phone, password: 'test1234' }),
+    }).then((r) => r.json());
+    assert.ok(byPhone.token);
+
+    const byEmail = await fetch(url('/api/auth/login'), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ identifier: 'login-test@example.com', password: 'test1234' }),
+    }).then((r) => r.json());
+    assert.ok(byEmail.token);
+    assert.equal(byEmail.user.phone, buyer.phone);
+  });
+
+  test('eski "phone" alanı geriye dönük uyumlu çalışmaya devam eder', async () => {
+    const buyer = await newBuyer('Legacy Phone Field');
+    const r = await fetch(url('/api/auth/login'), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: buyer.phone, password: 'test1234' }),
+    }).then((r) => r.json());
+    assert.ok(r.token);
+  });
+
+  test('bir e-posta iki farklı hesapta kullanılamaz', async () => {
+    const buyerA = await newBuyer('Email Owner A');
+    const buyerB = await newBuyer('Email Owner B');
+    await fetch(url('/api/auth/update-profile'), {
+      method: 'POST', headers: authHeaders(buyerA.token),
+      body: JSON.stringify({ name: 'Email Owner A', city: 'Test Şehir', email: 'shared@example.com' }),
+    });
+    const attempt = await fetch(url('/api/auth/update-profile'), {
+      method: 'POST', headers: authHeaders(buyerB.token),
+      body: JSON.stringify({ name: 'Email Owner B', city: 'Test Şehir', email: 'shared@example.com' }),
+    });
+    assert.equal(attempt.status, 400);
+  });
+
+  test('şifremi unuttum: var olmayan hesap için de aynı genel mesaj döner (numara sızdırılmaz)', async () => {
+    const r = await fetch(url('/api/auth/forgot-password'), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ identifier: '5559999999' }),
+    }).then((r) => r.json());
+    assert.equal(r.ok, true);
+    assert.ok(r.message);
+    assert.equal(r.devToken, undefined); // hesap yok, token da yok
+  });
+
+  test('şifremi unuttum → sıfırlama bağlantısı → yeni parolayla giriş, eski parola artık çalışmaz', async () => {
+    const buyer = await newBuyer('Reset Flow Buyer');
+    const forgot = await fetch(url('/api/auth/forgot-password'), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ identifier: buyer.phone }),
+    }).then((r) => r.json());
+    assert.ok(forgot.devToken); // test ortamında yanıtta dönüyor
+
+    const reset = await fetch(url('/api/auth/reset-password'), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: forgot.devToken, password: 'yenisifre1' }),
+    });
+    assert.equal(reset.status, 200);
+
+    const oldPassLogin = await fetch(url('/api/auth/login'), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ identifier: buyer.phone, password: 'test1234' }),
+    });
+    assert.equal(oldPassLogin.status, 401);
+
+    const newPassLogin = await fetch(url('/api/auth/login'), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ identifier: buyer.phone, password: 'yenisifre1' }),
+    });
+    assert.equal(newPassLogin.status, 200);
+  });
+
+  test('sıfırlama tokenı bir kere kullanılabilir, ikinci kullanımda reddedilir', async () => {
+    const buyer = await newBuyer('Reset Once Buyer');
+    const forgot = await fetch(url('/api/auth/forgot-password'), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ identifier: buyer.phone }),
+    }).then((r) => r.json());
+
+    const first = await fetch(url('/api/auth/reset-password'), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: forgot.devToken, password: 'birinciyeni1' }),
+    });
+    assert.equal(first.status, 200);
+
+    const second = await fetch(url('/api/auth/reset-password'), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: forgot.devToken, password: 'ikinciyeni1' }),
+    });
+    assert.equal(second.status, 400);
+  });
+
+  test('geçersiz/uydurma tokenla sıfırlama denemesi reddedilir', async () => {
+    const r = await fetch(url('/api/auth/reset-password'), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: 'uydurma-token-123', password: 'birsifre1' }),
+    });
+    assert.equal(r.status, 400);
+  });
+
+  test('parola sıfırlanınca hesabın açık oturumları kapanır', async () => {
+    const buyer = await newBuyer('Session Invalidate Buyer');
+    // Sıfırlama öncesi eldeki token geçerli olmalı.
+    const beforeMe = await fetch(url('/api/auth/me'), { headers: authHeaders(buyer.token) }).then((r) => r.json());
+    assert.ok(beforeMe.user);
+
+    const forgot = await fetch(url('/api/auth/forgot-password'), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ identifier: buyer.phone }),
+    }).then((r) => r.json());
+    await fetch(url('/api/auth/reset-password'), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: forgot.devToken, password: 'yenisifre2' }),
+    });
+
+    const afterMe = await fetch(url('/api/auth/me'), { headers: authHeaders(buyer.token) }).then((r) => r.json());
+    assert.equal(afterMe.user, null); // eski token artık geçersiz
+  });
+});
