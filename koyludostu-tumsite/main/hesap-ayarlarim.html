@@ -136,6 +136,21 @@
     <p class="acc-msg" id="invoiceInfoMsg"></p>
   </div>
 
+  <div class="acc-card" id="einvoiceCard" style="display:none;">
+    <h2>Otomatik E-Fatura <span id="einvoiceStatusBadge" class="acc-role-badge" style="background:var(--bg);"></span></h2>
+    <p style="font-size:12.5px;color:var(--muted);margin:0 0 12px;">Trendyol/Hepsiburada'daki gibi çalışır: zaten kullandığın bir e-Fatura/e-Arşiv entegratörünün (şu an <b>Nilvera</b> destekleniyor) API anahtarını bağlarsan, "Fatura Oluştur" bir taslak yerine gerçek bir e-Arşiv fatura kesmeyi dener. Bağlamazsan yazdırılabilir taslak gibi çalışmaya devam eder — zorunlu değil, bir kolaylık.</p>
+    <div class="acc-field"><label>Ortam</label>
+      <select id="einvoiceEnvField" style="width:100%;padding:11px 13px;border-radius:10px;border:1.5px solid var(--line);font-family:inherit;font-size:14px;background:var(--bg);">
+        <option value="test">Test</option>
+        <option value="live">Canlı</option>
+      </select>
+    </div>
+    <div class="acc-field" style="margin-top:12px;"><label>Nilvera API Anahtarı</label><input type="password" id="einvoiceApiKeyField" placeholder="Bağlıysa değiştirmek için yeni anahtar gir"></div>
+    <button class="acc-btn" id="saveEinvoiceBtn">Kaydet</button>
+    <button class="acc-btn" id="disconnectEinvoiceBtn" style="background:#fff;color:var(--ring3);border:1.5px solid var(--line);margin-left:8px;display:none;">Bağlantıyı Kaldır</button>
+    <p class="acc-msg" id="einvoiceMsg"></p>
+  </div>
+
   <div class="acc-card">
     <h2>Parola Değiştir</h2>
     <div class="acc-field"><label>Mevcut Parola</label><input type="password" id="curPassField"></div>
@@ -260,6 +275,17 @@
       document.getElementById('companyLegalNameField').value = data.user.companyLegalName || '';
       document.getElementById('taxOfficeField').value = data.user.taxOffice || '';
       document.getElementById('invoiceAddressField').value = data.user.invoiceAddress || '';
+
+      document.getElementById('einvoiceCard').style.display = 'block';
+      document.getElementById('einvoiceEnvField').value = data.user.einvoiceEnv || 'test';
+      var badge = document.getElementById('einvoiceStatusBadge');
+      var disconnectBtn = document.getElementById('disconnectEinvoiceBtn');
+      if (data.user.einvoiceConnected) {
+        badge.textContent = 'BAĞLI'; badge.style.color = 'var(--ring1)';
+        disconnectBtn.style.display = 'inline-block';
+      } else {
+        badge.textContent = 'BAĞLI DEĞİL'; badge.style.color = 'var(--muted)';
+      }
     }
   }).catch(function () {});
 
@@ -282,6 +308,55 @@
       if (data.error) { msg.className = 'acc-msg err'; msg.textContent = data.error; return; }
       msg.className = 'acc-msg ok';
       msg.textContent = 'Kaydedildi.';
+    }).catch(function () { btn.disabled = false; msg.className = 'acc-msg err'; msg.textContent = 'Bağlantı hatası, tekrar dene.'; });
+  });
+
+  document.getElementById('saveEinvoiceBtn').addEventListener('click', function () {
+    var msg = document.getElementById('einvoiceMsg');
+    var btn = document.getElementById('saveEinvoiceBtn');
+    var apiKey = document.getElementById('einvoiceApiKeyField').value.trim();
+    msg.className = 'acc-msg'; msg.textContent = '';
+    if (!apiKey) { msg.className = 'acc-msg err'; msg.textContent = 'Bir API anahtarı gir.'; return; }
+    btn.disabled = true;
+    window.KDAuth.authedFetch('/api/auth/update-profile', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: document.getElementById('nameField').value.trim(),
+        city: document.getElementById('cityField').value,
+        einvoiceApiKey: apiKey,
+        einvoiceEnv: document.getElementById('einvoiceEnvField').value,
+      }),
+    }).then(function (r) { return r.json(); }).then(function (data) {
+      btn.disabled = false;
+      if (data.error) { msg.className = 'acc-msg err'; msg.textContent = data.error; return; }
+      document.getElementById('einvoiceApiKeyField').value = '';
+      document.getElementById('einvoiceStatusBadge').textContent = 'BAĞLI';
+      document.getElementById('einvoiceStatusBadge').style.color = 'var(--ring1)';
+      document.getElementById('disconnectEinvoiceBtn').style.display = 'inline-block';
+      msg.className = 'acc-msg ok';
+      msg.textContent = 'Bağlandı. Gerçek bağlantı ilk fatura kesiminde denenir.';
+    }).catch(function () { btn.disabled = false; msg.className = 'acc-msg err'; msg.textContent = 'Bağlantı hatası, tekrar dene.'; });
+  });
+
+  document.getElementById('disconnectEinvoiceBtn').addEventListener('click', function () {
+    var msg = document.getElementById('einvoiceMsg');
+    var btn = document.getElementById('disconnectEinvoiceBtn');
+    btn.disabled = true;
+    window.KDAuth.authedFetch('/api/auth/update-profile', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: document.getElementById('nameField').value.trim(),
+        city: document.getElementById('cityField').value,
+        einvoiceDisconnect: true,
+      }),
+    }).then(function (r) { return r.json(); }).then(function (data) {
+      btn.disabled = false;
+      if (data.error) { msg.className = 'acc-msg err'; msg.textContent = data.error; return; }
+      document.getElementById('einvoiceStatusBadge').textContent = 'BAĞLI DEĞİL';
+      document.getElementById('einvoiceStatusBadge').style.color = 'var(--muted)';
+      btn.style.display = 'none';
+      msg.className = 'acc-msg ok';
+      msg.textContent = 'Bağlantı kaldırıldı.';
     }).catch(function () { btn.disabled = false; msg.className = 'acc-msg err'; msg.textContent = 'Bağlantı hatası, tekrar dene.'; });
   });
 

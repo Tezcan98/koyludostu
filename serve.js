@@ -751,6 +751,77 @@ function nextInvoiceNo(sellerId) {
   return `${year}/${String(next).padStart(6, '0')}`;
 }
 
+// ---------- Nilvera e-Arşiv Fatura entegrasyonu ----------
+// Trendyol/Hepsiburada gibi pazaryerleri faturayı kendileri kesmez — hukuken faturayı
+// düzenleyen satıcıdır; pazaryeri sadece satıcının zaten sahip olduğu bir e-Fatura/
+// e-Arşiv "özel entegratörü"nün (Paraşüt, Logo, KolayBi, Foriba, Nilvera...) API'sine
+// otomatik istek atan bir köprü kurar. Burada REST/JSON tabanlı olduğu için ek bir
+// XML/SOAP paketi gerektirmeyen Nilvera ile başlıyoruz (bkz. proje kuralı: bağımlılıksız
+// backend). NOT: Nilvera'nın tam istek şeması (Swagger) JS ile render edildiğinden bu
+// oturumda doğrulanamadı — satıcı gerçek bir test API anahtarı bağladığında dönen hataya
+// göre alan adları tek bir yerden (bu fonksiyon) düzeltilebilir; bağlanmamış satıcılar
+// için mevcut yazdırılabilir taslak akışı hiç etkilenmeden çalışmaya devam eder.
+function nilveraBaseUrl(env) {
+  return env === 'live' ? 'https://api.nilvera.com' : 'https://apitest.nilvera.com';
+}
+
+async function cutNilveraArchiveInvoice({ apiKey, env, invoiceNo, issueDate, seller, buyer, item }) {
+  const vatRate = Number(item.vatRate) || 0;
+  const unitPrice = Number(item.unitPrice) || 0;
+  const lineTotal = Math.round(unitPrice * item.quantity * 100) / 100;
+  const vatAmount = Math.round(lineTotal * (vatRate / 100) * 100) / 100;
+  const body = {
+    InvoiceInfo: {
+      InvoiceSerieOrNumber: invoiceNo,
+      IssueDate: issueDate,
+      CurrencyCode: 'TRY',
+    },
+    CompanyInfo: {
+      TaxOrIdentityNumber: seller.taxId,
+      Name: seller.legalName,
+      TaxOffice: seller.taxOffice,
+      Address: seller.address,
+    },
+    CustomerInfo: {
+      Name: buyer.name,
+      Address: buyer.address,
+      Phone: buyer.phone,
+    },
+    InvoiceLines: [{
+      Name: item.title,
+      Quantity: item.quantity,
+      UnitType: item.unit || 'C62',
+      UnitPrice: unitPrice,
+      VatRate: vatRate,
+      VatAmount: vatAmount,
+      LineTotal: lineTotal,
+    }],
+  };
+
+  let r;
+  try {
+    r = await fetch(`${nilveraBaseUrl(env)}/einvoice/Archive`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify(body),
+    });
+  } catch (e) {
+    return { ok: false, error: 'Nilvera\'ya bağlanılamadı: ' + e.message };
+  }
+  let data = null;
+  try { data = await r.json(); } catch { /* boş/JSON olmayan yanıt olabilir */ }
+  if (!r.ok) {
+    const msg = (data && (data.Message || data.message || data.title)) || `Nilvera hatası (HTTP ${r.status})`;
+    return { ok: false, error: msg, raw: data };
+  }
+  return {
+    ok: true,
+    providerInvoiceNo: (data && (data.UUID || data.InvoiceNumber || data.InvoiceSerieOrNumber)) || invoiceNo,
+    pdfUrl: (data && (data.PDFUrl || data.PdfUrl)) || null,
+    raw: data,
+  };
+}
+
 // Türkiye IBAN'ı: TR + 24 hane (toplam 26 karakter). Gerçek IBAN checksum
 // doğrulaması yapmıyoruz, sadece format kontrolü — banka zaten geçersiz bir
 // IBAN'a transferi kabul etmeyecektir.
@@ -798,6 +869,16 @@ function generateSmsCode() {
   return IS_TEST_ENV ? DEV_CODE : String(crypto.randomInt(0, 10000)).padStart(4, '0');
 }
 const VALID_ROLES = ['alici', 'satici'];
+
+// Kullanıcı nesnesini istemciye dönmeden önce sırları temizler — parola hash'i hiç
+// gitmez; e-Fatura entegratör API anahtarı da aynı şekilde asla client'a dönülmez
+// (biri bu anahtarı ele geçirirse satıcı adına fatura kesebilir/geçmiş faturalarını
+// görebilirdi). Sadece "bağlı mı" bilgisini (einvoiceConnected) dönüyoruz.
+function redactUser(user) {
+  if (!user) return user;
+  const { passwordHash, einvoiceApiKey, ...safe } = user;
+  return { ...safe, einvoiceConnected: !!einvoiceApiKey };
+}
 
 function findUserById(id) {
   const users = readJson(USERS_PATH, {});
@@ -905,7 +986,7 @@ function getSession(req) {
   const users = readJson(USERS_PATH, {});
   const user = users[s.phone];
   if (!user) return null;
-  const { passwordHash, ...safeUser } = user;
+  const safeUser = redactUser(user);
   return { token, phone: s.phone, user: safeUser };
 }
 
@@ -1627,7 +1708,7 @@ const server = http.createServer(async (req, res) => {
       pendingRegs.delete(regToken);
 
       const token = createSession(norm);
-      const { passwordHash, ...safeUser } = users[norm];
+      const safeUser = redactUser(users[norm]);
       return jsonResponse(res, 200, { token, user: safeUser, isNew: true });
     }
 
@@ -1652,7 +1733,7 @@ const server = http.createServer(async (req, res) => {
       }
       clearLoginAttempts(loginKey);
       const token = createSession(norm);
-      const { passwordHash, ...safeUser } = user;
+      const safeUser = redactUser(user);
       return jsonResponse(res, 200, { token, user: safeUser });
     }
 
@@ -1682,7 +1763,7 @@ const server = http.createServer(async (req, res) => {
         });
       }
       const token = createSession(found.phone);
-      const { passwordHash, ...safeUser } = found.user;
+      const safeUser = redactUser(found.user);
       return jsonResponse(res, 200, { token, user: safeUser });
     }
 
@@ -1740,7 +1821,7 @@ const server = http.createServer(async (req, res) => {
       user.verifiedSeller = false;
       writeJson(USERS_PATH, users);
 
-      const { passwordHash, ...safeUser } = user;
+      const safeUser = redactUser(user);
       return jsonResponse(res, 200, { user: safeUser });
     }
 
@@ -1924,7 +2005,7 @@ const server = http.createServer(async (req, res) => {
       if (session.user.sellerType !== 'sirket') {
         return jsonResponse(res, 403, { error: 'Fatura taslağı sadece şirket/vergi mükellefi satıcılar için sunulur.' });
       }
-      const { id } = await readBody(req);
+      const { id, vatRate } = await readBody(req);
       const orders = readJson(PRODUCT_ORDERS_PATH, {});
       const order = orders[id];
       if (!order || order.sellerId !== session.user.id) return jsonResponse(res, 404, { error: 'Sipariş bulunamadı' });
@@ -1942,29 +2023,74 @@ const server = http.createServer(async (req, res) => {
       const unitPrice = product ? Number(String(product.price).replace(/[^\d.,]/g, '').replace(',', '.')) || 0 : null;
       const unit = product ? product.unit : '';
 
+      const sellerInfo = {
+        legalName: session.user.companyLegalName || session.user.businessInfo || session.user.name,
+        taxOffice: session.user.taxOffice || '',
+        taxId: session.user.taxId || '',
+        address: session.user.invoiceAddress || [session.user.neighborhood, session.user.district, session.user.city].filter(Boolean).join(' / '),
+        iban: session.user.iban || '',
+        phone: session.phone,
+      };
+      const buyerInfo = {
+        name: order.buyerName,
+        phone: order.buyerPhone,
+        address: order.address || [order.district, order.city].filter(Boolean).join(' / '),
+      };
+      const vatRateNum = [0, 1, 10, 20].includes(Number(vatRate)) ? Number(vatRate) : 10;
+      const lineTotal = unitPrice !== null ? Math.round(unitPrice * order.quantity * 100) / 100 : null;
+      const vatAmount = lineTotal !== null ? Math.round(lineTotal * (vatRateNum / 100) * 100) / 100 : null;
+      const itemInfo = {
+        title: order.productTitle,
+        quantity: order.quantity,
+        unit: unit || '',
+        unitPrice,
+        vatRate: vatRateNum,
+        lineTotal,
+        vatAmount,
+        grandTotal: lineTotal !== null ? Math.round((lineTotal + vatAmount) * 100) / 100 : null,
+      };
+
+      // Satıcı Hesap Ayarları'ndan bir e-Fatura entegratörü (şu an: Nilvera) bağladıysa,
+      // taslak yerine gerçek bir e-Arşiv fatura kesmeyi dener; başarısız olursa (ya da
+      // hiç bağlı değilse) mevcut yazdırılabilir taslak akışı sorunsuz devam eder —
+      // otomatik kesim "şart değil, kolaylık" (bkz. ilgili konuşma).
+      const rawUser = readJson(USERS_PATH, {})[session.phone];
+      let einvoiceError = null;
+      if (!order.providerInvoiceNo && rawUser && rawUser.einvoiceApiKey) {
+        const cutArgs = {
+          apiKey: rawUser.einvoiceApiKey, env: rawUser.einvoiceEnv || 'test',
+          invoiceNo: order.invoiceNo, issueDate: order.invoicedAt,
+          seller: sellerInfo, buyer: buyerInfo,
+          item: itemInfo,
+        };
+        // Testlerde gerçek Nilvera API'sine ağ isteği atmıyoruz (bkz. IS_TEST_ENV deseni,
+        // SMS OTP'de olduğu gibi) — sahte bir anahtarla deterministik olarak simüle ederiz.
+        const result = IS_TEST_ENV
+          ? (rawUser.einvoiceApiKey === 'FAIL_TEST_KEY'
+            ? { ok: false, error: 'Test: geçersiz API anahtarı.' }
+            : { ok: true, providerInvoiceNo: 'TEST-' + order.invoiceNo, pdfUrl: null })
+          : await cutNilveraArchiveInvoice(cutArgs);
+        if (result.ok) {
+          order.einvoiceProvider = 'nilvera';
+          order.providerInvoiceNo = result.providerInvoiceNo;
+          order.providerPdfUrl = result.pdfUrl;
+          order.einvoiceCutAt = new Date().toISOString();
+          writeJson(PRODUCT_ORDERS_PATH, orders);
+        } else {
+          einvoiceError = result.error;
+        }
+      }
+
       return jsonResponse(res, 200, {
         invoiceNo: order.invoiceNo,
         issuedAt: order.invoicedAt,
-        seller: {
-          legalName: session.user.companyLegalName || session.user.businessInfo || session.user.name,
-          taxOffice: session.user.taxOffice || '',
-          taxId: session.user.taxId || '',
-          address: session.user.invoiceAddress || [session.user.neighborhood, session.user.district, session.user.city].filter(Boolean).join(' / '),
-          iban: session.user.iban || '',
-          phone: session.phone,
-        },
-        buyer: {
-          name: order.buyerName,
-          phone: order.buyerPhone,
-          address: order.address || [order.district, order.city].filter(Boolean).join(' / '),
-        },
-        item: {
-          title: order.productTitle,
-          quantity: order.quantity,
-          unit: unit || '',
-          unitPrice,
-          lineTotal: unitPrice !== null ? Math.round(unitPrice * order.quantity * 100) / 100 : null,
-        },
+        seller: sellerInfo,
+        buyer: buyerInfo,
+        item: itemInfo,
+        einvoice: order.providerInvoiceNo
+          ? { provider: order.einvoiceProvider, providerInvoiceNo: order.providerInvoiceNo, pdfUrl: order.providerPdfUrl || null }
+          : null,
+        einvoiceError,
       });
     }
 
@@ -2274,7 +2400,10 @@ const server = http.createServer(async (req, res) => {
     if (p === '/api/auth/update-profile' && req.method === 'POST') {
       const session = requireAuth(req, res);
       if (!session) return;
-      const { name, city, district, neighborhood, email, iban, companyLegalName, taxOffice, invoiceAddress } = await readBody(req);
+      const {
+        name, city, district, neighborhood, email, iban, companyLegalName, taxOffice, invoiceAddress,
+        einvoiceApiKey, einvoiceEnv, einvoiceDisconnect,
+      } = await readBody(req);
       const cleanName = String(name || '').trim().slice(0, 60);
       const cleanCity = String(city || '').trim().slice(0, 60);
       if (cleanName.length < 2) return jsonResponse(res, 400, { error: 'Lütfen adını gir.' });
@@ -2313,8 +2442,24 @@ const server = http.createServer(async (req, res) => {
       if (companyLegalName !== undefined) user.companyLegalName = String(companyLegalName || '').trim().slice(0, 150);
       if (taxOffice !== undefined) user.taxOffice = String(taxOffice || '').trim().slice(0, 100);
       if (invoiceAddress !== undefined) user.invoiceAddress = String(invoiceAddress || '').trim().slice(0, 300);
+      // Otomatik e-Fatura entegratör bağlantısı (Nilvera) — anahtar alanı maskeli
+      // gösterildiğinden (bkz. redactUser) boş gönderilmesi "değiştirme" anlamına gelir;
+      // gerçekten kaldırmak için ayrı bir einvoiceDisconnect bayrağı gerekir.
+      if (einvoiceDisconnect) {
+        delete user.einvoiceApiKey;
+        delete user.einvoiceProvider;
+        delete user.einvoiceEnv;
+      } else {
+        if (einvoiceApiKey !== undefined && String(einvoiceApiKey).trim()) {
+          user.einvoiceApiKey = String(einvoiceApiKey).trim().slice(0, 300);
+          user.einvoiceProvider = 'nilvera';
+        }
+        if (einvoiceEnv !== undefined && ['test', 'live'].includes(einvoiceEnv)) {
+          user.einvoiceEnv = einvoiceEnv;
+        }
+      }
       writeJson(USERS_PATH, users);
-      const { passwordHash, ...safeUser } = user;
+      const safeUser = redactUser(user);
       return jsonResponse(res, 200, { user: safeUser });
     }
 
@@ -2329,7 +2474,7 @@ const server = http.createServer(async (req, res) => {
       if (!user) return jsonResponse(res, 404, { error: 'Hesap bulunamadı' });
       user.notifyPrefs = { sms: !!sms, email: !!email };
       writeJson(USERS_PATH, users);
-      const { passwordHash, ...safeUser } = user;
+      const safeUser = redactUser(user);
       return jsonResponse(res, 200, { user: safeUser });
     }
 
@@ -2346,7 +2491,7 @@ const server = http.createServer(async (req, res) => {
       if (!user) return jsonResponse(res, 404, { error: 'Hesap bulunamadı' });
       user.sellerDocUrl = clean;
       writeJson(USERS_PATH, users);
-      const { passwordHash, ...safeUser } = user;
+      const safeUser = redactUser(user);
       return jsonResponse(res, 200, { user: safeUser });
     }
 
@@ -2367,7 +2512,7 @@ const server = http.createServer(async (req, res) => {
       user.idDocUrl = clean;
       user.idDocConsentAt = new Date().toISOString();
       writeJson(USERS_PATH, users);
-      const { passwordHash, ...safeUser } = user;
+      const safeUser = redactUser(user);
       return jsonResponse(res, 200, { user: safeUser });
     }
 
@@ -3067,7 +3212,7 @@ const server = http.createServer(async (req, res) => {
       const users = readJson(USERS_PATH, {});
       const complaints = readJson(COMPLAINTS_PATH, {});
       const posts = readJson(POSTS_PATH, {});
-      const safeUsers = Object.values(users).map(({ passwordHash, ...u }) => u);
+      const safeUsers = Object.values(users).map(redactUser);
       return jsonResponse(res, 200, {
         products: Object.values(products),
         users: safeUsers,
@@ -3232,7 +3377,7 @@ const server = http.createServer(async (req, res) => {
           const ownSlugs = own.map((p) => p.slug);
           const openComplaints = complaintList.filter((c) => c.sellerId === u.id && c.status === 'open').length;
           const convoCount = convoList.filter((c) => ownSlugs.indexOf(c.productSlug) !== -1).length;
-          const { passwordHash, ...safeUser } = u;
+          const safeUser = redactUser(u);
           return Object.assign({}, safeUser, {
             productCount: own.length, openComplaints, convoCount,
           });
@@ -3258,7 +3403,7 @@ const server = http.createServer(async (req, res) => {
       };
       notifyUser(phone, 'seller_application', STATUS_MESSAGES[status]);
 
-      const { passwordHash, ...safeUser } = user;
+      const safeUser = redactUser(user);
       return jsonResponse(res, 200, { user: safeUser });
     }
 
@@ -3275,7 +3420,7 @@ const server = http.createServer(async (req, res) => {
       notifyUser(phone, 'seller_badge', user.verifiedSeller
         ? 'Tebrikler! Artık "Güvenilir Satıcı" rozetine sahipsin.'
         : 'Güvenilir Satıcı rozetin kaldırıldı.');
-      const { passwordHash, ...safeUser } = user;
+      const safeUser = redactUser(user);
       return jsonResponse(res, 200, { user: safeUser });
     }
 

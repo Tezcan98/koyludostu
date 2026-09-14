@@ -29,6 +29,13 @@
   .fat-total-row td{font-weight:800;font-size:15px;border-bottom:none;padding-top:14px;}
   .fat-foot{font-size:11px;color:#999;margin-top:20px;line-height:1.6;}
   .fat-empty{padding:40px;text-align:center;color:var(--muted);font-size:13px;}
+  .fat-vat-form{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px;}
+  .fat-vat-form label{font-size:12px;font-weight:700;color:var(--muted);display:block;margin-bottom:6px;}
+  .fat-vat-form select{padding:10px 12px;border-radius:10px;border:1.5px solid var(--line);font-family:inherit;font-size:14px;background:var(--bg);}
+  .fat-vat-form button{padding:10px 20px;border-radius:10px;background:var(--ink);color:#fff;border:none;font-size:13.5px;font-weight:700;cursor:pointer;font-family:inherit;}
+  .fat-einvoice-badge{display:inline-block;font-size:11px;font-weight:800;padding:4px 10px;border-radius:10px;margin-bottom:12px;}
+  .fat-einvoice-badge.ok{background:rgba(78,107,58,.12);color:var(--ring1);}
+  .fat-einvoice-badge.warn{background:rgba(200,60,60,.12);color:var(--ring3);}
   @media print {
     .topbar, .drawer, .drawer-overlay, .fat-toolbar, .fat-note { display:none !important; }
     body{background:#fff;}
@@ -73,7 +80,7 @@
     <a href="/admin-siparisler.html">← Siparişlere dön</a>
     <button type="button" class="fat-print-btn" id="printBtn">🖨️ Yazdır / PDF Kaydet</button>
   </div>
-  <div class="fat-note">Bu, resmî bir e-Fatura/e-Arşiv belgesi değildir — GİB entegratörü gerektirmeyen, kendi fatura kesim aracına (e-Fatura, e-Arşiv ya da matbu) girerken kullanabileceğin, bilgileri hazır doldurulmuş bir <b>taslaktır</b>.</div>
+  <div class="fat-note">Nilvera bağlıysa "Fatura Oluştur" gerçek bir e-Arşiv fatura kesmeyi dener; bağlı değilsen ya da kesim başarısız olursa, kendi fatura kesim aracına girerken kullanabileceğin, bilgileri hazır doldurulmuş bir <b>taslak</b> gösterilir.</div>
   <div id="fatBody"><div class="fat-empty">Yükleniyor…</div></div>
 </div>
 
@@ -94,50 +101,83 @@
     return new Date(iso).toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric' });
   }
 
-  window.KDAuth.authedFetch('/api/admin/product-orders/invoice', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ id: id }),
-  }).then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
-    .then(function (res) {
-      if (!res.ok || res.data.error) {
-        body.innerHTML = '<div class="fat-empty">' + window.KDAuth.esc(res.data.error || 'Fatura taslağı oluşturulamadı.') + '</div>';
-        return;
-      }
-      var d = res.data;
-      var qty = d.item.quantity + ' ' + (d.item.unit || 'adet').replace('/', '').trim();
-      body.innerHTML =
-        '<div class="fat-doc">' +
-          '<div class="fat-head">' +
-            '<h1>Fatura Taslağı</h1>' +
-            '<div class="fat-meta"><b>' + window.KDAuth.esc(d.invoiceNo) + '</b>' + fmtDate(d.issuedAt) + '</div>' +
+  function renderDoc(d) {
+    var qty = d.item.quantity + ' ' + (d.item.unit || 'adet').replace('/', '').trim();
+    var einvoiceBadge = d.einvoice
+      ? '<div class="fat-einvoice-badge ok">✅ Nilvera üzerinden gerçek e-Arşiv fatura kesildi — No: ' + window.KDAuth.esc(d.einvoice.providerInvoiceNo) + '</div>'
+      : (d.einvoiceError
+        ? '<div class="fat-einvoice-badge warn">⚠️ Otomatik kesim başarısız (' + window.KDAuth.esc(d.einvoiceError) + ') — aşağıdaki taslağı kullan</div>'
+        : '');
+    var pdfLink = d.einvoice && d.einvoice.pdfUrl
+      ? '<p style="margin-top:10px;"><a href="' + window.KDAuth.esc(d.einvoice.pdfUrl) + '" target="_blank">Nilvera PDF\'sini görüntüle →</a></p>' : '';
+    body.innerHTML =
+      einvoiceBadge +
+      '<div class="fat-doc">' +
+        '<div class="fat-head">' +
+          '<h1>' + (d.einvoice ? 'e-Arşiv Fatura' : 'Fatura Taslağı') + '</h1>' +
+          '<div class="fat-meta"><b>' + window.KDAuth.esc(d.einvoice ? d.einvoice.providerInvoiceNo : d.invoiceNo) + '</b>' + fmtDate(d.issuedAt) + '</div>' +
+        '</div>' +
+        '<div class="fat-parties">' +
+          '<div class="fat-party"><h2>Satıcı</h2>' +
+            '<p><b>' + window.KDAuth.esc(d.seller.legalName) + '</b></p>' +
+            (d.seller.taxOffice ? '<p>Vergi Dairesi: ' + window.KDAuth.esc(d.seller.taxOffice) + '</p>' : '') +
+            (d.seller.taxId ? '<p>Vergi No: ' + window.KDAuth.esc(d.seller.taxId) + '</p>' : '') +
+            (d.seller.address ? '<p>' + window.KDAuth.esc(d.seller.address) + '</p>' : '') +
+            '<p>Tel: ' + window.KDAuth.esc(window.KDAuth.fmtPhone(d.seller.phone)) + '</p>' +
+            (d.seller.iban ? '<p>IBAN: ' + window.KDAuth.esc(d.seller.iban) + '</p>' : '') +
           '</div>' +
-          '<div class="fat-parties">' +
-            '<div class="fat-party"><h2>Satıcı</h2>' +
-              '<p><b>' + window.KDAuth.esc(d.seller.legalName) + '</b></p>' +
-              (d.seller.taxOffice ? '<p>Vergi Dairesi: ' + window.KDAuth.esc(d.seller.taxOffice) + '</p>' : '') +
-              (d.seller.taxId ? '<p>Vergi No: ' + window.KDAuth.esc(d.seller.taxId) + '</p>' : '') +
-              (d.seller.address ? '<p>' + window.KDAuth.esc(d.seller.address) + '</p>' : '') +
-              '<p>Tel: ' + window.KDAuth.esc(window.KDAuth.fmtPhone(d.seller.phone)) + '</p>' +
-              (d.seller.iban ? '<p>IBAN: ' + window.KDAuth.esc(d.seller.iban) + '</p>' : '') +
-            '</div>' +
-            '<div class="fat-party"><h2>Alıcı</h2>' +
-              '<p><b>' + window.KDAuth.esc(d.buyer.name) + '</b></p>' +
-              (d.buyer.address ? '<p>' + window.KDAuth.esc(d.buyer.address) + '</p>' : '') +
-              '<p>Tel: ' + window.KDAuth.esc(window.KDAuth.fmtPhone(d.buyer.phone)) + '</p>' +
-            '</div>' +
+          '<div class="fat-party"><h2>Alıcı</h2>' +
+            '<p><b>' + window.KDAuth.esc(d.buyer.name) + '</b></p>' +
+            (d.buyer.address ? '<p>' + window.KDAuth.esc(d.buyer.address) + '</p>' : '') +
+            '<p>Tel: ' + window.KDAuth.esc(window.KDAuth.fmtPhone(d.buyer.phone)) + '</p>' +
           '</div>' +
-          '<table class="fat-items">' +
-            '<thead><tr><th>Ürün</th><th class="num">Miktar</th><th class="num">Birim Fiyat</th><th class="num">Tutar</th></tr></thead>' +
-            '<tbody>' +
-              '<tr><td>' + window.KDAuth.esc(d.item.title) + '</td><td class="num">' + window.KDAuth.esc(qty) + '</td>' +
-              '<td class="num">' + fmtMoney(d.item.unitPrice) + '</td><td class="num">' + fmtMoney(d.item.lineTotal) + '</td></tr>' +
-              '<tr class="fat-total-row"><td colspan="3">Toplam</td><td class="num">' + fmtMoney(d.item.lineTotal) + '</td></tr>' +
-            '</tbody>' +
-          '</table>' +
-          '<div class="fat-foot">Bu taslak Köylü Dostu platformundaki sipariş kayıtlarına göre otomatik oluşturulmuştur; KDV ve diğer yasal unsurları kendi fatura kesim aracında tamamlaman gerekir. Fiyat, platformdaki güncel ürün fiyatına göre hesaplanmıştır.</div>' +
-        '</div>';
-    })
-    .catch(function () { body.innerHTML = '<div class="fat-empty">Bağlantı hatası, tekrar dene.</div>'; });
+        '</div>' +
+        '<table class="fat-items">' +
+          '<thead><tr><th>Ürün</th><th class="num">Miktar</th><th class="num">Birim Fiyat</th><th class="num">KDV Hariç</th></tr></thead>' +
+          '<tbody>' +
+            '<tr><td>' + window.KDAuth.esc(d.item.title) + '</td><td class="num">' + window.KDAuth.esc(qty) + '</td>' +
+            '<td class="num">' + fmtMoney(d.item.unitPrice) + '</td><td class="num">' + fmtMoney(d.item.lineTotal) + '</td></tr>' +
+            '<tr><td colspan="3">KDV (%' + d.item.vatRate + ')</td><td class="num">' + fmtMoney(d.item.vatAmount) + '</td></tr>' +
+            '<tr class="fat-total-row"><td colspan="3">Genel Toplam</td><td class="num">' + fmtMoney(d.item.grandTotal) + '</td></tr>' +
+          '</tbody>' +
+        '</table>' +
+        pdfLink +
+        '<div class="fat-foot">' + (d.einvoice
+          ? 'Bu fatura Nilvera e-Arşiv altyapısı üzerinden gerçek olarak kesilmiştir.'
+          : 'Bu taslak Köylü Dostu platformundaki sipariş kayıtlarına göre otomatik oluşturulmuştur; kendi fatura kesim aracında tamamlaman gerekir.') +
+        ' Fiyat, platformdaki güncel ürün fiyatına göre hesaplanmıştır.</div>' +
+      '</div>';
+  }
+
+  function cutInvoice(vatRate) {
+    body.innerHTML = '<div class="fat-empty">Oluşturuluyor…</div>';
+    window.KDAuth.authedFetch('/api/admin/product-orders/invoice', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: id, vatRate: vatRate }),
+    }).then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
+      .then(function (res) {
+        if (!res.ok || res.data.error) {
+          body.innerHTML = '<div class="fat-empty">' + window.KDAuth.esc(res.data.error || 'Fatura oluşturulamadı.') + '</div>';
+          return;
+        }
+        renderDoc(res.data);
+      })
+      .catch(function () { body.innerHTML = '<div class="fat-empty">Bağlantı hatası, tekrar dene.</div>'; });
+  }
+
+  body.innerHTML =
+    '<div class="fat-vat-form">' +
+      '<div><label for="vatRateSelect">KDV Oranı</label>' +
+        '<select id="vatRateSelect">' +
+          '<option value="1">%1</option><option value="10" selected>%10</option>' +
+          '<option value="20">%20</option><option value="0">%0 (istisna)</option>' +
+        '</select>' +
+      '</div>' +
+      '<button type="button" id="cutBtn">Fatura Oluştur</button>' +
+    '</div>';
+  document.getElementById('cutBtn').addEventListener('click', function () {
+    cutInvoice(parseInt(document.getElementById('vatRateSelect').value, 10));
+  });
 
   document.getElementById('printBtn').addEventListener('click', function () { window.print(); });
 })();

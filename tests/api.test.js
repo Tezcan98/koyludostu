@@ -2254,6 +2254,8 @@ describe('Şirket satıcı için fatura taslağı', () => {
     assert.equal(first.buyer.name, buyer.user.name);
     assert.equal(first.item.unitPrice, 100);
     assert.equal(first.item.lineTotal, 100);
+    assert.equal(first.einvoice, null);
+    assert.equal(first.einvoiceError, null);
 
     const second = await fetch(url('/api/admin/product-orders/invoice'), {
       method: 'POST', headers: authHeaders(seller.token), body: JSON.stringify({ id: order.id }),
@@ -2272,5 +2274,76 @@ describe('Şirket satıcı için fatura taslağı', () => {
       method: 'POST', headers: authHeaders(otherSeller.token), body: JSON.stringify({ id: order.id }),
     });
     assert.equal(r.status, 404);
+  });
+});
+
+describe('Nilvera e-Fatura entegratör bağlantısı', () => {
+  test('bağlanan API anahtarı hiçbir zaman istemciye dönmez, sadece einvoiceConnected görünür', async () => {
+    const seller = await newCompanySeller('Nilvera Gizlilik');
+    const saved = await fetch(url('/api/auth/update-profile'), {
+      method: 'POST', headers: authHeaders(seller.token),
+      body: JSON.stringify({ name: seller.user.name, city: 'Test Şehir', einvoiceApiKey: 'gizli-api-anahtari', einvoiceEnv: 'test' }),
+    }).then((r) => r.json());
+    assert.equal(saved.user.einvoiceConnected, true);
+    assert.equal(saved.user.einvoiceApiKey, undefined);
+
+    const me = await fetch(url('/api/auth/me'), { headers: authHeaders(seller.token) }).then((r) => r.json());
+    assert.equal(me.user.einvoiceConnected, true);
+    assert.equal(me.user.einvoiceApiKey, undefined);
+  });
+
+  test('einvoiceDisconnect bağlantıyı kaldırır', async () => {
+    const seller = await newCompanySeller('Nilvera Disconnect');
+    await fetch(url('/api/auth/update-profile'), {
+      method: 'POST', headers: authHeaders(seller.token),
+      body: JSON.stringify({ name: seller.user.name, city: 'Test Şehir', einvoiceApiKey: 'gizli-api-anahtari' }),
+    });
+    const after = await fetch(url('/api/auth/update-profile'), {
+      method: 'POST', headers: authHeaders(seller.token),
+      body: JSON.stringify({ name: seller.user.name, city: 'Test Şehir', einvoiceDisconnect: true }),
+    }).then((r) => r.json());
+    assert.equal(after.user.einvoiceConnected, false);
+  });
+
+  test('bağlı satıcı için fatura kesimi otomatik olarak Nilvera üzerinden denenir (test ortamında simüle edilir)', async () => {
+    const seller = await newCompanySeller('Nilvera Bağlı');
+    await fetch(url('/api/auth/update-profile'), {
+      method: 'POST', headers: authHeaders(seller.token),
+      body: JSON.stringify({ name: seller.user.name, city: 'Test Şehir', einvoiceApiKey: 'sahte-gecerli-anahtar', einvoiceEnv: 'test' }),
+    });
+    const buyer = await newBuyer('Nilvera Alıcı 1');
+    const product = await createProduct(seller.token, { price: '50', unit: '/ kg' });
+    const order = await completePurchase(buyer.token, seller.token, product.slug);
+
+    const first = await fetch(url('/api/admin/product-orders/invoice'), {
+      method: 'POST', headers: authHeaders(seller.token), body: JSON.stringify({ id: order.id, vatRate: 10 }),
+    }).then((r) => r.json());
+    assert.equal(first.einvoiceError, null);
+    assert.equal(first.einvoice.provider, 'nilvera');
+    assert.match(first.einvoice.providerInvoiceNo, /^TEST-/);
+
+    // Aynı sipariş için tekrar istenince tekrar Nilvera'ya gitmez, kaydedileni döner.
+    const second = await fetch(url('/api/admin/product-orders/invoice'), {
+      method: 'POST', headers: authHeaders(seller.token), body: JSON.stringify({ id: order.id }),
+    }).then((r) => r.json());
+    assert.equal(second.einvoice.providerInvoiceNo, first.einvoice.providerInvoiceNo);
+  });
+
+  test('Nilvera bağlantısı başarısız olursa taslak akışı bozulmadan devam eder', async () => {
+    const seller = await newCompanySeller('Nilvera Başarısız');
+    await fetch(url('/api/auth/update-profile'), {
+      method: 'POST', headers: authHeaders(seller.token),
+      body: JSON.stringify({ name: seller.user.name, city: 'Test Şehir', einvoiceApiKey: 'FAIL_TEST_KEY', einvoiceEnv: 'test' }),
+    });
+    const buyer = await newBuyer('Nilvera Alıcı 2');
+    const product = await createProduct(seller.token, { price: '50', unit: '/ kg' });
+    const order = await completePurchase(buyer.token, seller.token, product.slug);
+
+    const r = await fetch(url('/api/admin/product-orders/invoice'), {
+      method: 'POST', headers: authHeaders(seller.token), body: JSON.stringify({ id: order.id }),
+    }).then((r) => r.json());
+    assert.equal(r.einvoice, null);
+    assert.ok(r.einvoiceError);
+    assert.match(r.invoiceNo, /^\d{4}\/\d{6}$/);
   });
 });
