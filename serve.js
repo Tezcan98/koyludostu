@@ -1633,6 +1633,13 @@ const server = http.createServer(async (req, res) => {
       const { phone } = await readBody(req);
       const norm = normalizePhone(phone);
       if (norm.length !== 10) return jsonResponse(res, 400, { error: 'Geçerli bir telefon numarası girin (5XX XXX XX XX)' });
+      // Kayıt akışında kullanılıyor (bkz. çağıranlar) — telefon zaten kayıtlıysa SMS
+      // göndermeden en baştan reddet; aksi halde kullanıcı kodu girene kadar (bkz.
+      // /api/auth/verify) bunu öğrenemezdi, boşuna bir SMS kodu almış/girmiş olurdu.
+      const existingUsers = readJson(USERS_PATH, {});
+      if (existingUsers[norm]) {
+        return jsonResponse(res, 400, { error: 'Bu telefon numarası zaten kayıtlı. Giriş Yap sekmesinden devam et.' });
+      }
       const code = generateSmsCode();
       pendingCodes.set(norm, { code, at: Date.now(), attempts: 0 });
       // Kod ASLA API yanıtında istemciye dönülmez — sadece konsola yazılır (gerçek bir

@@ -1083,6 +1083,28 @@ describe('Kullanıcı senaryosu: satıcı token\'ıyla yönetici uçlarına eri�
   });
 });
 
+describe('Kayıt: telefon numarası zaten kayıtlıysa erken hata', () => {
+  test('SMS kodu gönderilmeden önce telefonun zaten kayıtlı olduğu bildirilir', async () => {
+    const existing = await newBuyer('Zaten Kayıtlı');
+    const r = await fetch(url('/api/auth/request-code'), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: existing.phone }),
+    });
+    const data = await r.json();
+    assert.equal(r.status, 400);
+    assert.match(data.error, /zaten kayıtlı/);
+  });
+
+  test('kayıtlı olmayan bir telefon için kod normal şekilde gönderilir', async () => {
+    const phone = nextTestPhone();
+    const r = await fetch(url('/api/auth/request-code'), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone }),
+    });
+    assert.equal(r.status, 200);
+  });
+});
+
 describe('Kayıt: il/ilçe/mahalle', () => {
   test('kayıt sırasında ilçe ve mahalle saklanır', async () => {
     const buyer = await newBuyer('Adres Testi');

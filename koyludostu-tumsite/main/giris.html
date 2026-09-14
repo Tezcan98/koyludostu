@@ -246,6 +246,7 @@
     </div>
     <p class="auth-error" id="codeError"></p>
     <button class="auth-btn" id="verifyBtn">Doğrula ve Hesabı Oluştur</button>
+    <a class="auth-back" id="resendCodeBtn">Kodu tekrar gönder</a>
     <a class="auth-back" id="backBtn">← Numarayı değiştir</a>
   </div>
 </div>
@@ -302,10 +303,45 @@
   var params = new URLSearchParams(location.search);
   var explicitRedirect = params.get('sonra');
 
+  // Kayıt sırasında sayfa kapanır/yenilenirse (ör. SMS kodu gelmeden önce) formu baştan
+  // doldurmak zorunda kalmasın diye regToken + telefonu localStorage'a kaydediyoruz —
+  // regToken tek kullanımlık, kısa ömürlü (15 dk, bkz. REGISTER_TTL) bir işaretçi,
+  // gizli bir bilgi taşımıyor. Süresi geçmişse ya da sunucu yeniden başlamışsa zaten
+  // verify() adımında net bir hatayla "baştan başla" durumuna düşer (aşağıda ele alınır).
+  var PENDING_REG_KEY = 'kd_pending_reg';
+  var PENDING_REG_TTL_MS = 15 * 60 * 1000;
+  function savePendingReg() {
+    try {
+      localStorage.setItem(PENDING_REG_KEY, JSON.stringify({ regToken: regToken, phone: currentPhone, savedAt: Date.now() }));
+    } catch (e) { /* localStorage kapalı olabilir, sorun değil */ }
+  }
+  function clearPendingReg() {
+    try { localStorage.removeItem(PENDING_REG_KEY); } catch (e) { /* yok say */ }
+  }
+  function loadPendingReg() {
+    try {
+      var raw = localStorage.getItem(PENDING_REG_KEY);
+      if (!raw) return null;
+      var data = JSON.parse(raw);
+      if (!data.regToken || Date.now() - data.savedAt > PENDING_REG_TTL_MS) { clearPendingReg(); return null; }
+      return data;
+    } catch (e) { return null; }
+  }
+
   function showRegisterFlow() {
     tabLoginBtn.classList.remove('active');
     tabRegisterBtn.classList.add('active');
     tabLogin.hidden = true;
+    var pending = loadPendingReg();
+    if (pending && pending.phone) {
+      regToken = pending.regToken;
+      currentPhone = pending.phone;
+      phoneInput.value = pending.phone;
+      phoneError.textContent = '';
+      codeSubText.textContent = 'Yarım kalan kaydın var — devam etmek için kodu tekrar gönder.';
+      goRegStep('phone');
+      return;
+    }
     goRegStep('info');
   }
   function showLoginFlow() {
@@ -634,16 +670,18 @@
     }).then(function (r) { return r.json(); }).then(function (data) {
       if (data.error) { infoError.textContent = data.error; return; }
       regToken = data.regToken;
+      savePendingReg();
       goRegStep('phone');
     }).catch(function () { infoError.textContent = 'Bağlantı hatası, tekrar deneyin.'; });
   });
 
-  // ---- Üye Ol adım 2: telefon ----
-  document.getElementById('sendCodeBtn').addEventListener('click', function () {
+  // ---- Üye Ol adım 2: telefon (kod gönder / tekrar gönder ortak) ----
+  function sendCode(onDone) {
     phoneError.textContent = '';
     var digitsOnly = phoneInput.value.replace(/\D/g, '');
     if (digitsOnly.length < 10) { phoneError.textContent = 'Lütfen geçerli bir telefon numarası girin.'; return; }
     currentPhone = phoneInput.value;
+    savePendingReg();
     fetch('/api/auth/request-code', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ phone: currentPhone }),
@@ -652,8 +690,10 @@
       codeSubText.textContent = currentPhone + ' numarasına gelen 4 haneli kodu gir.';
       goRegStep('code');
       digits[0].focus();
+      if (onDone) onDone();
     }).catch(function () { phoneError.textContent = 'Bağlantı hatası, tekrar deneyin.'; });
-  });
+  }
+  document.getElementById('sendCodeBtn').addEventListener('click', function () { sendCode(); });
 
   digits.forEach(function (input, i) {
     input.addEventListener('input', function () {
@@ -676,10 +716,24 @@
     }).then(function (r) { return r.json(); }).then(function (data) {
       if (data.error) {
         codeError.textContent = data.error;
+        // Kayıt bilgilerinin süresi dolmuşsa (sunucu yeniden başlamış ya da 15 dk geçmişse)
+        // burada takılı kalmasınlar diye baştan başlatıyoruz.
+        if (/süresi doldu/.test(data.error)) {
+          clearPendingReg();
+          regToken = '';
+          setTimeout(function () { goRegStep('info'); }, 1500);
+        }
         return;
       }
+      clearPendingReg();
       finishLogin(data);
     }).catch(function () { codeError.textContent = 'Bağlantı hatası, tekrar deneyin.'; });
+  });
+
+  // ---- Kodu tekrar gönder (kod süresi dolmuşsa ya da hiç gelmediyse) ----
+  document.getElementById('resendCodeBtn').addEventListener('click', function () {
+    codeError.textContent = '';
+    sendCode(function () { codeError.textContent = 'Yeni kod gönderildi.'; });
   });
 })();
 </script>
