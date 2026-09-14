@@ -865,8 +865,14 @@ const MAX_CODE_ATTEMPTS = 5;
 // şeyi doğrulamamış olurdu: kod her zaman '0000' olduğu ve bu public repo'da görülebildiği
 // için biri kendisine ait olmayan bir telefon numarasıyla hesap açabilir/doğrulayabilirdi.
 const IS_TEST_ENV = !!process.env.KD_DATA_DIR;
+// GEÇİCİ: Henüz gerçek bir SMS sağlayıcısı (Netgsm, Twilio vb.) bağlanmadığı için üretimde
+// de sabit '0000' kullanılması istendi — aksi halde kimse kayıt/giriş yapamaz çünkü kodu
+// hiçbir yere alamıyor. SMS_NOT_CONNECTED=1 KALDIRILMADIĞI SÜRECE telefon doğrulaması
+// GÜVENLİK SAĞLAMAZ (herkes başkasının numarasıyla hesap açabilir/giriş yapabilir) — bir
+// SMS sağlayıcısı bağlanır bağlanmaz bu env değişkeni sunucudan kaldırılmalı.
+const SMS_NOT_CONNECTED = !!process.env.SMS_NOT_CONNECTED;
 function generateSmsCode() {
-  return IS_TEST_ENV ? DEV_CODE : String(crypto.randomInt(0, 10000)).padStart(4, '0');
+  return (IS_TEST_ENV || SMS_NOT_CONNECTED) ? DEV_CODE : String(crypto.randomInt(0, 10000)).padStart(4, '0');
 }
 const VALID_ROLES = ['alici', 'satici'];
 
