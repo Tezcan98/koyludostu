@@ -2070,3 +2070,50 @@ describe('Telefon/e-posta ile giriş ve şifremi unuttum', () => {
     assert.equal(afterMe.user, null); // eski token artık geçersiz
   });
 });
+
+describe('Kayıt sırasında opsiyonel e-posta', () => {
+  test('kayıt sırasında e-posta eklenirse hesapta saklanır ve o e-postayla giriş yapılabilir', async () => {
+    const phone = nextTestPhone();
+    const reg = await registerUser(server.baseUrl, {
+      name: 'Kayıtta Email Veren', email: 'kayitta-email@example.com', city: 'Test Şehir', password: 'test1234', role: 'alici', phone,
+    });
+    assert.equal(reg.user.email, 'kayitta-email@example.com');
+
+    const byEmail = await fetch(url('/api/auth/login'), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ identifier: 'kayitta-email@example.com', password: 'test1234' }),
+    }).then((r) => r.json());
+    assert.ok(byEmail.token);
+  });
+
+  test('kayıt sırasında e-posta boş bırakılabilir', async () => {
+    const buyer = await newBuyer('Emailsiz Kayit');
+    assert.equal(buyer.user.email, '');
+  });
+
+  test('kayıt sırasında geçersiz formatlı e-posta reddedilir', async () => {
+    const phone = nextTestPhone();
+    const r = await fetch(url('/api/auth/register-start'), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: 'Bozuk Email', email: 'gecersiz-email', city: 'Test Şehir', district: 'Test İlçe',
+        password: 'test1234', role: 'alici', termsAccepted: true,
+      }),
+    });
+    assert.equal(r.status, 400);
+  });
+
+  test('kayıt sırasında başka bir hesapta kayıtlı e-posta reddedilir', async () => {
+    await registerUser(server.baseUrl, {
+      name: 'İlk Sahip', email: 'cakisan@example.com', city: 'Test Şehir', password: 'test1234', role: 'alici', phone: nextTestPhone(),
+    });
+    const r = await fetch(url('/api/auth/register-start'), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: 'İkinci Deneme', email: 'cakisan@example.com', city: 'Test Şehir', district: 'Test İlçe',
+        password: 'test1234', role: 'alici', termsAccepted: true,
+      }),
+    });
+    assert.equal(r.status, 400);
+  });
+});

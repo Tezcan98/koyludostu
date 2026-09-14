@@ -71,11 +71,11 @@ function nextTestPhone() {
   return '555' + String(1000000 + seq).slice(-7);
 }
 
-async function registerUser(baseUrl, { name, city, district, neighborhood, password, role, phone, businessInfo, taxId, iban }) {
+async function registerUser(baseUrl, { name, email, city, district, neighborhood, password, role, phone, businessInfo, taxId, iban }) {
   const reg = await fetch(baseUrl + '/api/auth/register-start', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      name, city, district: district || 'Test İlçe', neighborhood: neighborhood || '',
+      name, email, city, district: district || 'Test İlçe', neighborhood: neighborhood || '',
       password, role, termsAccepted: true, businessInfo,
       taxId: role === 'satici' ? (taxId || '12345678901') : undefined,
       iban: role === 'satici' ? (iban || 'TR330006100519786457841326') : undefined,

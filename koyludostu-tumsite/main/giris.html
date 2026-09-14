@@ -115,6 +115,11 @@
       <input type="text" id="nameInput" name="kd-name-field" autocomplete="off">
     </div>
     <div class="auth-field">
+      <label for="emailInput">E-posta (opsiyonel)</label>
+      <input type="email" id="emailInput" name="kd-email-field" autocomplete="email">
+      <p style="font-size:11.5px;color:var(--muted);margin:6px 0 0;">Girersen, şifreni unutursan ya da telefon yerine e-postayla giriş yapmak istersen kullanabilirsin.</p>
+    </div>
+    <div class="auth-field">
       <label for="cityInput">İl</label>
       <select id="cityInput" name="kd-city-field" autocomplete="off"><option value="">Yükleniyor…</option></select>
     </div>
@@ -529,12 +534,14 @@
   document.getElementById('infoNextBtn').addEventListener('click', function () {
     infoError.textContent = '';
     var name = document.getElementById('nameInput').value.trim();
+    var email = document.getElementById('emailInput').value.trim();
     var city = document.getElementById('cityInput').value.trim();
     var district = document.getElementById('districtInput').value.trim();
     var neighborhood = document.getElementById('neighborhoodInput').value.trim();
     var pass = document.getElementById('passInput').value;
     var pass2 = document.getElementById('passInput2').value;
     if (name.length < 2) { infoError.textContent = 'Lütfen adını ve soyadını gir.'; return; }
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { infoError.textContent = 'Geçerli bir e-posta adresi gir ya da boş bırak.'; return; }
     if (city.length < 2) { infoError.textContent = 'Lütfen şehrini gir.'; return; }
     if (district.length < 2) { infoError.textContent = 'Lütfen ilçeni gir.'; return; }
     var passOk = pass.length >= 8 && /[a-zA-Z]/.test(pass) && /[0-9]/.test(pass);
@@ -566,7 +573,7 @@
     fetch('/api/auth/register-start', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        name: name, city: city, district: district, neighborhood: neighborhood,
+        name: name, email: email, city: city, district: district, neighborhood: neighborhood,
         password: pass, role: selectedRole, termsAccepted: true, businessInfo: businessInfo, taxId: taxId, iban: iban,
         sellerType: selectedRole === 'satici' ? selectedSellerType : '',
         idDocDataUrl: selectedRole === 'satici' ? idDocDataUrl : '', idDocConsent: idDocConsent,

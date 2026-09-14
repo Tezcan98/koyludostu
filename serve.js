@@ -1390,13 +1390,25 @@ const server = http.createServer(async (req, res) => {
     // ---------- Auth: önce üyelik bilgileri (ad+şehir+parola), sonra telefon SMS onayı ----------
 
     if (p === '/api/auth/register-start' && req.method === 'POST') {
-      const { name, city, district, neighborhood, password, role, termsAccepted, businessInfo, taxId, iban, idDocDataUrl, idDocConsent, sellerType, idDocOcrTaxId } = await readBody(req);
+      const { name, email, city, district, neighborhood, password, role, termsAccepted, businessInfo, taxId, iban, idDocDataUrl, idDocConsent, sellerType, idDocOcrTaxId } = await readBody(req);
       const cleanName = String(name || '').trim().slice(0, 60);
+      const cleanEmail = String(email || '').trim().slice(0, 120);
       const cleanCity = String(city || '').trim().slice(0, 60);
       const cleanDistrict = String(district || '').trim().slice(0, 60);
       const cleanNeighborhood = String(neighborhood || '').trim().slice(0, 80);
       const pass = String(password || '');
       if (cleanName.length < 2) return jsonResponse(res, 400, { error: 'Lütfen adını gir.' });
+      // E-posta tamamen opsiyoneldir (SMS zaten kimlik doğrulaması için zorunlu) — ama
+      // eklenmek isteniyorsa hem doğru formatlı hem de tekil olmalı, çünkü e-postayla da
+      // giriş yapılabiliyor (bkz. /api/auth/login) ve iki hesap aynı e-postayı paylaşamaz.
+      if (cleanEmail) {
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+          return jsonResponse(res, 400, { error: 'Geçerli bir e-posta adresi gir ya da boş bırak.' });
+        }
+        if (findUserByEmail(cleanEmail)) {
+          return jsonResponse(res, 400, { error: 'Bu e-posta adresi başka bir hesapta kayıtlı.' });
+        }
+      }
       if (cleanCity.length < 2) return jsonResponse(res, 400, { error: 'Lütfen şehrini gir.' });
       if (cleanDistrict.length < 2) return jsonResponse(res, 400, { error: 'Lütfen ilçeni gir.' });
       if (!isValidPassword(pass)) return jsonResponse(res, 400, { error: 'Parola en az 8 karakter olmalı, en az bir harf ve bir rakam içermeli.' });
@@ -1449,7 +1461,7 @@ const server = http.createServer(async (req, res) => {
 
       const regToken = randomToken();
       pendingRegs.set(regToken, {
-        name: cleanName, city: cleanCity, district: cleanDistrict, neighborhood: cleanNeighborhood,
+        name: cleanName, email: cleanEmail, city: cleanCity, district: cleanDistrict, neighborhood: cleanNeighborhood,
         passwordHash: hashPassword(pass), role,
         businessInfo: cleanBusinessInfo, taxId: role === 'satici' ? cleanTaxId : '',
         sellerType: role === 'satici' ? cleanSellerType : '',
@@ -1503,6 +1515,11 @@ const server = http.createServer(async (req, res) => {
       if (!pendingReg || now - pendingReg.at > REGISTER_TTL) {
         return jsonResponse(res, 400, { error: 'Kayıt bilgilerinin süresi doldu. Lütfen baştan başla.' });
       }
+      // register-start ile verify arasındaki (en fazla REGISTER_TTL kadar) sürede başka
+      // biri aynı e-postayla kayıt olmuş olabilir — burada tekrar kontrol ediyoruz.
+      if (pendingReg.email && findUserByEmail(pendingReg.email)) {
+        return jsonResponse(res, 400, { error: 'Bu e-posta adresi başka bir hesapta kayıtlı. Lütfen baştan başla.' });
+      }
 
       // Kimlik belgesi varsa hesap oluşturulurken diske yazılır (kayıt sırasında henüz
       // oturum yoktu, dosya register-start'tan beri sadece bellekte bekliyordu).
@@ -1519,7 +1536,7 @@ const server = http.createServer(async (req, res) => {
 
       users[norm] = {
         id: 'u_' + randomToken().slice(0, 10), phone: norm,
-        name: pendingReg.name, city: pendingReg.city, district: pendingReg.district,
+        name: pendingReg.name, email: pendingReg.email || '', city: pendingReg.city, district: pendingReg.district,
         neighborhood: pendingReg.neighborhood || '', passwordHash: pendingReg.passwordHash, role: pendingReg.role,
         termsAcceptedAt: pendingReg.termsAcceptedAt,
         createdAt: new Date().toISOString(),
