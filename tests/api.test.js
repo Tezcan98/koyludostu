@@ -108,7 +108,7 @@ async function completePurchase(buyerToken, sellerToken, productSlug) {
   const order = await fetch(url('/api/product-orders'), {
     method: 'POST', headers: authHeaders(buyerToken),
     body: JSON.stringify({
-      productSlug, quantity: 1, city: 'Test Şehir', district: 'Test İlçe', termsAccepted: true,
+      productSlug, quantity: 1, city: 'Test Şehir', district: 'Test İlçe', address: 'Test Mah. No:1', termsAccepted: true,
     }),
   }).then((r) => r.json());
   await fetch(url('/api/admin/product-orders/update'), {
@@ -1318,7 +1318,7 @@ describe('Admin: satıcı IBAN/tür düzenleme', () => {
     const product = await createProduct(seller.token, {});
     const order = await fetch(url('/api/product-orders'), {
       method: 'POST', headers: authHeaders(buyer.token),
-      body: JSON.stringify({ productSlug: product.slug, quantity: 1, city: 'Test Şehir', district: 'Test İlçe', termsAccepted: true }),
+      body: JSON.stringify({ productSlug: product.slug, quantity: 1, city: 'Test Şehir', district: 'Test İlçe', address: 'Test Mah. No:1', termsAccepted: true }),
     }).then((r) => r.json());
 
     // newSeller() varsayılan olarak sabit bir test IBAN'ı ile kayıt olur (satıcı kaydında
@@ -1405,6 +1405,14 @@ describe('Ürün siparişleri (Siparişlerim): oluşturma, takip, durum güncell
     });
     assert.equal(missingCity.status, 400);
 
+    const missingAddress = await fetch(url('/api/product-orders'), {
+      method: 'POST', headers: authHeaders(buyer.token),
+      body: JSON.stringify({ productSlug: product.slug, quantity: 2, city: 'İzmir', district: 'Konak', termsAccepted: true }),
+    });
+    const missingAddressBody = await missingAddress.json();
+    assert.equal(missingAddress.status, 400);
+    assert.match(missingAddressBody.error, /adres/i);
+
     const order = await fetch(url('/api/product-orders'), {
       method: 'POST', headers: authHeaders(buyer.token),
       body: JSON.stringify({
@@ -1433,7 +1441,7 @@ describe('Ürün siparişleri (Siparişlerim): oluşturma, takip, durum güncell
 
     const order = await fetch(url('/api/product-orders'), {
       method: 'POST', headers: authHeaders(buyer.token),
-      body: JSON.stringify({ productSlug: product.slug, quantity: 1, city: 'Manisa', district: 'Şehzadeler', termsAccepted: true }),
+      body: JSON.stringify({ productSlug: product.slug, quantity: 1, city: 'Manisa', district: 'Şehzadeler', address: 'Test Mah. No:1', termsAccepted: true }),
     }).then((r) => r.json());
 
     const wrongSeller = await fetch(url('/api/admin/product-orders/update'), {
@@ -1477,7 +1485,7 @@ describe('Sipariş fotoğraf doğrulaması (opsiyonel): gönderim ve teslim alma
 
     const order = await fetch(url('/api/product-orders'), {
       method: 'POST', headers: authHeaders(buyer.token),
-      body: JSON.stringify({ productSlug: product.slug, quantity: 1, city: 'Bursa', district: 'Nilüfer', termsAccepted: true }),
+      body: JSON.stringify({ productSlug: product.slug, quantity: 1, city: 'Bursa', district: 'Nilüfer', address: 'Test Mah. No:1', termsAccepted: true }),
     }).then((r) => r.json());
 
     // fotoğrafsız güncelleme hâlâ çalışmalı (opsiyonel olduğu için zorunlu değil)
@@ -1506,7 +1514,7 @@ describe('Sipariş fotoğraf doğrulaması (opsiyonel): gönderim ve teslim alma
 
     const order = await fetch(url('/api/product-orders'), {
       method: 'POST', headers: authHeaders(buyer.token),
-      body: JSON.stringify({ productSlug: product.slug, quantity: 1, city: 'Konya', district: 'Selçuklu', termsAccepted: true }),
+      body: JSON.stringify({ productSlug: product.slug, quantity: 1, city: 'Konya', district: 'Selçuklu', address: 'Test Mah. No:1', termsAccepted: true }),
     }).then((r) => r.json());
 
     const wrongBuyer = await fetch(url('/api/product-orders/confirm-receipt'), {
@@ -1533,7 +1541,7 @@ describe('Sipariş fotoğraf doğrulaması (opsiyonel): gönderim ve teslim alma
     const buyer = await newBuyer('Geçersiz Foto Alıcı');
     const order = await fetch(url('/api/product-orders'), {
       method: 'POST', headers: authHeaders(buyer.token),
-      body: JSON.stringify({ productSlug: product.slug, quantity: 1, city: 'Trabzon', district: 'Ortahisar', termsAccepted: true }),
+      body: JSON.stringify({ productSlug: product.slug, quantity: 1, city: 'Trabzon', district: 'Ortahisar', address: 'Test Mah. No:1', termsAccepted: true }),
     }).then((r) => r.json());
 
     const bad = await fetch(url('/api/admin/product-orders/update'), {
@@ -1580,7 +1588,7 @@ describe('Satıcı IBAN\'ı ve "ödemeyi gönderdim" öz-bildirimi', () => {
 
     const order = await fetch(url('/api/product-orders'), {
       method: 'POST', headers: authHeaders(buyer.token),
-      body: JSON.stringify({ productSlug: product.slug, quantity: 1, city: 'Ankara', district: 'Çankaya', termsAccepted: true }),
+      body: JSON.stringify({ productSlug: product.slug, quantity: 1, city: 'Ankara', district: 'Çankaya', address: 'Test Mah. No:1', termsAccepted: true }),
     }).then((r) => r.json());
 
     const mineBefore = await fetch(url('/api/product-orders/mine'), { headers: authHeaders(buyer.token) }).then((r) => r.json());
@@ -1612,13 +1620,13 @@ describe('Sipariş Şartları: her iki taraf da kendi adımında kabul etmek zor
 
     const noTerms = await fetch(url('/api/product-orders'), {
       method: 'POST', headers: authHeaders(buyer.token),
-      body: JSON.stringify({ productSlug: product.slug, quantity: 1, city: 'İzmir', district: 'Konak' }),
+      body: JSON.stringify({ productSlug: product.slug, quantity: 1, city: 'İzmir', district: 'Konak', address: 'Test Mah. No:1' }),
     });
     assert.equal(noTerms.status, 400);
 
     const withTerms = await fetch(url('/api/product-orders'), {
       method: 'POST', headers: authHeaders(buyer.token),
-      body: JSON.stringify({ productSlug: product.slug, quantity: 1, city: 'İzmir', district: 'Konak', termsAccepted: true }),
+      body: JSON.stringify({ productSlug: product.slug, quantity: 1, city: 'İzmir', district: 'Konak', address: 'Test Mah. No:1', termsAccepted: true }),
     }).then((r) => r.json());
     assert.ok(withTerms.buyerTermsAcceptedAt);
     assert.equal(withTerms.sellerTermsAcceptedAt, null);
@@ -1630,7 +1638,7 @@ describe('Sipariş Şartları: her iki taraf da kendi adımında kabul etmek zor
     const buyer = await newBuyer('Şart Alıcı 2');
     const order = await fetch(url('/api/product-orders'), {
       method: 'POST', headers: authHeaders(buyer.token),
-      body: JSON.stringify({ productSlug: product.slug, quantity: 1, city: 'Bursa', district: 'Nilüfer', termsAccepted: true }),
+      body: JSON.stringify({ productSlug: product.slug, quantity: 1, city: 'Bursa', district: 'Nilüfer', address: 'Test Mah. No:1', termsAccepted: true }),
     }).then((r) => r.json());
 
     const noTerms = await fetch(url('/api/admin/product-orders/update'), {
@@ -1659,7 +1667,7 @@ describe('Sipariş Şartları: her iki taraf da kendi adımında kabul etmek zor
     const buyer = await newBuyer('Şart Alıcı 3');
     const order = await fetch(url('/api/product-orders'), {
       method: 'POST', headers: authHeaders(buyer.token),
-      body: JSON.stringify({ productSlug: product.slug, quantity: 1, city: 'Konya', district: 'Selçuklu', termsAccepted: true }),
+      body: JSON.stringify({ productSlug: product.slug, quantity: 1, city: 'Konya', district: 'Selçuklu', address: 'Test Mah. No:1', termsAccepted: true }),
     }).then((r) => r.json());
 
     const rejected = await fetch(url('/api/admin/product-orders/update'), {
@@ -1884,7 +1892,7 @@ describe('Satın alma doğrulaması olmadan yorum yapılamaz', () => {
     const p = await createProduct(seller.token);
     await fetch(url('/api/product-orders'), {
       method: 'POST', headers: authHeaders(buyer.token),
-      body: JSON.stringify({ productSlug: p.slug, quantity: 1, city: 'Test Şehir', district: 'Test İlçe', termsAccepted: true }),
+      body: JSON.stringify({ productSlug: p.slug, quantity: 1, city: 'Test Şehir', district: 'Test İlçe', address: 'Test Mah. No:1', termsAccepted: true }),
     });
     const r = await fetch(url('/api/reviews'), {
       method: 'POST', headers: authHeaders(buyer.token),
@@ -1899,7 +1907,7 @@ describe('Satın alma doğrulaması olmadan yorum yapılamaz', () => {
     const p = await createProduct(seller.token);
     const order = await fetch(url('/api/product-orders'), {
       method: 'POST', headers: authHeaders(buyer.token),
-      body: JSON.stringify({ productSlug: p.slug, quantity: 1, city: 'Test Şehir', district: 'Test İlçe', termsAccepted: true }),
+      body: JSON.stringify({ productSlug: p.slug, quantity: 1, city: 'Test Şehir', district: 'Test İlçe', address: 'Test Mah. No:1', termsAccepted: true }),
     }).then((r) => r.json());
     await fetch(url('/api/product-orders/confirm-receipt'), {
       method: 'POST', headers: authHeaders(buyer.token), body: JSON.stringify({ id: order.id }),
@@ -1917,7 +1925,7 @@ describe('Satın alma doğrulaması olmadan yorum yapılamaz', () => {
 
     const orderAttempt = await fetch(url('/api/product-orders'), {
       method: 'POST', headers: authHeaders(seller.token),
-      body: JSON.stringify({ productSlug: p.slug, quantity: 1, city: 'Test Şehir', district: 'Test İlçe', termsAccepted: true }),
+      body: JSON.stringify({ productSlug: p.slug, quantity: 1, city: 'Test Şehir', district: 'Test İlçe', address: 'Test Mah. No:1', termsAccepted: true }),
     });
     assert.equal(orderAttempt.status, 400);
 
@@ -2308,7 +2316,7 @@ describe('Şirket satıcı için fatura taslağı', () => {
     const product = await createProduct(seller.token, {});
     const order = await fetch(url('/api/product-orders'), {
       method: 'POST', headers: authHeaders(buyer.token),
-      body: JSON.stringify({ productSlug: product.slug, quantity: 1, city: 'Test Şehir', district: 'Test İlçe', termsAccepted: true }),
+      body: JSON.stringify({ productSlug: product.slug, quantity: 1, city: 'Test Şehir', district: 'Test İlçe', address: 'Test Mah. No:1', termsAccepted: true }),
     }).then((r) => r.json());
 
     const r = await fetch(url('/api/admin/product-orders/invoice'), {

@@ -38,7 +38,7 @@
               '<div class="order-field"><label>İl</label><select id="orderCity"><option value="">Yükleniyor…</option></select></div>' +
               '<div class="order-field"><label>İlçe</label><select id="orderDistrict" disabled><option value="">Önce il seç</option></select></div>' +
             '</div>' +
-            '<div class="order-field"><label>Adres / teslimat notu <span class="order-opt">(opsiyonel)</span></label>' +
+            '<div class="order-field"><label>Adres / teslimat notu</label>' +
               '<textarea id="orderAddress" placeholder="Açık adres ya da nasıl teslim almak istediğin" maxlength="300"></textarea></div>' +
           '</div>' +
 
@@ -137,6 +137,7 @@
       if (qty < 1) { msgEl.textContent = 'Geçerli bir adet gir.'; return; }
       if (!city) { msgEl.textContent = 'Teslimat ili gerekli.'; return; }
       if (!district) { msgEl.textContent = 'Teslimat ilçesi gerekli.'; return; }
+      if (!address) { msgEl.textContent = 'Açık adres ya da teslimat notu gerekli.'; return; }
       if (!document.getElementById('orderTermsCheck').checked) { msgEl.textContent = 'Sipariş Şartları\'nı kabul etmelisin.'; return; }
 
       msgEl.textContent = '';

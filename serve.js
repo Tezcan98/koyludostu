@@ -1918,6 +1918,7 @@ const server = http.createServer(async (req, res) => {
       const note = String(body.note || '').trim().slice(0, 300);
       if (!city) return jsonResponse(res, 400, { error: 'Teslimat ili gerekli.' });
       if (!district) return jsonResponse(res, 400, { error: 'Teslimat ilçesi gerekli.' });
+      if (!address) return jsonResponse(res, 400, { error: 'Açık adres ya da teslimat notu gerekli.' });
       if (!body.termsAccepted) return jsonResponse(res, 400, { error: 'Sipariş Şartları\'nı kabul etmelisin.' });
 
       const orders = readJson(PRODUCT_ORDERS_PATH, {});
