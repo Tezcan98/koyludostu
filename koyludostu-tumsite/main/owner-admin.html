@@ -35,8 +35,8 @@
   .own-empty{padding:30px;text-align:center;color:var(--muted);font-size:13px;}
   .own-badge{font-size:10px;font-weight:800;padding:2px 8px;border-radius:8px;background:var(--bg);color:var(--muted);flex-shrink:0;}
   .own-star{background:none;border:none;font-size:18px;cursor:pointer;flex-shrink:0;}
-  .own-ad-btn{background:none;border:1px solid var(--line);border-radius:8px;color:var(--muted);font-size:11px;font-weight:700;padding:4px 10px;cursor:pointer;flex-shrink:0;font-family:inherit;}
-  .own-ad-btn.is-ad{border-color:#c08a2e;color:#c08a2e;background:#fbf3e3;}
+  .own-toggle-btn{background:none;border:1px solid var(--line);border-radius:8px;color:var(--muted);font-size:11px;font-weight:700;padding:4px 10px;cursor:pointer;flex-shrink:0;font-family:inherit;}
+  .own-toggle-btn.is-sponsored{border-color:#c08a2e;color:#c08a2e;background:#fbf3e3;}
   .own-pause-badge{font-size:10px;font-weight:800;padding:2px 8px;border-radius:8px;background:rgba(200,60,60,.12);color:#8e3b46;margin-left:6px;}
   .own-organic-badge{font-size:10px;font-weight:800;padding:2px 8px;border-radius:8px;background:rgba(78,107,58,.12);color:#4e6b3a;margin-left:6px;}
   .own-sel{padding:5px 8px;border-radius:8px;border:1px solid var(--line);font-family:inherit;font-size:11px;background:var(--bg);flex-shrink:0;}
@@ -277,7 +277,7 @@
         return '<div class="own-row" data-key="' + p.id + '">' +
           '<img src="' + imgSrc(p.img) + '" alt="">' +
           '<div class="own-body"><div class="own-title">' + esc(p.productTitle) + '</div><div class="own-sub">' + esc(p.sellerName) + ' · ' + esc(p.caption || '—') + '</div></div>' +
-          '<button class="own-ad-btn is-ad">Reklamdan indir</button>' +
+          '<button class="own-toggle-btn is-sponsored">Reklamdan indir</button>' +
         '</div>';
       }).join('');
     } else {
@@ -289,12 +289,12 @@
         return '<div class="own-row" data-key="' + p.id + '">' +
           '<img src="' + imgSrc(p.img) + '" alt="">' +
           '<div class="own-body"><div class="own-title">' + esc(p.productTitle) + '</div><div class="own-sub">' + esc(p.sellerName) + ' · ' + esc(p.caption || '—') + '</div></div>' +
-          '<button class="own-ad-btn">Reklam yap</button>' +
+          '<button class="own-toggle-btn">Reklam yap</button>' +
         '</div>';
       }).join('');
     }
     content.innerHTML = html;
-    content.querySelectorAll('.own-ad-btn').forEach(function (btn) {
+    content.querySelectorAll('.own-toggle-btn').forEach(function (btn) {
       btn.addEventListener('click', function () {
         var id = btn.closest('.own-row').dataset.key;
         authedFetch('/api/owner/posts/toggle-ad', {
@@ -546,7 +546,7 @@
         return '<div class="own-row" data-pk="' + it.id + '">' +
           '<div class="own-body"><div class="own-title">' + esc(it.name) + (it.active === false ? ' <span class="own-pause-badge">PASİF</span>' : '') + '</div>' +
           '<div class="own-sub">' + esc(it.price) + ' ' + esc(it.unit) + (it.description ? ' · ' + esc(it.description) : '') + '</div></div>' +
-          '<button class="own-ad-btn" data-pk-toggle="' + it.id + '" data-active="' + (it.active !== false) + '">' + (it.active === false ? 'Aktifleştir' : 'Pasife Al') + '</button>' +
+          '<button class="own-toggle-btn" data-pk-toggle="' + it.id + '" data-active="' + (it.active !== false) + '">' + (it.active === false ? 'Aktifleştir' : 'Pasife Al') + '</button>' +
           '<button class="own-del" data-pk-del="' + it.id + '">Sil</button>' +
         '</div>';
       }).join('') : '<div class="own-empty">Henüz ambalaj eklenmedi.</div>';

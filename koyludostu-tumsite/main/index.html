@@ -221,7 +221,7 @@
     if (!posts.length) { row.innerHTML = ''; row.style.display = 'none'; return; }
     row.innerHTML = posts.map(function (post, i) {
       return '<a class="story-item" href="javascript:;" data-i="' + i + '">' +
-        '<span class="story-ring' + (post.isAd ? ' is-ad' : '') + '"><img src="https://images.pexels.com/photos/' + post.img + '/pexels-photo-' + post.img + '.jpeg?auto=compress&cs=tinysrgb&w=150" alt="' + post.productTitle + '"></span>' +
+        '<span class="story-ring' + (post.isAd ? ' is-sponsored' : '') + '"><img src="https://images.pexels.com/photos/' + post.img + '/pexels-photo-' + post.img + '.jpeg?auto=compress&cs=tinysrgb&w=150" alt="' + post.productTitle + '"></span>' +
         '<span>' + post.sellerName.split(' ')[0] + '</span>' +
       '</a>';
     }).join('');

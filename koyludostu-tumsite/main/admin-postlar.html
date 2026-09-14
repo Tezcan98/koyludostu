@@ -33,7 +33,7 @@
   .post-item-title{font-size:13px;font-weight:700;}
   .post-item-cap{font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .post-item-badge{font-size:10px;font-weight:800;padding:2px 8px;border-radius:8px;flex-shrink:0;}
-  .post-item-badge.ad{background:#fbf3e3;color:#c08a2e;}
+  .post-item-badge.sponsored{background:#fbf3e3;color:#c08a2e;}
   .post-item-badge.active{background:#e0ecdc;color:var(--ring1);}
   .post-item-badge.expired{background:var(--bg);color:var(--muted);}
   .post-del{background:none;border:none;color:var(--ring3);font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0;}
@@ -139,7 +139,7 @@
       if (!posts.length) { list.innerHTML = '<div class="adm-empty">Henüz post paylaşmadın.</div>'; return; }
       list.innerHTML = posts.map(function (post) {
         var badge = '';
-        if (post.isAd) badge = '<span class="post-item-badge ad">Reklam</span>';
+        if (post.isAd) badge = '<span class="post-item-badge sponsored">Reklam</span>';
         else {
           var left = timeLeft(post.expiresAt);
           badge = left ? '<span class="post-item-badge active">' + left + '</span>' : '<span class="post-item-badge expired">Süresi doldu</span>';
