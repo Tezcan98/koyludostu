@@ -11,14 +11,15 @@
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
   :root{
-    --ink:#1A1210; --cream:#FFFBF7; --paper:#FFFFFF;
-    --red:#E30A17; --red-dark:#A10D1C; --red-soft:#FDE6E4;
-    --muted:#7A716B; --line:#F0E3DF;
+    /* Ana uygulamayla (assets/style.css) birebir aynı marka renkleri. */
+    --ink:#1A1A1A; --bg:#FAFAF9; --card:#FFFFFF; --muted:#767066; --line:#ECE8E1;
+    --ring1:#4E6B3A; --ring1-dark:#3A5129; --ring1-soft:#E8EFE3;
+    --ring2:#C08A2E; --ring3:#8E3B46;
   }
   *,*::before,*::after{box-sizing:border-box;}
   html{scroll-behavior:smooth;}
   body{
-    margin:0; background:var(--cream); color:var(--ink); font-family:'Plus Jakarta Sans',sans-serif;
+    margin:0; background:var(--bg); color:var(--ink); font-family:'Plus Jakarta Sans',sans-serif;
     -webkit-font-smoothing:antialiased; overflow-x:hidden;
   }
   a{color:inherit;}
@@ -32,7 +33,7 @@
   .brand{display:flex;align-items:center;gap:11px;}
   .logo-ring{
     width:42px;height:42px;border-radius:50%;flex-shrink:0;padding:2px;
-    background:conic-gradient(from 220deg,var(--red),var(--ink),var(--red-dark),var(--red));
+    background:conic-gradient(from 220deg,var(--ring1),var(--ink),var(--ring1-dark),var(--ring1));
   }
   .logo-ring div{width:100%;height:100%;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden;}
   .logo-ring img{width:92%;height:92%;object-fit:contain;}
@@ -42,12 +43,12 @@
     padding:10px 18px;border-radius:100px;font-size:13px;font-weight:700;text-decoration:none;white-space:nowrap;
     border:none;cursor:pointer;font-family:inherit;
   }
-  .header-cta:hover{background:var(--red-dark);}
+  .header-cta:hover{background:var(--ring1-dark);}
 
   /* ================= HERO (renkli blok) ================= */
   .hero{
     position:relative;overflow:hidden;
-    background:var(--red);color:#fff;
+    background:var(--ring1);color:#fff;
     margin:24px 16px 0;border-radius:32px;
     padding:clamp(40px,8vw,72px) clamp(20px,6vw,56px) clamp(48px,9vw,80px);
     text-align:center;
@@ -84,8 +85,8 @@
     font-size:15px;font-weight:800;text-decoration:none;cursor:pointer;border:1.5px solid transparent;
     font-family:inherit;
   }
-  .btn-white{background:#fff;color:var(--red);}
-  .btn-white:hover{background:#FFEDEC;}
+  .btn-white{background:#fff;color:var(--ring1);}
+  .btn-white:hover{background:var(--ring1-soft);}
 
   /* ---- Kayan ürün şeridi (canlılık) ---- */
   .marquee{
@@ -102,7 +103,7 @@
 
   /* ================= GERİ SAYIM ================= */
   .cd-section{padding:clamp(48px,9vw,76px) 0 clamp(28px,5vw,40px);text-align:center;}
-  .cd-label{font-size:12.5px;font-weight:800;color:var(--red);margin:0 0 6px;letter-spacing:.05em;text-transform:uppercase;}
+  .cd-label{font-size:12.5px;font-weight:800;color:var(--ring1);margin:0 0 6px;letter-spacing:.05em;text-transform:uppercase;}
   .cd-title{font-size:clamp(20px,3.4vw,28px);font-weight:800;margin:0 0 30px;}
   .countdown{
     display:grid;grid-template-columns:repeat(4,1fr);gap:clamp(8px,2vw,16px);
@@ -113,7 +114,7 @@
     padding:clamp(16px,3.2vw,26px) 6px;text-align:center;position:relative;overflow:hidden;
     border:1.5px solid var(--ink);
   }
-  .cd-box:nth-child(odd){background:var(--red);border-color:var(--red);}
+  .cd-box:nth-child(odd){background:var(--ring1);border-color:var(--ring1);}
   .cd-box:nth-child(even){background:#fff;color:var(--ink);border-color:var(--line);}
   .cd-num{
     font-size:clamp(28px,6.8vw,46px);font-weight:900;line-height:1;font-variant-numeric:tabular-nums;
@@ -121,18 +122,18 @@
   .cd-unit{font-size:clamp(9.5px,1.8vw,11.5px);font-weight:700;margin-top:7px;text-transform:uppercase;letter-spacing:.05em;opacity:.7;}
   .target-date{font-size:13.5px;color:var(--muted);}
   .target-date b{color:var(--ink);font-weight:800;}
-  .launched-msg{display:none;font-size:16px;font-weight:800;color:var(--red);margin-bottom:20px;}
+  .launched-msg{display:none;font-size:16px;font-weight:800;color:var(--ring1);margin-bottom:20px;}
 
   /* ================= ÖZELLİKLER ================= */
   .features{padding:clamp(20px,5vw,36px) 0 clamp(48px,9vw,72px);}
-  .features-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
+  .features-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;}
   @media (max-width:720px){.features-grid{grid-template-columns:1fr;}}
   .feature{
     border-radius:22px;padding:26px 24px;position:relative;overflow:hidden;
     background:#fff;border:1.5px solid var(--line);
   }
   .feature .ico{
-    width:44px;height:44px;border-radius:13px;background:var(--red-soft);color:var(--red);
+    width:44px;height:44px;border-radius:13px;background:var(--ring1-soft);color:var(--ring1);
     display:flex;align-items:center;justify-content:center;margin-bottom:18px;
   }
   .feature .ico svg{width:23px;height:23px;}
@@ -170,7 +171,7 @@
     padding:clamp(36px,7vw,60px) clamp(20px,6vw,52px);
   }
   .prereg-head{text-align:center;max-width:520px;margin:0 auto 32px;}
-  .prereg-head .cd-label{color:var(--red);}
+  .prereg-head .cd-label{color:var(--ring1);}
   .prereg-head h2{font-size:clamp(22px,4vw,32px);font-weight:800;margin:8px 0 12px;text-wrap:balance;}
   .prereg-head p{font-size:14.5px;color:rgba(255,255,255,.72);line-height:1.6;margin:0;}
   .prereg-form{
@@ -181,12 +182,12 @@
     background:rgba(255,255,255,.08);color:#fff;font-family:inherit;font-size:14.5px;
   }
   .prereg-form input::placeholder{color:rgba(255,255,255,.48);}
-  .prereg-form input:focus{outline:none;border-color:var(--red);background:rgba(255,255,255,.13);}
+  .prereg-form input:focus{outline:none;border-color:var(--ring1);background:rgba(255,255,255,.13);}
   .prereg-form button{
-    padding:15px 28px;border-radius:100px;background:var(--red);color:#fff;
+    padding:15px 28px;border-radius:100px;background:var(--ring1);color:#fff;
     border:none;font-family:inherit;font-size:14.5px;font-weight:800;cursor:pointer;white-space:nowrap;
   }
-  .prereg-form button:hover{background:#C60914;}
+  .prereg-form button:hover{background:var(--ring1-dark);}
   .prereg-form button:disabled{opacity:.6;cursor:default;}
   .prereg-msg{text-align:center;font-size:13px;margin-top:14px;min-height:18px;color:rgba(255,255,255,.8);}
   .prereg-msg.err{color:#FF9B92;}
@@ -262,14 +263,19 @@
           <h3>Güvenli Alışveriş</h3>
           <p>Sipariş takibi, satıcı-alıcı mesajlaşması ve şikayet sistemiyle uçtan uca izlenebilir, güvenli bir alışveriş deneyimi.</p>
         </div>
+        <div class="feature">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="7" width="15" height="10" rx="1"/><path d="M16 10h3.5a1 1 0 0 1 .9.55L22 14v3h-2"/><circle cx="6" cy="19" r="2"/><circle cx="17.5" cy="19" r="2"/><path d="M8 19h7.5"/></svg></div>
+          <h3>Doğru Nakliye, Her Seferinde</h3>
+          <p>Her ürünün saklama koşulu sistemde tanımlı: kuru ürünler kargoyla yola çıkar, taze ve soğuk zincir gerektirenler kargoya hiç verilmez — elden teslim ya da otobüsle, bozulmadan sana ulaşır.</p>
+        </div>
       </div>
     </section>
 
     <section class="showcase" id="uygulama">
       <div class="showcase-head">
-        <div class="cd-label">Şu An Geliştiriyoruz</div>
-        <h2>Uygulamadan bir bakış</h2>
-        <p>Kayıt olmadan önce ne bulacağını bil istedik — bunlar üzerinde çalıştığımız, şu anda canlı çalışan uygulamadan gerçek ekran görüntüleri.</p>
+        <div class="cd-label">Uygulamadan Bir Bakış</div>
+        <h2>Kayıt olmadan önce ne bulacağını gör</h2>
+        <p>Zeytinyağından bala, taze sebzeden peynire — üreticilerin ürünleri, gerçek yorumlar ve detaylı filtrelerle seni bekliyor.</p>
       </div>
       <div class="showcase-grid">
         <div class="browser-card">
