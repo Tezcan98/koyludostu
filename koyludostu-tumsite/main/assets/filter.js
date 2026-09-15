@@ -223,8 +223,8 @@
         .slice(0, 12);
 
       container.innerHTML =
-        renderDiscoverRow('🆕 Yeni Eklenenler', newArrivals) +
-        renderDiscoverRow('🔥 Bu Hafta Trend', trending);
+        renderDiscoverRow('Yeni Eklenenler', newArrivals) +
+        renderDiscoverRow('Bu Hafta Trend', trending);
       if (window.KDFavorites) window.KDFavorites.refresh();
 
       // "Senin Şehrinden" — giriş yapmışsa kendi kayıtlı iline göre, ekstra bir
