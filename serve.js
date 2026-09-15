@@ -1948,6 +1948,10 @@ const server = http.createServer(async (req, res) => {
         // eder — genel Kullanım Şartları'ndan (kayıt anında, bir kere) farklı olarak
         // burada her siparişte tazelenir.
         buyerTermsAcceptedAt: now, sellerTermsAcceptedAt: null,
+        // Pazarlama amaçlı bildirim göndermek için ayrı, açık bir onay — Sipariş
+        // Şartları onayından bağımsızdır, zorunlu değildir (İYS uyumu için ileride
+        // kullanılabilecek bir rıza kaydı).
+        notifyOptIn: !!body.notifyOptIn,
       };
       writeJson(PRODUCT_ORDERS_PATH, orders);
       notifyUser(product.sellerPhone, 'new_product_order',

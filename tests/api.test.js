@@ -2683,3 +2683,23 @@ describe('Vitrin başvurusu (ücretli, admin onaylı)', () => {
     assert.equal(found.isAd, false);
   });
 });
+
+describe('Sipariş talebinde bildirim tercihi (notifyOptIn)', () => {
+  test('gönderilmezse false, gönderilirse aynen kaydedilir', async () => {
+    const seller = await newSeller('Bildirim Tercihi Satıcı');
+    const buyer = await newBuyer('Bildirim Tercihi Alıcı');
+    const product = await createProduct(seller.token, {});
+
+    const withoutOptIn = await fetch(url('/api/product-orders'), {
+      method: 'POST', headers: authHeaders(buyer.token),
+      body: JSON.stringify({ productSlug: product.slug, quantity: 1, city: 'Test Şehir', district: 'Test İlçe', address: 'Test Mah. No:1', termsAccepted: true }),
+    }).then((r) => r.json());
+    assert.equal(withoutOptIn.notifyOptIn, false);
+
+    const withOptIn = await fetch(url('/api/product-orders'), {
+      method: 'POST', headers: authHeaders(buyer.token),
+      body: JSON.stringify({ productSlug: product.slug, quantity: 1, city: 'Test Şehir', district: 'Test İlçe', address: 'Test Mah. No:1', termsAccepted: true, notifyOptIn: true }),
+    }).then((r) => r.json());
+    assert.equal(withOptIn.notifyOptIn, true);
+  });
+});

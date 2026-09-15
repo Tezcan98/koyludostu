@@ -4,6 +4,35 @@
   // ile alıcı arasında platform dışında görüşülür; durumu "Siparişlerim" sayfasından
   // takip edilir.
 
+  function ensureOrderTermsModal() {
+    var modal = document.getElementById('orderTermsModal');
+    if (modal) return modal;
+    modal = document.createElement('div');
+    modal.className = 'terms-modal';
+    modal.id = 'orderTermsModal';
+    modal.hidden = true;
+    modal.innerHTML =
+      '<div class="terms-box">' +
+        '<div class="terms-box-head"><b>Sipariş Şartları</b><button id="orderTermsModalClose" aria-label="Kapat">×</button></div>' +
+        '<div class="terms-box-body">' +
+          '<h3>1. Bu bir sipariş onayı değildir</h3>' +
+          '<p>Gönderdiğin talep, ürünü satan satıcıya iletilen bir istek mesajıdır. Satıcı uygun görürse seninle iletişime geçer; bağlayıcı satış sözleşmesi platform ile değil, doğrudan seninle satıcı arasında kurulur.</p>' +
+          '<h3>2. Fiyat ve ödeme</h3>' +
+          '<p>Talep ekranında gördüğün tutar tahminidir, satıcı onayına tabidir. Köylü Dostu ödemeye aracılık etmez; ödeme satıcıyla doğrudan (IBAN üzerinden) kararlaştırılır.</p>' +
+          '<h3>3. Teslimat</h3>' +
+          '<p>Teslimat yöntemi (kendin al, otobüs, kargo) ürünün saklama koşuluna göre değişir; kargoya uygun olmayan (soğuk zincir gerektiren/çabuk bozulan) ürünler kargoyla gönderilemez. Kesin teslimat şekli satıcıyla mesaj üzerinden netleştirilir.</p>' +
+          '<h3>4. Cayma hakkı</h3>' +
+          '<p>Mesafeli Sözleşmeler Yönetmeliği\'ndeki 14 günlük cayma hakkı, çabuk bozulabilen/kısa raf ömürlü gıda ürünlerinde genellikle uygulanmaz. Detaylar için <a href="/iade-politikasi.html" target="_blank">İade ve Cayma Hakkı</a> sayfasına bakabilirsin.</p>' +
+          '<h3>5. Sorun yaşarsan</h3>' +
+          '<p>Ürün tarif edilenden farklı ya da hiç gelmezse, uygulama üzerinden şikayet açabilirsin — Köylü Dostu süreci takip eder ve gerekirse hukuki destek yönlendirmesi yapar.</p>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(modal);
+    document.getElementById('orderTermsModalClose').addEventListener('click', function () { modal.hidden = true; });
+    modal.addEventListener('click', function (e) { if (e.target === modal) modal.hidden = true; });
+    return modal;
+  }
+
   function ensureOrderPanel() {
     var panel = document.getElementById('orderPanel');
     if (panel) return panel;
@@ -53,7 +82,8 @@
           '</div>' +
         '</div>' +
         '<div class="order-footer">' +
-          '<label class="order-terms-row"><input type="checkbox" id="orderTermsCheck"> <span><a href="javascript:;" class="order-terms-link">Sipariş Şartları\'nı</a> okudum, kabul ediyorum.</span></label>' +
+          '<label class="order-terms-row"><input type="checkbox" id="orderTermsCheck"> <span><a href="javascript:;" id="orderTermsLink" class="order-terms-link">Sipariş Şartları\'nı</a> okudum, kabul ediyorum.</span></label>' +
+          '<label class="order-terms-row"><input type="checkbox" id="orderNotifyCheck"> <span>Bu ürün/satıcıyla ilgili bildirimleri almak istiyorum.</span></label>' +
           '<p class="order-msg" id="orderMsg"></p>' +
           '<button id="orderSendBtn">Talebi Gönder</button>' +
         '</div>' +
@@ -61,6 +91,9 @@
     document.body.appendChild(panel);
     panel.addEventListener('click', function (e) { if (e.target === panel) panel.hidden = true; });
     document.getElementById('orderCloseBtn').addEventListener('click', function () { panel.hidden = true; });
+
+    var termsModal = ensureOrderTermsModal();
+    document.getElementById('orderTermsLink').addEventListener('click', function () { termsModal.hidden = false; });
 
     var qtyInput = document.getElementById('orderQty');
     document.getElementById('orderQtyMinus').addEventListener('click', function () {
@@ -123,6 +156,7 @@
     document.getElementById('orderDeadline').value = '';
     document.getElementById('orderNote').value = '';
     document.getElementById('orderTermsCheck').checked = false;
+    document.getElementById('orderNotifyCheck').checked = false;
     var msgEl = document.getElementById('orderMsg');
     msgEl.textContent = '';
 
@@ -181,6 +215,7 @@
         body: JSON.stringify({
           productSlug: slug, quantity: qty, city: city, district: district,
           address: address, deadline: deadline, note: note, termsAccepted: true,
+          notifyOptIn: document.getElementById('orderNotifyCheck').checked,
         }),
       }).then(function (r) { return r.json(); }).then(function (data) {
         sendBtn.disabled = false;
