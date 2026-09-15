@@ -2520,3 +2520,111 @@ describe('sitemap.xml', () => {
     assert.match(body, /sss\.html/);
   });
 });
+
+describe('Postlar: reklam artık ücretsiz kendi kendine işaretlenemez', () => {
+  test('POST /api/posts içindeki isAd:true yok sayılır, post normal 24 saatlik post olarak oluşur', async () => {
+    const seller = await newSeller('Post Reklam Testi');
+    const product = await createProduct(seller.token, {});
+    const post = await fetch(url('/api/posts'), {
+      method: 'POST', headers: authHeaders(seller.token),
+      body: JSON.stringify({ productSlug: product.slug, caption: 'Test', isAd: true }),
+    }).then((r) => r.json());
+    assert.equal(post.isAd, false);
+    assert.ok(post.expiresAt);
+  });
+});
+
+describe('Vitrin başvurusu (ücretli, admin onaylı)', () => {
+  async function newSellerWithPost(name) {
+    const seller = await newSeller(name);
+    const product = await createProduct(seller.token, {});
+    const post = await fetch(url('/api/posts'), {
+      method: 'POST', headers: authHeaders(seller.token),
+      body: JSON.stringify({ productSlug: product.slug, caption: 'Test post' }),
+    }).then((r) => r.json());
+    return { seller, product, post };
+  }
+
+  test('geçersiz pakette 400 döner', async () => {
+    const { seller, post } = await newSellerWithPost('Vitrin Geçersiz Paket');
+    const r = await fetch(url('/api/vitrin-applications'), {
+      method: 'POST', headers: authHeaders(seller.token),
+      body: JSON.stringify({ postId: post.id, packageId: 'uydurma-paket' }),
+    });
+    assert.equal(r.status, 400);
+  });
+
+  test('başvuru yapılır, admin onaylar, post Vitrin\'de yayına alınır (isAd true, sponsoredUntil ileri bir tarih)', async () => {
+    const { seller, post } = await newSellerWithPost('Vitrin Onay Akışı');
+    const applied = await fetch(url('/api/vitrin-applications'), {
+      method: 'POST', headers: authHeaders(seller.token),
+      body: JSON.stringify({ postId: post.id, packageId: '7gun' }),
+    }).then((r) => r.json());
+    assert.equal(applied.status, 'pending');
+    assert.equal(applied.price, 250);
+
+    const mine = await fetch(url('/api/vitrin-applications/mine'), { headers: authHeaders(seller.token) }).then((r) => r.json());
+    assert.equal(mine.applications.length, 1);
+
+    const ownerToken = await ownerLogin(server.baseUrl, server.adminPassword);
+    const pendingList = await fetch(url('/api/owner/vitrin-applications'), { headers: authHeaders(ownerToken) }).then((r) => r.json());
+    assert.ok(pendingList.applications.some((a) => a.id === applied.id));
+
+    const decided = await fetch(url('/api/owner/vitrin-applications/decide'), {
+      method: 'POST', headers: authHeaders(ownerToken),
+      body: JSON.stringify({ id: applied.id, status: 'approved' }),
+    }).then((r) => r.json());
+    assert.equal(decided.status, 'approved');
+
+    const activePosts = await fetch(url('/api/posts/active')).then((r) => r.json());
+    const activePost = activePosts.posts.find((p) => p.id === post.id);
+    assert.equal(activePost.isAd, true);
+    assert.ok(new Date(activePost.sponsoredUntil).getTime() > Date.now());
+  });
+
+  test('reddedilen başvuru postu yayına almaz', async () => {
+    const { seller, post } = await newSellerWithPost('Vitrin Red Akışı');
+    const applied = await fetch(url('/api/vitrin-applications'), {
+      method: 'POST', headers: authHeaders(seller.token),
+      body: JSON.stringify({ postId: post.id, packageId: '7gun' }),
+    }).then((r) => r.json());
+    const ownerToken = await ownerLogin(server.baseUrl, server.adminPassword);
+    await fetch(url('/api/owner/vitrin-applications/decide'), {
+      method: 'POST', headers: authHeaders(ownerToken),
+      body: JSON.stringify({ id: applied.id, status: 'rejected' }),
+    });
+    const mine = await fetch(url('/api/vitrin-applications/mine'), { headers: authHeaders(seller.token) }).then((r) => r.json());
+    assert.equal(mine.applications[0].status, 'rejected');
+    const activePosts = await fetch(url('/api/posts/active')).then((r) => r.json());
+    const activePost = activePosts.posts.find((p) => p.id === post.id);
+    assert.equal(activePost.isAd, false);
+  });
+
+  test('aynı post için bekleyen bir başvuru varken ikinci başvuru reddedilir', async () => {
+    const { seller, post } = await newSellerWithPost('Vitrin Çift Başvuru');
+    await fetch(url('/api/vitrin-applications'), {
+      method: 'POST', headers: authHeaders(seller.token),
+      body: JSON.stringify({ postId: post.id, packageId: '7gun' }),
+    });
+    const second = await fetch(url('/api/vitrin-applications'), {
+      method: 'POST', headers: authHeaders(seller.token),
+      body: JSON.stringify({ postId: post.id, packageId: '30gun' }),
+    });
+    assert.equal(second.status, 400);
+  });
+
+  test('sponsoredUntil süresi dolmuş bir post, bir sonraki okumada otomatik normale döner', async () => {
+    const { post } = await newSellerWithPost('Vitrin Süre Dolumu');
+    const postsPath = path.join(server.dataDir, 'posts.json');
+    const posts = JSON.parse(fs.readFileSync(postsPath, 'utf8'));
+    posts[post.id].isAd = true;
+    posts[post.id].sponsoredUntil = new Date(Date.now() - 1000).toISOString(); // geçmişte kalmış
+    fs.writeFileSync(postsPath, JSON.stringify(posts, null, 2));
+
+    const activePosts = await fetch(url('/api/posts/active')).then((r) => r.json());
+    const found = activePosts.posts.find((p) => p.id === post.id);
+    // Süresi dolduğu için artık normal bir post — hâlâ 24 saatlik TTL içinde olduğundan listede kalır ama isAd false olmalı.
+    assert.ok(found);
+    assert.equal(found.isAd, false);
+  });
+});

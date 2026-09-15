@@ -82,6 +82,7 @@
     <button type="button" class="own-tab" data-tab="complaints">Şikayetler</button>
     <button type="button" class="own-tab" data-tab="posts">Postlar</button>
     <button type="button" class="own-tab" data-tab="ads">Reklamlar</button>
+    <button type="button" class="own-tab" data-tab="vitrinApplications">Vitrin Başvuruları</button>
   </div>
 
   <div id="tabContent"></div>
@@ -236,6 +237,9 @@
       return;
     } else if (activeTab === 'shipments') {
       renderShipmentsTab(content);
+      return;
+    } else if (activeTab === 'vitrinApplications') {
+      renderVitrinApplicationsTab(content);
       return;
     } else if (activeTab === 'packaging') {
       renderPackagingTab(content);
@@ -557,6 +561,48 @@
       }
     }).catch(function () {
       content.innerHTML = '<div class="own-empty">Kargo talepleri yüklenemedi.</div>';
+    });
+  }
+
+  var VITRIN_STATUS_LABELS = { pending: 'İnceleniyor', approved: 'Onaylandı', rejected: 'Onaylanmadı' };
+  function renderVitrinApplicationsTab(content) {
+    content.innerHTML = '<div class="own-empty">Yükleniyor…</div>';
+    authedFetch('/api/owner/vitrin-applications').then(function (r) { return r.json(); }).then(function (d) {
+      var apps = d.applications || [];
+      if (!apps.length) { content.innerHTML = '<div class="own-empty">Vitrin başvurusu yok.</div>'; return; }
+      var pending = apps.filter(function (a) { return a.status === 'pending'; });
+      var rest = apps.filter(function (a) { return a.status !== 'pending'; });
+      var html = '';
+      if (pending.length) html += '<p style="font-size:12px;color:var(--muted);margin:0 0 10px;">' + pending.length + ' başvuru onay bekliyor.</p>';
+      function row(a) {
+        var decideBtns = a.status === 'pending'
+          ? '<button class="own-approve-btn" data-decide="approved" data-id="' + a.id + '">Onayla</button>' +
+            '<button class="own-reject-btn" data-decide="rejected" data-id="' + a.id + '">Reddet</button>'
+          : '';
+        return '<div class="own-row" data-key="' + a.id + '">' +
+          '<img src="' + imgSrc(a.img) + '" alt="">' +
+          '<div class="own-body"><div class="own-title">' + esc(a.productTitle) + '</div>' +
+          '<div class="own-sub">' + esc(a.sellerName) + ' · ' + esc(a.packageLabel) + ' · ' + a.price + '₺</div></div>' +
+          '<span class="own-badge">' + VITRIN_STATUS_LABELS[a.status] + '</span>' +
+          decideBtns +
+        '</div>';
+      }
+      html += pending.map(row).join('');
+      if (rest.length) {
+        html += '<p style="font-size:12px;color:var(--muted);margin:18px 0 10px;">Geçmiş başvurular:</p>';
+        html += rest.map(row).join('');
+      }
+      content.innerHTML = html;
+      content.querySelectorAll('[data-decide]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          authedFetch('/api/owner/vitrin-applications/decide', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: btn.dataset.id, status: btn.dataset.decide }),
+          }).then(function () { renderVitrinApplicationsTab(content); }).catch(function () {});
+        });
+      });
+    }).catch(function () {
+      content.innerHTML = '<div class="own-empty">Başvurular yüklenemedi.</div>';
     });
   }
 

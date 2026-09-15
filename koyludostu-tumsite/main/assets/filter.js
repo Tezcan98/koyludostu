@@ -203,6 +203,46 @@
     var PREFERRED_CAT_ORDER = ['Asma Yaprağı', 'Üzüm', 'Pekmez', 'İncir', 'Zeytin', 'Zeytinyağı', 'Salça', 'Tarhana',
       'Kiraz', 'Kuru Meyve', 'Kuruyemiş', 'Bal', 'Peynir', 'Sebze', 'Meyve', 'Reçel', 'Baklava'];
 
+    // ---------- Keşif şeritleri: anasayfa grid'inin üstünde, aynı ürün verisinden
+    // (ekstra bir API çağrısı gerekmeden) türetilen yatay kaydırmalı bloklar. ----------
+    function renderDiscoverRow(title, products) {
+      if (!products.length) return '';
+      return '<div class="discover-section"><div class="discover-title">' + esc(title) + '</div>' +
+        '<div class="discover-scroll">' + products.map(pinHtml).join('') + '</div></div>';
+    }
+
+    function renderDiscoverSections() {
+      var container = document.getElementById('discoverSections');
+      if (!container || !allProducts.length) return;
+
+      var newArrivals = allProducts.slice()
+        .sort(function (a, b) { return new Date(b.createdAt) - new Date(a.createdAt); })
+        .slice(0, 12);
+      var trending = allProducts.slice()
+        .sort(function (a, b) { return defaultScore(b) - defaultScore(a); })
+        .slice(0, 12);
+
+      container.innerHTML =
+        renderDiscoverRow('🆕 Yeni Eklenenler', newArrivals) +
+        renderDiscoverRow('🔥 Bu Hafta Trend', trending);
+      if (window.KDFavorites) window.KDFavorites.refresh();
+
+      // "Senin Şehrinden" — giriş yapmışsa kendi kayıtlı iline göre, ekstra bir
+      // konum izni istemeden (hesabındaki il zaten var).
+      if (window.KDAuth && window.KDAuth.isLoggedIn()) {
+        window.KDAuth.authedFetch('/api/auth/me').then(function (r) { return r.json(); }).then(function (data) {
+          var city = data.user && data.user.city;
+          if (!city) return;
+          var fromCity = allProducts.filter(function (p) { return p.city === city; })
+            .sort(function (a, b) { return defaultScore(b) - defaultScore(a); })
+            .slice(0, 12);
+          if (!fromCity.length) return;
+          container.innerHTML += renderDiscoverRow('📍 ' + city + "'dan", fromCity);
+          if (window.KDFavorites) window.KDFavorites.refresh();
+        }).catch(function () {});
+      }
+    }
+
     Promise.all([
       fetch('/api/products').then(function (r) { return r.json(); }),
       fetch('/api/reviews/stats').then(function (r) { return r.json(); }).catch(function () { return {}; }),
@@ -227,6 +267,7 @@
       renderChecks(cityWrap, cities, 'cityCheck');
 
       renderAttrFilters();
+      renderDiscoverSections();
 
       apply();
     }).catch(function () {

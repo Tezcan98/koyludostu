@@ -35,6 +35,14 @@ const INVOICE_COUNTERS_PATH = path.join(DATA_DIR, 'invoice_counters.json');
 const SECURE_UPLOADS_DIR = path.join(DATA_DIR, 'secure-uploads');
 const NOTIFICATION_SETTINGS_PATH = path.join(DATA_DIR, 'notification-settings.json');
 const POST_TTL_MS = 24 * 60 * 60 * 1000;
+// Vitrin/Keşfet'te öne çıkma (post.isAd) artık ücretli, admin onaylı bir başvuru
+// süreci — satıcı doğrudan kendi postunu ücretsiz "reklam" işaretleyemez (bkz.
+// POST /api/posts, orada body.isAd bilerek yok sayılır).
+const VITRIN_APPLICATIONS_PATH = path.join(DATA_DIR, 'vitrin_applications.json');
+const VITRIN_PACKAGES = {
+  '7gun': { label: '7 Gün', days: 7, price: 250 },
+  '30gun': { label: '30 Gün', days: 30, price: 800 },
+};
 
 const SITES = {
   blog: path.join(BASE, 'blog'),
@@ -3013,7 +3021,11 @@ const server = http.createServer(async (req, res) => {
     if (p === '/api/posts' && req.method === 'POST') {
       const session = requireRole(req, res, 'satici');
       if (!session) return;
-      const { productSlug, caption, isAd } = await readBody(req);
+      // NOT: isAd bilerek buradan kabul edilmiyor — Vitrin'de öne çıkmak artık
+      // ücretli, admin onaylı bir başvuru gerektiriyor (bkz. POST
+      // /api/vitrin-applications). Her yeni post her zaman normal (24 saatlik)
+      // bir post olarak başlar.
+      const { productSlug, caption } = await readBody(req);
       const products = readJson(PRODUCTS_PATH, {});
       const product = products[productSlug];
       if (!product || product.sellerId !== session.user.id) {
@@ -3026,16 +3038,33 @@ const server = http.createServer(async (req, res) => {
       posts[id] = {
         id, productSlug, productTitle: product.title, img: product.img,
         sellerId: session.user.id, sellerName: session.user.name,
-        caption: clean, isAd: !!isAd,
+        caption: clean, isAd: false,
         createdAt: now.toISOString(),
-        expiresAt: isAd ? null : new Date(now.getTime() + POST_TTL_MS).toISOString(),
+        expiresAt: new Date(now.getTime() + POST_TTL_MS).toISOString(),
       };
       writeJson(POSTS_PATH, posts);
       return jsonResponse(res, 200, posts[id]);
     }
 
+    // Onaylanmış bir Vitrin başvurusunun süresi (sponsoredUntil) dolmuşsa postu
+    // sessizce normal duruma döndürür — ayrı bir zamanlanmış görev gerektirmeden,
+    // her okumada tembel biçimde (post TTL'inin filtrelenme şekliyle aynı desen).
+    function reconcileSponsoredPosts(posts) {
+      const now = Date.now();
+      let changed = false;
+      Object.values(posts).forEach((post) => {
+        if (post.isAd && post.sponsoredUntil && new Date(post.sponsoredUntil).getTime() <= now) {
+          post.isAd = false;
+          post.expiresAt = new Date(now + POST_TTL_MS).toISOString();
+          changed = true;
+        }
+      });
+      return changed;
+    }
+
     if (p === '/api/posts/active' && req.method === 'GET') {
       const posts = readJson(POSTS_PATH, {});
+      if (reconcileSponsoredPosts(posts)) writeJson(POSTS_PATH, posts);
       const now = Date.now();
       const active = Object.values(posts)
         .filter((post) => post.isAd || new Date(post.expiresAt).getTime() > now)
@@ -3047,6 +3076,7 @@ const server = http.createServer(async (req, res) => {
       const session = requireRole(req, res, 'satici');
       if (!session) return;
       const posts = readJson(POSTS_PATH, {});
+      if (reconcileSponsoredPosts(posts)) writeJson(POSTS_PATH, posts);
       const mine = Object.values(posts)
         .filter((post) => post.sellerId === session.user.id)
         .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
@@ -3063,6 +3093,83 @@ const server = http.createServer(async (req, res) => {
       delete posts[id];
       writeJson(POSTS_PATH, posts);
       return jsonResponse(res, 200, { ok: true });
+    }
+
+    // ---------- Vitrin/Keşfet başvurusu: satıcının bir postunun Vitrin'de öne
+    // çıkması (isAd=true, "Reklam" rozeti) artık ücretli — ödeme platform dışında
+    // (banka havalesi) alınır, admin başvuruyu onaylayınca post yayına alınır.
+    // Bkz. reconcileSponsoredPosts — süre dolunca otomatik normale döner. ----------
+    if (p === '/api/vitrin-applications' && req.method === 'POST') {
+      const session = requireApprovedSeller(req, res);
+      if (!session) return;
+      const { postId, packageId } = await readBody(req);
+      const pkg = VITRIN_PACKAGES[packageId];
+      if (!pkg) return jsonResponse(res, 400, { error: 'Geçersiz paket.' });
+      const posts = readJson(POSTS_PATH, {});
+      const post = posts[postId];
+      if (!post || post.sellerId !== session.user.id) return jsonResponse(res, 404, { error: 'Post bulunamadı' });
+      if (post.isAd) return jsonResponse(res, 400, { error: 'Bu post zaten Vitrin\'de yayında.' });
+
+      const applications = readJson(VITRIN_APPLICATIONS_PATH, {});
+      const alreadyPending = Object.values(applications).some(
+        (a) => a.postId === postId && a.status === 'pending',
+      );
+      if (alreadyPending) return jsonResponse(res, 400, { error: 'Bu post için zaten bekleyen bir başvurun var.' });
+
+      const id = 'va_' + randomToken().slice(0, 10);
+      const now = new Date().toISOString();
+      applications[id] = {
+        id, postId, productTitle: post.productTitle, img: post.img,
+        sellerId: session.user.id, sellerName: session.user.name, sellerPhone: session.phone,
+        packageId, packageLabel: pkg.label, packageDays: pkg.days, price: pkg.price,
+        status: 'pending', createdAt: now, updatedAt: now,
+      };
+      writeJson(VITRIN_APPLICATIONS_PATH, applications);
+      return jsonResponse(res, 200, applications[id]);
+    }
+
+    if (p === '/api/vitrin-applications/mine' && req.method === 'GET') {
+      const session = requireRole(req, res, 'satici');
+      if (!session) return;
+      const applications = readJson(VITRIN_APPLICATIONS_PATH, {});
+      const mine = Object.values(applications)
+        .filter((a) => a.sellerId === session.user.id)
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      return jsonResponse(res, 200, { applications: mine });
+    }
+
+    if (p === '/api/owner/vitrin-applications' && req.method === 'GET') {
+      if (!requireAdmin(req, res)) return;
+      const applications = readJson(VITRIN_APPLICATIONS_PATH, {});
+      const list = Object.values(applications).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      return jsonResponse(res, 200, { applications: list });
+    }
+
+    if (p === '/api/owner/vitrin-applications/decide' && req.method === 'POST') {
+      if (!requireAdmin(req, res)) return;
+      const { id, status } = await readBody(req);
+      if (!['approved', 'rejected'].includes(status)) return jsonResponse(res, 400, { error: 'Geçersiz durum.' });
+      const applications = readJson(VITRIN_APPLICATIONS_PATH, {});
+      const application = applications[id];
+      if (!application) return jsonResponse(res, 404, { error: 'Başvuru bulunamadı' });
+      application.status = status;
+      application.updatedAt = new Date().toISOString();
+      writeJson(VITRIN_APPLICATIONS_PATH, applications);
+
+      if (status === 'approved') {
+        const posts = readJson(POSTS_PATH, {});
+        const post = posts[application.postId];
+        if (post) {
+          post.isAd = true;
+          post.sponsoredUntil = new Date(Date.now() + application.packageDays * 24 * 60 * 60 * 1000).toISOString();
+          writeJson(POSTS_PATH, posts);
+        }
+      }
+      notifyUser(application.sellerPhone, 'vitrin_application_update',
+        status === 'approved'
+          ? `Vitrin başvurun onaylandı! "${application.productTitle}" postun ${application.packageLabel} boyunca Vitrin'de öne çıkacak.`
+          : `Vitrin başvurun (${application.productTitle}) onaylanmadı. Detay için bize ulaşabilirsin.`);
+      return jsonResponse(res, 200, application);
     }
 
     // ---------- Ürün fotoğrafı yükleme: base64 data URL -> statik dosya ----------
@@ -3368,6 +3475,7 @@ const server = http.createServer(async (req, res) => {
       const post = posts[id];
       if (!post) return jsonResponse(res, 404, { error: 'Post bulunamadı' });
       post.isAd = !post.isAd;
+      post.sponsoredUntil = null; // elle açma/kapama süresiz kabul edilir, paket süresini ezer
       post.expiresAt = post.isAd ? null : new Date(Date.now() + POST_TTL_MS).toISOString();
       writeJson(POSTS_PATH, posts);
       return jsonResponse(res, 200, post);

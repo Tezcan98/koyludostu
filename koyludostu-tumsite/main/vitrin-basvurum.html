@@ -3,39 +3,49 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Postlarım — Köylü Dostu Yönetim</title>
+<title>Vitrin Başvurusu — Köylü Dostu Yönetim</title>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/style.css">
 <style>
   body{background:var(--bg);}
   .adm-wrap{max-width:640px;margin:0 auto;padding:24px 16px 60px;}
   .adm-wrap h1{font-size:20px;font-weight:800;margin:6px 0 4px;}
-  .adm-wrap p.lead{font-size:12.5px;color:var(--muted);margin:0 0 18px;}
-  .adm-wrap p.lead a{color:var(--ring1);font-weight:700;}
+  .adm-wrap p.lead{font-size:12.5px;color:var(--muted);margin:0 0 18px;line-height:1.6;}
+  .vit-intro{font-size:12px;color:var(--muted);background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:18px;line-height:1.6;}
+  .vit-intro b{color:var(--ink);}
   .post-form{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:20px;}
-  .post-field{margin-bottom:12px;}
+  .post-field{margin-bottom:14px;}
   .post-field label{font-size:12px;font-weight:700;color:var(--muted);display:block;margin-bottom:6px;}
-  .post-field select, .post-field textarea{
+  .post-field select{
     width:100%;padding:10px 12px;border-radius:10px;border:1.5px solid var(--line);
     font-family:inherit;font-size:13.5px;background:var(--bg);
   }
-  .post-field textarea{min-height:70px;resize:vertical;}
+  .pkg-row{display:flex;gap:10px;flex-wrap:wrap;}
+  .pkg-opt{
+    flex:1;min-width:140px;border:1.5px solid var(--line);border-radius:12px;padding:14px;cursor:pointer;
+    background:var(--bg);text-align:center;
+  }
+  .pkg-opt.selected{border-color:var(--ring1);background:#eef2ea;}
+  .pkg-opt .pkg-days{font-size:13.5px;font-weight:800;}
+  .pkg-opt .pkg-price{font-size:18px;font-weight:800;color:var(--ring1);margin-top:4px;}
   .post-submit{
     padding:11px 20px;border-radius:12px;background:var(--ink);color:#fff;border:none;
-    font-size:13.5px;font-weight:700;cursor:pointer;
+    font-size:13.5px;font-weight:700;cursor:pointer;margin-top:14px;
   }
+  .post-submit:disabled{opacity:.5;}
   .post-msg{font-size:12.5px;color:var(--ring3);min-height:16px;margin-top:8px;}
-  .post-item{display:flex;gap:12px;align-items:center;padding:12px;background:var(--card);border:1px solid var(--line);border-radius:12px;margin-bottom:8px;}
-  .post-item img{width:48px;height:48px;border-radius:10px;object-fit:cover;flex-shrink:0;}
-  .post-item-body{flex:1;min-width:0;}
-  .post-item-title{font-size:13px;font-weight:700;}
-  .post-item-cap{font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-  .post-item-badge{font-size:10px;font-weight:800;padding:2px 8px;border-radius:8px;flex-shrink:0;}
-  .post-item-badge.sponsored{background:#fbf3e3;color:#c08a2e;}
-  .post-item-badge.active{background:#e0ecdc;color:var(--ring1);}
-  .post-item-badge.expired{background:var(--bg);color:var(--muted);}
-  .post-del{background:none;border:none;color:var(--ring3);font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0;}
+  .post-msg.ok{color:var(--ring1);}
+  .app-item{display:flex;gap:12px;align-items:center;padding:12px;background:var(--card);border:1px solid var(--line);border-radius:12px;margin-bottom:8px;}
+  .app-item img{width:44px;height:44px;border-radius:10px;object-fit:cover;flex-shrink:0;}
+  .app-item-body{flex:1;min-width:0;}
+  .app-item-title{font-size:13px;font-weight:700;}
+  .app-item-sub{font-size:11.5px;color:var(--muted);margin-top:2px;}
+  .app-badge{font-size:10px;font-weight:800;padding:3px 9px;border-radius:10px;flex-shrink:0;white-space:nowrap;}
+  .app-badge.pending{background:rgba(192,138,46,.15);color:var(--ring2);}
+  .app-badge.approved{background:rgba(78,107,58,.12);color:var(--ring1);}
+  .app-badge.rejected{background:rgba(200,60,60,.12);color:var(--ring3);}
   .adm-empty{padding:30px;text-align:center;color:var(--muted);font-size:13px;}
+  .section-title{font-size:15px;font-weight:800;margin:26px 0 12px;}
 </style>
 </head>
 <body>
@@ -74,7 +84,8 @@
     <a href="/admin-yorumlarim.html" data-page="yorumlarim"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>Yorumlarım</a>
     <a href="/admin-ambalaj.html" data-page="ambalaj"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8v13H3V8"/><path d="M1 3h22v5H1z"/><path d="M10 12h4"/></svg>Ambalaj Satın Al</a>
     <a href="/admin-sikayetler.html" data-page="sikayetler"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 1 21h22z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>Şikayetler</a>
-    <a href="/admin-postlar.html" data-page="postlar" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>Postlarım</a>
+    <a href="/admin-postlar.html" data-page="postlar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>Postlarım</a>
+    <a href="/vitrin-basvurum.html" data-page="vitrin-basvurum" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>Vitrin Başvurusu</a>
     <div class="drawer-section-label">Hesabım</div>
     <a href="/satici-basvurum.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>Satıcı Başvurum</a>
     <a href="/hesap-ayarlarim.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/></svg>Hesap Ayarları</a>
@@ -89,96 +100,108 @@
   </nav>
 </div>
 <div class="adm-wrap">
-  <h1>Postlarım <span id="sellerName" style="font-weight:500;color:var(--muted);font-size:13px;"></span></h1>
-  <p class="lead">Ana sayfadaki story baloncuklarında görünen ürün tanıtımların. Normal postlar 24 saat sonra kaybolur; ücretli Vitrin başvurusu onaylanan postlar süresi boyunca kalıcı görünür ve "Reklam" rozeti alır. <a href="/vitrin-basvurum.html">Vitrin'e başvur →</a></p>
+  <h1>Vitrin Başvurusu <span id="sellerName" style="font-weight:500;color:var(--muted);font-size:13px;"></span></h1>
+  <p class="lead">Bir postunu, seçtiğin süre boyunca anasayfanın en üstündeki story şeridinde "Reklam" rozetiyle kalıcı olarak öne çıkar.</p>
+  <div class="vit-intro">Bu ücretli bir hizmettir. Başvurun admin ekibimiz tarafından incelenir; onaylanırsa ödeme bilgileri (Köylü Dostu IBAN'ı) Mesaj Kutusu üzerinden sana iletilir. Ödemen alındıktan sonra postun Vitrin'de yayına alınır.</div>
 
   <div class="post-form">
     <div class="post-field">
-      <label>Ürün</label>
-      <select id="productSelect"></select>
+      <label>Öne Çıkarılacak Post</label>
+      <select id="postSelect"><option value="">Yükleniyor…</option></select>
     </div>
     <div class="post-field">
-      <label>Kısa Açıklama</label>
-      <textarea id="captionField" maxlength="200" placeholder="Örn. Bu hafta hasat başladı, taze kirazlar geldi!"></textarea>
+      <label>Süre / Paket</label>
+      <div class="pkg-row" id="pkgRow"></div>
     </div>
-    <button class="post-submit" id="postSubmitBtn">Paylaş</button>
-    <p class="post-msg" id="postMsg"></p>
+    <button class="post-submit" id="applyBtn">Vitrin Başvurusu Gönder</button>
+    <p class="post-msg" id="applyMsg"></p>
   </div>
 
-  <div id="postList"></div>
+  <div class="section-title">Başvurularım</div>
+  <div id="appList"><div class="adm-empty">Yükleniyor…</div></div>
 </div>
 
 <script src="assets/auth.js"></script>
 <script>
 (function () {
-  if (!window.KDAuth.requireApprovedSeller('/admin-postlar.html')) return;
+  if (!window.KDAuth.requireApprovedSeller('/vitrin-basvurum.html')) return;
   document.getElementById('sellerName').textContent = '· ' + window.KDAuth.name();
 
-  window.KDAuth.authedFetch('/api/admin/products/mine').then(function (r) { return r.json(); }).then(function (data) {
-    var select = document.getElementById('productSelect');
-    var products = data.products || [];
-    if (!products.length) { select.innerHTML = '<option value="">Ürünün yok</option>'; return; }
-    select.innerHTML = products.map(function (p) { return '<option value="' + p.slug + '">' + p.title + '</option>'; }).join('');
-  }).catch(function () {});
+  var PACKAGES = [
+    { id: '7gun', label: '7 Gün', price: 250 },
+    { id: '30gun', label: '30 Gün', price: 800 },
+  ];
+  var selectedPkg = PACKAGES[0].id;
+  var pkgRow = document.getElementById('pkgRow');
+  pkgRow.innerHTML = PACKAGES.map(function (pkg) {
+    return '<div class="pkg-opt' + (pkg.id === selectedPkg ? ' selected' : '') + '" data-id="' + pkg.id + '">' +
+      '<div class="pkg-days">' + pkg.label + '</div><div class="pkg-price">' + pkg.price + '₺</div>' +
+    '</div>';
+  }).join('');
+  pkgRow.querySelectorAll('.pkg-opt').forEach(function (el) {
+    el.addEventListener('click', function () {
+      selectedPkg = el.dataset.id;
+      pkgRow.querySelectorAll('.pkg-opt').forEach(function (o) { o.classList.toggle('selected', o === el); });
+    });
+  });
 
-  function timeLeft(iso) {
-    var diff = new Date(iso).getTime() - Date.now();
-    if (diff <= 0) return null;
-    var h = Math.floor(diff / 3600000);
-    if (h < 1) return Math.floor(diff / 60000) + ' dk kaldı';
-    return h + ' sa kaldı';
-  }
+  var preselectPostId = new URLSearchParams(location.search).get('postId') || '';
 
   function loadPosts() {
     window.KDAuth.authedFetch('/api/admin/posts/mine').then(function (r) { return r.json(); }).then(function (data) {
-      var list = document.getElementById('postList');
-      var posts = data.posts || [];
-      if (!posts.length) { list.innerHTML = '<div class="adm-empty">Henüz post paylaşmadın.</div>'; return; }
-      list.innerHTML = posts.map(function (post) {
-        var badge = '';
-        var vitrinLink = '';
-        if (post.isAd) {
-          badge = '<span class="post-item-badge sponsored">Reklam</span>';
-        } else {
-          var left = timeLeft(post.expiresAt);
-          badge = left ? '<span class="post-item-badge active">' + left + '</span>' : '<span class="post-item-badge expired">Süresi doldu</span>';
-          vitrinLink = '<a class="post-del" href="/vitrin-basvurum.html?postId=' + post.id + '" style="text-decoration:none;">Vitrin\'e Başvur</a>';
-        }
-        return '<div class="post-item" data-id="' + post.id + '">' +
-          '<img src="https://images.pexels.com/photos/' + post.img + '/pexels-photo-' + post.img + '.jpeg?auto=compress&cs=tinysrgb&w=150" alt="">' +
-          '<div class="post-item-body"><div class="post-item-title">' + post.productTitle + '</div><div class="post-item-cap">' + (post.caption || '—') + '</div></div>' +
-          badge + vitrinLink +
-          '<button class="post-del" data-id="' + post.id + '">Sil</button>' +
-        '</div>';
+      var select = document.getElementById('postSelect');
+      var eligible = (data.posts || []).filter(function (p) { return !p.isAd; });
+      if (!eligible.length) {
+        select.innerHTML = '<option value="">Önce Postlarım sayfasından bir post paylaş</option>';
+        document.getElementById('applyBtn').disabled = true;
+        return;
+      }
+      select.innerHTML = eligible.map(function (p) {
+        return '<option value="' + p.id + '"' + (p.id === preselectPostId ? ' selected' : '') + '>' + window.KDAuth.esc(p.productTitle) + (p.caption ? ' — ' + window.KDAuth.esc(p.caption) : '') + '</option>';
       }).join('');
-      list.querySelectorAll('.post-del').forEach(function (btn) {
-        btn.addEventListener('click', function () {
-          window.KDAuth.authedFetch('/api/admin/posts/delete', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id: btn.dataset.id }),
-          }).then(function () { loadPosts(); }).catch(function () {});
-        });
-      });
     }).catch(function () {});
   }
-
-  document.getElementById('postSubmitBtn').addEventListener('click', function () {
-    var msg = document.getElementById('postMsg');
-    var slug = document.getElementById('productSelect').value;
-    var caption = document.getElementById('captionField').value.trim();
-    if (!slug) { msg.textContent = 'Önce bir ürün seç.'; return; }
-    msg.textContent = '';
-    window.KDAuth.authedFetch('/api/posts', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ productSlug: slug, caption: caption }),
-    }).then(function (r) { return r.json(); }).then(function (data) {
-      if (data.error) { msg.textContent = data.error; return; }
-      document.getElementById('captionField').value = '';
-      loadPosts();
-    }).catch(function () {});
-  });
-
   loadPosts();
+
+  function statusLabel(s) { return { pending: 'İnceleniyor', approved: 'Onaylandı', rejected: 'Onaylanmadı' }[s] || s; }
+
+  function loadApplications() {
+    window.KDAuth.authedFetch('/api/vitrin-applications/mine').then(function (r) { return r.json(); }).then(function (data) {
+      var list = document.getElementById('appList');
+      var apps = data.applications || [];
+      if (!apps.length) { list.innerHTML = '<div class="adm-empty">Henüz Vitrin başvurun yok.</div>'; return; }
+      list.innerHTML = apps.map(function (a) {
+        return '<div class="app-item">' +
+          '<img src="https://images.pexels.com/photos/' + a.img + '/pexels-photo-' + a.img + '.jpeg?auto=compress&cs=tinysrgb&w=150" alt="">' +
+          '<div class="app-item-body"><div class="app-item-title">' + window.KDAuth.esc(a.productTitle) + '</div>' +
+          '<div class="app-item-sub">' + window.KDAuth.esc(a.packageLabel) + ' · ' + a.price + '₺</div></div>' +
+          '<span class="app-badge ' + a.status + '">' + statusLabel(a.status) + '</span>' +
+        '</div>';
+      }).join('');
+    }).catch(function () {
+      document.getElementById('appList').innerHTML = '<div class="adm-empty">Başvurular yüklenemedi.</div>';
+    });
+  }
+  loadApplications();
+
+  document.getElementById('applyBtn').addEventListener('click', function () {
+    var msg = document.getElementById('applyMsg');
+    var btn = document.getElementById('applyBtn');
+    var postId = document.getElementById('postSelect').value;
+    msg.className = 'post-msg'; msg.textContent = '';
+    if (!postId) { msg.textContent = 'Bir post seç.'; return; }
+    btn.disabled = true;
+    window.KDAuth.authedFetch('/api/vitrin-applications', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ postId: postId, packageId: selectedPkg }),
+    }).then(function (r) { return r.json(); }).then(function (data) {
+      btn.disabled = false;
+      if (data.error) { msg.className = 'post-msg err'; msg.textContent = data.error; return; }
+      msg.className = 'post-msg ok'; msg.textContent = 'Başvurun alındı, inceleniyor.';
+      loadPosts();
+      loadApplications();
+    }).catch(function () { btn.disabled = false; msg.textContent = 'Bağlantı hatası, tekrar dene.'; });
+  });
 })();
 </script>
 </body>

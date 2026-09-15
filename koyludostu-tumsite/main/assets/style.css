@@ -139,6 +139,16 @@ button{font-family:inherit;}
 }
 .filter-reset:hover{color:var(--ink);border-color:var(--ink);}
 
+/* Keşif şeritleri (Yeni Eklenenler / Trend / Senin Şehrinden) — anasayfa grid'inin
+   üstünde, yatay kaydırmalı, aynı .pin kartını sabit genişlikte yeniden kullanır. */
+.discover-section{max-width:1400px;margin:0 auto;padding:0 20px;margin-bottom:18px;}
+.discover-title{font-size:15px;font-weight:800;margin:0 0 10px;padding:0 4px;}
+.discover-scroll{display:flex;gap:12px;overflow-x:auto;padding:0 4px 8px;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch;}
+.discover-scroll::-webkit-scrollbar{height:5px;}
+.discover-scroll::-webkit-scrollbar-thumb{background:var(--line);border-radius:4px;}
+.discover-scroll .pin{width:150px;flex:0 0 150px;scroll-snap-align:start;margin-bottom:0;}
+.discover-scroll .pin img{aspect-ratio:3/4;height:auto;}
+
 /* Feed / grid */
 .feed{max-width:1400px;margin:0 auto;padding:22px 20px 70px;}
 .feed-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:16px;padding:0 4px;}
