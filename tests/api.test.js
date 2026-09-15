@@ -429,7 +429,7 @@ describe('Kargo Takip', () => {
 
   test('toplam ağırlık = birim ağırlık × miktar, bozulabilirlik talepte donduruluyor', async () => {
     const seller = await newSeller('Seller Ship Weight');
-    const p = await createProduct(seller.token, { weightKg: 2, perishable: true });
+    const p = await createProduct(seller.token, { weightKg: 2, storageType: 'soguk' });
     const sh = await fetch(url('/api/admin/shipments'), {
       method: 'POST', headers: authHeaders(seller.token),
       body: JSON.stringify({ productSlug: p.slug, quantity: 3, buyerName: 'Alıcı', buyerPhone: nextTestPhone(), address: 'Adres' }),
@@ -464,12 +464,67 @@ describe('Ürün ağırlığı ve bozulabilirlik', () => {
 
   test('perishable ve weightKg doğru saklanır ve ürün sayfasında uyarı çıkar', async () => {
     const seller = await newSeller('Seller Weight Ok');
-    const p = await createProduct(seller.token, { weightKg: 0.75, perishable: true });
+    const p = await createProduct(seller.token, { weightKg: 0.75, storageType: 'soguk' });
     assert.equal(p.weightKg, 0.75);
     assert.equal(p.perishable, true);
     const html = await fetch(url('/urun/' + p.slug + '.html')).then((r) => r.text());
-    assert.match(html, /Çabuk bozulur/);
+    assert.match(html, /Soğuk zincir gerektirir/);
     assert.match(html, /0\.75 kg/);
+  });
+});
+
+describe('Saklama koşulu türü — soğuk zincir/çabuk bozulan ürünlerde kargo engellenir', () => {
+  test('varsayılan (belirtilmezse) oda sıcaklığı kabul edilir, kargo serbest kalır', async () => {
+    const seller = await newSeller('Storage Default');
+    const p = await createProduct(seller.token, { delivery: ['pickup', 'kargo'] });
+    assert.equal(p.storageType, 'oda');
+    assert.equal(p.perishable, false);
+    assert.deepEqual(p.delivery.sort(), ['kargo', 'pickup']);
+  });
+
+  test('soğuk zincir seçilip sadece kargo işaretlenirse ürün oluşturulamaz', async () => {
+    const seller = await newSeller('Storage Soguk Only Kargo');
+    const img = await uploadImage(seller.token);
+    const r = await fetch(url('/api/admin/products'), {
+      method: 'POST', headers: authHeaders(seller.token),
+      body: JSON.stringify({
+        title: 'Taze Peynir', cat: 'Peynir', city: 'Test', price: '100', unit: '/ kg',
+        delivery: ['kargo'], storageType: 'soguk', img,
+      }),
+    });
+    assert.equal(r.status, 400);
+    const body = await r.json();
+    assert.match(body.error, /kargo seçilemez/);
+  });
+
+  test('soğuk zincirde kargo + otobüs birlikte seçilirse kargo sessizce elenir, otobüs kalır', async () => {
+    const seller = await newSeller('Storage Soguk Strip');
+    const p = await createProduct(seller.token, { storageType: 'soguk', delivery: ['kargo', 'bus'] });
+    assert.equal(p.storageType, 'soguk');
+    assert.equal(p.perishable, true);
+    assert.deepEqual(p.delivery, ['bus']);
+  });
+
+  test('güncellemede oda -> soğuk zincire geçilirse mevcut kargo seçeneği kaldırılır', async () => {
+    const seller = await newSeller('Storage Update To Soguk');
+    const p = await createProduct(seller.token, { delivery: ['kargo', 'pickup'] });
+    const updated = await fetch(url('/api/admin/products/update'), {
+      method: 'POST', headers: authHeaders(seller.token),
+      body: JSON.stringify({ slug: p.slug, storageType: 'soguk' }),
+    }).then((r) => r.json());
+    assert.equal(updated.storageType, 'soguk');
+    assert.equal(updated.perishable, true);
+    assert.deepEqual(updated.delivery, ['pickup']);
+  });
+
+  test('güncellemede soğuk zincire geçiş, geriye sadece kargo bırakıyorsa reddedilir', async () => {
+    const seller = await newSeller('Storage Update To Soguk Empty');
+    const p = await createProduct(seller.token, { delivery: ['kargo'] });
+    const r = await fetch(url('/api/admin/products/update'), {
+      method: 'POST', headers: authHeaders(seller.token),
+      body: JSON.stringify({ slug: p.slug, storageType: 'soguk' }),
+    });
+    assert.equal(r.status, 400);
   });
 });
 
@@ -1007,7 +1062,7 @@ describe('Kullanıcı senaryosu: kargo ve ambalaj talebi birlikte', () => {
   test('çabuk bozulan bir satış için hem kargo hem soğuk zincir ambalajı talep edilir', async () => {
     const seller = await newSeller('Seller Combo');
     const ownerToken = await ownerLogin(server.baseUrl, server.adminPassword);
-    const p = await createProduct(seller.token, { weightKg: 1.2, perishable: true, cat: 'Meyve' });
+    const p = await createProduct(seller.token, { weightKg: 1.2, storageType: 'soguk', cat: 'Meyve' });
 
     const shipment = await fetch(url('/api/admin/shipments'), {
       method: 'POST', headers: authHeaders(seller.token),

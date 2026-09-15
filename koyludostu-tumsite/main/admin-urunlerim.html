@@ -168,16 +168,10 @@
       <label>Stok Miktarı (boş = sınırsız)</label>
       <input type="number" id="fStock" min="0" placeholder="Örn. 40">
     </div>
-    <div class="prod-row">
-      <div class="prod-field">
-        <label>Birim Ağırlık (kg) — kargo için gerekli</label>
-        <input type="number" id="fWeight" min="0.1" step="0.1" placeholder="Örn. 1">
-      </div>
-      <div class="prod-field" style="display:flex;align-items:flex-end;">
-        <label class="prod-check-label"><input type="checkbox" id="fPerishable"> Çabuk bozulur (soğuk zincir gerekir)</label>
-      </div>
+    <div class="prod-field">
+      <label>Birim Ağırlık (kg) — kargo için gerekli</label>
+      <input type="number" id="fWeight" min="0.1" step="0.1" placeholder="Örn. 1">
     </div>
-    <p class="doc-status" id="perishableWarning" style="display:none;color:var(--ring2);">⚠️ Çabuk bozulan bir ürün için kargo yerine kendin teslim ya da otobüs tercih etmen önerilir.</p>
     <div class="prod-field">
       <label>Fotoğraf (kapak)</label>
       <input type="file" id="fPhoto" accept="image/png,image/jpeg,image/webp">
@@ -208,15 +202,23 @@
       <div class="doc-status" id="certStatus"></div>
     </div>
     <div class="prod-field">
+      <label>Saklama Koşulu Türü</label>
+      <select id="fStorageType">
+        <option value="oda">Oda sıcaklığında dayanıklı (kargoya uygun) — ör. kuru üzüm, bal, kuruyemiş</option>
+        <option value="soguk">Soğuk zincir / çabuk bozulur (kargoya uygun değil) — ör. yaş üzüm, peynir, taze sebze</option>
+      </select>
+    </div>
+    <div class="prod-field">
       <label>Nakliye Yöntemi</label>
       <div class="prod-checks">
         <label><input type="checkbox" class="fDelivery" value="pickup"> Kendim Alacağım</label>
         <label><input type="checkbox" class="fDelivery" value="bus"> Otobüs</label>
-        <label><input type="checkbox" class="fDelivery" value="kargo"> Kargo</label>
+        <label><input type="checkbox" class="fDelivery" value="kargo" id="fDeliveryKargo"> Kargo</label>
       </div>
+      <p class="doc-status" id="kargoBlockedNote" style="display:none;color:var(--ring2);">⚠️ Soğuk zincir/çabuk bozulan ürünlerde kargo seçilemez — sadece kendin teslim ya da otobüs kullanılabilir.</p>
     </div>
     <div class="prod-field">
-      <label>Saklama Koşulları</label>
+      <label>Saklama Koşulları <span style="font-weight:400;color:var(--muted);">(opsiyonel not)</span></label>
       <textarea id="fStorage" maxlength="300" placeholder="Örn. Serin ve kuru yerde saklayın."></textarea>
     </div>
     <div class="prod-field">
@@ -347,13 +349,19 @@
     ],
   };
 
-  function updatePerishableWarning() {
-    var kargo = document.querySelector('.fDelivery[value="kargo"]').checked;
-    var perishable = document.getElementById('fPerishable').checked;
-    document.getElementById('perishableWarning').style.display = (kargo && perishable) ? 'block' : 'none';
+  // Soğuk zincir/çabuk bozulan ürünlerde Kargo seçeneği tamamen kilitlenir — sadece
+  // uyarı değil, gerçek bir engelleme (sunucu tarafında da ayrıca zorlanıyor, bkz.
+  // /api/admin/products). Kuru üzüm gibi dayanıklı ürünler kargoyla gidebilir;
+  // yaş üzüm/peynir gibi soğuk zincir gerektirenler gidemez.
+  function updateKargoAvailability() {
+    var storageType = document.getElementById('fStorageType').value;
+    var kargoBox = document.getElementById('fDeliveryKargo');
+    var blocked = storageType === 'soguk';
+    kargoBox.disabled = blocked;
+    if (blocked) kargoBox.checked = false;
+    document.getElementById('kargoBlockedNote').style.display = blocked ? 'block' : 'none';
   }
-  document.getElementById('fPerishable').addEventListener('change', updatePerishableWarning);
-  document.querySelector('.fDelivery[value="kargo"]').addEventListener('change', updatePerishableWarning);
+  document.getElementById('fStorageType').addEventListener('change', updateKargoAvailability);
 
   function renderCatAttrs(values) {
     values = values || {};
@@ -460,10 +468,12 @@
     document.getElementById('fMaxQty').value = p.maxQty || '';
     document.getElementById('fStock').value = (p.stock === null || p.stock === undefined) ? '' : p.stock;
     document.getElementById('fWeight').value = p.weightKg || '';
-    document.getElementById('fPerishable').checked = !!p.perishable;
     document.getElementById('fStorage').value = p.storageConditions || '';
     document.getElementById('fDesc').value = p.description || '';
     document.querySelectorAll('.fDelivery').forEach(function (c) { c.checked = (p.delivery || []).indexOf(c.value) !== -1; });
+    // Eski ürünlerde storageType alanı yoktu — geriye dönük uyum için perishable'dan türetiyoruz.
+    document.getElementById('fStorageType').value = p.storageType || (p.perishable ? 'soguk' : 'oda');
+    updateKargoAvailability();
     photoDataUrl = '';
     document.getElementById('fPhoto').value = '';
     document.getElementById('photoPreview').style.display = 'none';
@@ -498,7 +508,8 @@
     document.getElementById('fMaxQty').value = '';
     document.getElementById('fStock').value = '';
     document.getElementById('fWeight').value = '';
-    document.getElementById('fPerishable').checked = false;
+    document.getElementById('fStorageType').value = 'oda';
+    updateKargoAvailability();
     document.getElementById('fStorage').value = '';
     document.getElementById('fDesc').value = '';
     document.getElementById('fPhoto').value = '';
@@ -554,7 +565,7 @@
       maxQty: document.getElementById('fMaxQty').value,
       stock: document.getElementById('fStock').value,
       weightKg: document.getElementById('fWeight').value,
-      perishable: document.getElementById('fPerishable').checked,
+      storageType: document.getElementById('fStorageType').value,
       storageConditions: document.getElementById('fStorage').value.trim(),
       description: document.getElementById('fDesc').value.trim(),
       delivery: delivery,

@@ -212,7 +212,7 @@ function renderProductPage(product, allProducts) {
     .map((f) => `${esc(f.label)}: ${esc(product.attrs[f.key])}`);
   const attrsLine = attrPairs.length ? `<div class="qty-range">${attrPairs.join(' · ')}</div>` : '';
   const perishableLine = product.perishable
-    ? `<div class="perishable-badge">❄️ Çabuk bozulur — kargoda gecikme riskine dikkat</div>` : '';
+    ? `<div class="perishable-badge">❄️ Soğuk zincir gerektirir — kargoyla gönderilmez, kendin teslim ya da otobüsle alınır</div>` : '';
   const weightLine = product.weightKg
     ? `<div class="qty-range">Birim ağırlık: ~${product.weightKg} kg</div>` : '';
   const galleryPhotos = [product.img].concat(Array.isArray(product.images) ? product.images : []);
@@ -3232,14 +3232,26 @@ const server = http.createServer(async (req, res) => {
       const storageConditions = String(body.storageConditions || '').trim().slice(0, 300);
       const description = String(body.description || '').trim().slice(0, 1000);
       const img = String(body.img || '').trim();
-      const delivery = Array.isArray(body.delivery) ? body.delivery.filter((d) => ['pickup', 'bus', 'kargo'].includes(d)) : [];
+      // Saklama koşulu türü nakliye seçeneklerini kısıtlar: soğuk zincir/çabuk
+      // bozulan ürünler (ör. yaş üzüm, peynir) kargoyla gönderilemez — sadece
+      // dayanıklı (oda sıcaklığı) ürünler kargoya uygundur (ör. kuru üzüm, bal).
+      // İstemci tarafında da engelleniyor ama asıl zorlama burada, sunucuda.
+      const storageType = body.storageType === 'soguk' ? 'soguk' : 'oda';
+      let delivery = Array.isArray(body.delivery) ? body.delivery.filter((d) => ['pickup', 'bus', 'kargo'].includes(d)) : [];
+      if (storageType === 'soguk') delivery = delivery.filter((d) => d !== 'kargo');
 
       if (title.length < 2) return jsonResponse(res, 400, { error: 'Ürün başlığı gerekli.' });
       if (!cat) return jsonResponse(res, 400, { error: 'Kategori seç.' });
       if (city.length < 2) return jsonResponse(res, 400, { error: 'Şehir gerekli.' });
       if (!priceNum || priceNum <= 0) return jsonResponse(res, 400, { error: 'Geçerli bir fiyat gir.' });
       if (!unit) return jsonResponse(res, 400, { error: 'Ambalaj/birim gerekli (ör. / kg).' });
-      if (!delivery.length) return jsonResponse(res, 400, { error: 'En az bir nakliye yöntemi seç.' });
+      if (!delivery.length) {
+        return jsonResponse(res, 400, {
+          error: storageType === 'soguk'
+            ? 'Soğuk zincir/çabuk bozulan ürünlerde kargo seçilemez — kendin teslim ya da otobüs seç.'
+            : 'En az bir nakliye yöntemi seç.',
+        });
+      }
       if (!img) return jsonResponse(res, 400, { error: 'Bir fotoğraf yükle.' });
       if (!isValidProductImg(img)) return jsonResponse(res, 400, { error: 'Geçersiz görsel. Önce /api/admin/upload-image ile yükle.' });
 
@@ -3265,7 +3277,9 @@ const server = http.createServer(async (req, res) => {
         weightKg = Number(body.weightKg);
         if (!Number.isFinite(weightKg) || weightKg <= 0) return jsonResponse(res, 400, { error: 'Geçerli bir birim ağırlık gir (kg).' });
       }
-      const perishable = !!body.perishable;
+      // perishable, storageType'tan türetilir — geriye dönük uyumluluk için (eski
+      // kod/ekranlar hâlâ bu boolean'a bakıyor, ör. kargo takip/çabuk-bozulur rozeti).
+      const perishable = storageType === 'soguk';
 
       // Kapak fotoğrafı (img) hâlâ zorunlu tek alan; ek fotoğraflar (images) opsiyonel bir
       // galeri oluşturur — her biri /api/admin/upload-image ile önceden yüklenmiş olmalı.
@@ -3279,7 +3293,7 @@ const server = http.createServer(async (req, res) => {
         slug, title, cat, price: priceNum + '₺', unit, img, images, city, delivery,
         sellerId: session.user.id, sellerName: session.user.name, sellerPhone: session.phone,
         createdAt: new Date().toISOString(), description, minQty, maxQty, storageConditions, stock,
-        active: true, attrs, weightKg, perishable,
+        active: true, attrs, weightKg, perishable, storageType,
         organic, organicDocUrl: organicDocUrl || null, organicApproved: false,
         certificateUrl: certificateUrl || null,
         // Yakında: yapay zeka ile otomatik fotoğraf düzenleme (bkz. /api/admin/products/ai-enhance-photos).
@@ -3336,7 +3350,22 @@ const server = http.createServer(async (req, res) => {
           prod.weightKg = weightKg;
         }
       }
-      if (typeof body.perishable === 'boolean') prod.perishable = body.perishable;
+      if (body.storageType === 'oda' || body.storageType === 'soguk') {
+        prod.storageType = body.storageType;
+        prod.perishable = body.storageType === 'soguk'; // geriye dönük uyumluluk (bkz. yukarıdaki not)
+      }
+      // Saklama türü soğuk zincirse kargo hiçbir zaman listede kalamaz — bu isteğin
+      // delivery/storageType'a dokunup dokunmadığından bağımsız her zaman uygulanır.
+      if (prod.storageType === 'soguk' && Array.isArray(prod.delivery)) {
+        prod.delivery = prod.delivery.filter((d) => d !== 'kargo');
+      }
+      if (!prod.delivery || !prod.delivery.length) {
+        return jsonResponse(res, 400, {
+          error: prod.storageType === 'soguk'
+            ? 'Soğuk zincir/çabuk bozulan ürünlerde kargo seçilemez — kendin teslim ya da otobüs seç.'
+            : 'En az bir nakliye yöntemi seç.',
+        });
+      }
 
       if (body.organic !== undefined) {
         const organic = !!body.organic;
