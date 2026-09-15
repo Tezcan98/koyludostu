@@ -2547,6 +2547,82 @@ const server = http.createServer(async (req, res) => {
       return jsonResponse(res, 200, { ok: true });
     }
 
+    // Hesabımı Sil (KVKK "unutulma hakkı") — kullanıcının kendi isteğiyle, parola
+    // doğrulamasıyla hesabını tamamen silmesi. Sahibinin admin'e ulaşmasını beklemek
+    // zorunda kalmadan kendi kendine yapabildiği bir öz-servis. Ürünler/siparişler/
+    // yorumlar geriye dönük kayıt olarak kalır (owner'ın /api/owner/users/delete
+    // uç noktasıyla aynı davranış) — sadece hesap ve oturumlar silinir.
+    if (p === '/api/auth/delete-account' && req.method === 'POST') {
+      const session = requireAuth(req, res);
+      if (!session) return;
+      const { password } = await readBody(req);
+      const users = readJson(USERS_PATH, {});
+      const user = users[session.phone];
+      if (!user) return jsonResponse(res, 404, { error: 'Hesap bulunamadı' });
+      if (!verifyPassword(String(password || ''), user.passwordHash)) {
+        return jsonResponse(res, 401, { error: 'Parola hatalı.' });
+      }
+      delete users[session.phone];
+      writeJson(USERS_PATH, users);
+      const sessions = readJson(SESSIONS_PATH, {});
+      for (const t of Object.keys(sessions)) if (sessions[t].phone === session.phone) delete sessions[t];
+      writeJson(SESSIONS_PATH, sessions);
+      return jsonResponse(res, 200, { ok: true });
+    }
+
+    // ---------- Adres defteri: alıcının sipariş verirken tekrar tekrar elle adres
+    // yazmaması için kayıtlı adresleri. Kullanıcı kaydının içinde bir dizi olarak
+    // tutulur (ayrı bir dosya gerektirmeyecek kadar küçük bir veri). ----------
+    if (p === '/api/addresses/mine' && req.method === 'GET') {
+      const session = requireAuth(req, res);
+      if (!session) return;
+      return jsonResponse(res, 200, { addresses: session.user.addresses || [] });
+    }
+
+    if (p === '/api/addresses/add' && req.method === 'POST') {
+      const session = requireAuth(req, res);
+      if (!session) return;
+      const { label, city, district, neighborhood, address } = await readBody(req);
+      const cleanLabel = String(label || '').trim().slice(0, 40);
+      const cleanCity = String(city || '').trim().slice(0, 60);
+      const cleanDistrict = String(district || '').trim().slice(0, 60);
+      const cleanAddress = String(address || '').trim().slice(0, 300);
+      if (!cleanLabel) return jsonResponse(res, 400, { error: 'Adrese bir isim ver (ör. Ev, İş).' });
+      if (!cleanCity) return jsonResponse(res, 400, { error: 'İl gerekli.' });
+      if (!cleanDistrict) return jsonResponse(res, 400, { error: 'İlçe gerekli.' });
+      if (!cleanAddress) return jsonResponse(res, 400, { error: 'Açık adres gerekli.' });
+
+      const users = readJson(USERS_PATH, {});
+      const user = users[session.phone];
+      if (!user) return jsonResponse(res, 404, { error: 'Hesap bulunamadı' });
+      if (!Array.isArray(user.addresses)) user.addresses = [];
+      if (user.addresses.length >= 15) {
+        return jsonResponse(res, 400, { error: 'En fazla 15 adres kaydedebilirsin.' });
+      }
+      const entry = {
+        id: 'addr_' + randomToken().slice(0, 10),
+        label: cleanLabel, city: cleanCity, district: cleanDistrict,
+        neighborhood: String(neighborhood || '').trim().slice(0, 80),
+        address: cleanAddress,
+        createdAt: new Date().toISOString(),
+      };
+      user.addresses.push(entry);
+      writeJson(USERS_PATH, users);
+      return jsonResponse(res, 200, { addresses: user.addresses });
+    }
+
+    if (p === '/api/addresses/delete' && req.method === 'POST') {
+      const session = requireAuth(req, res);
+      if (!session) return;
+      const { id } = await readBody(req);
+      const users = readJson(USERS_PATH, {});
+      const user = users[session.phone];
+      if (!user) return jsonResponse(res, 404, { error: 'Hesap bulunamadı' });
+      user.addresses = (user.addresses || []).filter((a) => a.id !== id);
+      writeJson(USERS_PATH, users);
+      return jsonResponse(res, 200, { addresses: user.addresses });
+    }
+
     // Şifremi unuttum — telefon ya da e-posta ile bir sıfırlama bağlantısı ister.
     // Hesabın var olup olmadığını sızdırmamak için sonuç her zaman aynı genel
     // mesajla döner; bağlantı sadece eşleşen bir hesap bulunursa gerçekten gönderilir.
@@ -3539,6 +3615,34 @@ const server = http.createServer(async (req, res) => {
       const rest = p.slice(prefix.length + 1) || '/';
       return serveStatic(res, root, rest);
     }
+  }
+
+  // Arama motorları için canlı sitemap — sabit bir dosya yerine her istekte
+  // ürün/satıcı verisinden üretilir, böylece yeni eklenen bir ürün/satıcı
+  // dosyayı elden güncellemeye gerek kalmadan dizine hemen girer.
+  if (p === '/sitemap.xml' && req.method === 'GET') {
+    const proto = req.headers['x-forwarded-proto'] || 'http';
+    const origin = `${proto}://${req.headers.host}`;
+    const products = readJson(PRODUCTS_PATH, {});
+    const users = readJson(USERS_PATH, {});
+    const staticPages = [
+      '', 'hakkimizda.html', 'gizlilik.html', 'kullanim-sartlari.html', 'kvkk.html',
+      'sss.html', 'iade-politikasi.html', 'giris.html', 'vitrin.html',
+    ];
+    const urls = staticPages.map((page) => `${origin}/${page}`);
+    Object.values(products).forEach((prod) => {
+      if (prod.active !== false) urls.push(`${origin}/urun/${encodeURIComponent(prod.slug)}.html`);
+    });
+    Object.entries(users).forEach(([, u]) => {
+      if (u.role === 'satici' && u.sellerStatus === 'approved') urls.push(`${origin}/satici/${encodeURIComponent(u.id)}.html`);
+    });
+    const body = '<?xml version="1.0" encoding="UTF-8"?>\n' +
+      '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' +
+      urls.map((u) => `  <url><loc>${esc(u)}</loc></url>`).join('\n') +
+      '\n</urlset>\n';
+    res.writeHead(200, { 'Content-Type': 'application/xml; charset=utf-8' });
+    res.end(body);
+    return;
   }
 
   // Statik dosyası olmayan (satıcı tarafından sonradan eklenmiş) ürünler için

@@ -34,6 +34,8 @@
 
           '<div class="order-section">' +
             '<div class="order-section-title">Teslimat Bilgileri</div>' +
+            '<div class="order-field" id="orderSavedAddressWrap" hidden><label>Kayıtlı Adreslerim</label>' +
+              '<select id="orderSavedAddress"><option value="">Yeni adres gir…</option></select></div>' +
             '<div class="order-field-row">' +
               '<div class="order-field"><label>İl</label><select id="orderCity"><option value="">Yükleniyor…</option></select></div>' +
               '<div class="order-field"><label>İlçe</label><select id="orderDistrict" disabled><option value="">Önce il seç</option></select></div>' +
@@ -123,6 +125,37 @@
     document.getElementById('orderTermsCheck').checked = false;
     var msgEl = document.getElementById('orderMsg');
     msgEl.textContent = '';
+
+    // Kayıtlı adreslerim varsa seçim kutusunu doldur — seçilince il/ilçe/adres
+    // otomatik dolar, elle tekrar yazmaya gerek kalmaz (bkz. /adreslerim.html).
+    var savedWrap = document.getElementById('orderSavedAddressWrap');
+    var savedSelect = document.getElementById('orderSavedAddress');
+    savedWrap.hidden = true;
+    savedSelect.innerHTML = '<option value="">Yeni adres gir…</option>';
+    if (window.KDAuth.isLoggedIn()) {
+      window.KDAuth.authedFetch('/api/addresses/mine').then(function (r) { return r.json(); }).then(function (data) {
+        var addresses = data.addresses || [];
+        if (!addresses.length) return;
+        savedWrap.hidden = false;
+        addresses.forEach(function (a) {
+          var opt = document.createElement('option');
+          opt.value = a.id;
+          opt.textContent = a.label + ' — ' + a.district + '/' + a.city;
+          savedSelect.appendChild(opt);
+        });
+        savedSelect.onchange = function () {
+          var picked = addresses.filter(function (a) { return a.id === savedSelect.value; })[0];
+          if (!picked) return;
+          var cityEl = document.getElementById('orderCity');
+          var districtEl = document.getElementById('orderDistrict');
+          cityEl.value = picked.city;
+          cityEl.dispatchEvent(new Event('change'));
+          districtEl.value = picked.district;
+          var fullAddress = (picked.neighborhood ? picked.neighborhood + ', ' : '') + picked.address;
+          document.getElementById('orderAddress').value = fullAddress;
+        };
+      }).catch(function () {});
+    }
 
     var sendBtn = document.getElementById('orderSendBtn');
     sendBtn.disabled = false;

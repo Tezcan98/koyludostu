@@ -1,0 +1,17 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /secure-uploads/
+Disallow: /admin-*.html
+Disallow: /owner-admin.html
+Disallow: /satici-basvurum.html
+Disallow: /hesap-ayarlarim.html
+Disallow: /siparislerim.html
+Disallow: /mesajlarim.html
+Disallow: /favorilerim.html
+Disallow: /favori-saticilarim.html
+Disallow: /yorumlarim.html
+Disallow: /sikayetlerim.html
+Disallow: /adreslerim.html
+
+Sitemap: https://beta.koyludostu.com/sitemap.xml

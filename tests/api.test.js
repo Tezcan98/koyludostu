@@ -2440,3 +2440,83 @@ describe('Nilvera e-Fatura entegratör bağlantısı', () => {
     assert.match(r.invoiceNo, /^\d{4}\/\d{6}$/);
   });
 });
+
+describe('Adres defteri', () => {
+  test('adres eklenir, listelenir, silinir', async () => {
+    const buyer = await newBuyer('Adres Defteri Alıcı');
+    const empty = await fetch(url('/api/addresses/mine'), { headers: authHeaders(buyer.token) }).then((r) => r.json());
+    assert.deepEqual(empty.addresses, []);
+
+    const added = await fetch(url('/api/addresses/add'), {
+      method: 'POST', headers: authHeaders(buyer.token),
+      body: JSON.stringify({ label: 'Ev', city: 'İstanbul', district: 'Kadıköy', neighborhood: 'Moda', address: 'Moda Cad. No:1' }),
+    }).then((r) => r.json());
+    assert.equal(added.addresses.length, 1);
+    assert.equal(added.addresses[0].label, 'Ev');
+    const id = added.addresses[0].id;
+
+    const listed = await fetch(url('/api/addresses/mine'), { headers: authHeaders(buyer.token) }).then((r) => r.json());
+    assert.equal(listed.addresses.length, 1);
+
+    const afterDelete = await fetch(url('/api/addresses/delete'), {
+      method: 'POST', headers: authHeaders(buyer.token), body: JSON.stringify({ id }),
+    }).then((r) => r.json());
+    assert.equal(afterDelete.addresses.length, 0);
+  });
+
+  test('eksik alanlarla adres eklenemez', async () => {
+    const buyer = await newBuyer('Adres Eksik Alıcı');
+    const r = await fetch(url('/api/addresses/add'), {
+      method: 'POST', headers: authHeaders(buyer.token),
+      body: JSON.stringify({ label: 'Ev', city: 'İstanbul' }),
+    });
+    assert.equal(r.status, 400);
+  });
+
+  test('girişsiz istek 401 döner', async () => {
+    const r = await fetch(url('/api/addresses/mine'));
+    assert.equal(r.status, 401);
+  });
+});
+
+describe('Hesabımı Sil', () => {
+  test('yanlış parolayla hesap silinemez', async () => {
+    const buyer = await newBuyer('Silme Yanlış Parola');
+    const r = await fetch(url('/api/auth/delete-account'), {
+      method: 'POST', headers: authHeaders(buyer.token), body: JSON.stringify({ password: 'yanlisparola1' }),
+    });
+    assert.equal(r.status, 401);
+  });
+
+  test('doğru parolayla hesap silinir, oturum geçersizleşir, aynı telefonla tekrar kayıt olunabilir', async () => {
+    const phone = nextTestPhone();
+    const buyer = await registerUser(server.baseUrl, { name: 'Silme Testi', city: 'Test Şehir', password: 'test1234', role: 'alici', phone });
+
+    const del = await fetch(url('/api/auth/delete-account'), {
+      method: 'POST', headers: authHeaders(buyer.token), body: JSON.stringify({ password: 'test1234' }),
+    });
+    assert.equal(del.status, 200);
+
+    const meAfter = await fetch(url('/api/auth/me'), { headers: authHeaders(buyer.token) }).then((r) => r.json());
+    assert.equal(meAfter.user, null);
+
+    // Aynı telefonla tekrar kayıt olunabilmeli (hesap gerçekten silinmiş).
+    const reReg = await registerUser(server.baseUrl, { name: 'Yeni Kayıt', city: 'Test Şehir', password: 'test5678', role: 'alici', phone });
+    assert.ok(reReg.token);
+  });
+});
+
+describe('sitemap.xml', () => {
+  test('geçerli XML döner, aktif ürünleri içerir', async () => {
+    const seller = await newSeller('Sitemap Satıcı');
+    const product = await createProduct(seller.token, { title: 'Sitemap Ürünü' });
+
+    const r = await fetch(url('/sitemap.xml'));
+    assert.equal(r.status, 200);
+    assert.match(r.headers.get('content-type'), /xml/);
+    const body = await r.text();
+    assert.match(body, /<urlset/);
+    assert.match(body, new RegExp('urun/' + product.slug + '\\.html'));
+    assert.match(body, /sss\.html/);
+  });
+});

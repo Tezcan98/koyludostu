@@ -71,11 +71,14 @@
     <a href="/mesajlarim.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Mesajlar</a>
     <a href="/yorumlarim.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>Yorumlarım</a>
     <a href="/hesap-ayarlarim.html" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/></svg>Hesap Ayarları</a>
+    <a href="/adreslerim.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>Adreslerim</a>
     <div class="drawer-section-label">Diğer</div>
     <a href="/hakkimizda.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>Hakkımızda</a>
     <a href="/gizlilik.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z"/></svg>Gizlilik</a>
     <a href="/kullanim-sartlari.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h6"/></svg>Kullanım Şartları</a>
     <a href="/kvkk.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z"/><path d="M9 12l2 2 4-4"/></svg>KVKK Aydınlatma Metni</a>
+    <a href="/sss.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>SSS / Yardım</a>
+    <a href="/iade-politikasi.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>İade ve Cayma Hakkı</a>
   </nav>
 </div>
 
@@ -158,6 +161,14 @@
     <div class="acc-field"><label>Yeni Parola (Tekrar)</label><input type="password" id="newPassField2"></div>
     <button class="acc-btn" id="savePassBtn">Parolayı Güncelle</button>
     <p class="acc-msg" id="passMsg"></p>
+  </div>
+
+  <div class="acc-card" style="border-color:rgba(142,59,70,.3);">
+    <h2 style="color:var(--ring3);">Hesabımı Sil</h2>
+    <p style="font-size:12.5px;color:var(--muted);margin:0 0 12px;">Hesabın kalıcı olarak silinir, bu işlem geri alınamaz. Ürün/sipariş/yorum kayıtların referans olarak kalır ama artık kimseye ait görünmez, hesabınla giriş yapamazsın.</p>
+    <div class="acc-field"><label>Parolanı Doğrula</label><input type="password" id="deleteAccountPassField"></div>
+    <button class="acc-btn" id="deleteAccountBtn" style="background:var(--ring3);">Hesabımı Kalıcı Olarak Sil</button>
+    <p class="acc-msg" id="deleteAccountMsg"></p>
   </div>
 
   <a class="acc-logout" href="javascript:;" id="logoutLink">Çıkış yap</a>
@@ -421,6 +432,25 @@
 
   document.getElementById('logoutLink').addEventListener('click', function () {
     window.KDAuth.logout(); location.href = '/index.html';
+  });
+
+  document.getElementById('deleteAccountBtn').addEventListener('click', function () {
+    var msg = document.getElementById('deleteAccountMsg');
+    var btn = document.getElementById('deleteAccountBtn');
+    var password = document.getElementById('deleteAccountPassField').value;
+    msg.className = 'acc-msg'; msg.textContent = '';
+    if (!password) { msg.className = 'acc-msg err'; msg.textContent = 'Parolanı gir.'; return; }
+    if (!confirm('Hesabını kalıcı olarak silmek istediğine emin misin? Bu işlem geri alınamaz.')) return;
+    btn.disabled = true;
+    window.KDAuth.authedFetch('/api/auth/delete-account', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: password }),
+    }).then(function (r) { return r.json(); }).then(function (data) {
+      btn.disabled = false;
+      if (data.error) { msg.className = 'acc-msg err'; msg.textContent = data.error; return; }
+      window.KDAuth.logout();
+      location.href = '/index.html';
+    }).catch(function () { btn.disabled = false; msg.className = 'acc-msg err'; msg.textContent = 'Bağlantı hatası, tekrar dene.'; });
   });
 })();
 </script>

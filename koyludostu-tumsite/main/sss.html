@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#4E6B3A">
+<link rel="apple-touch-icon" href="/assets/logo-icon.jpg">
+<title>SSS / Yardım — Köylü Dostu</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  .doc-wrap{max-width:640px;margin:0 auto;padding:20px 20px 60px;}
+  .doc-wrap h1{font-size:20px;font-weight:800;margin:6px 0 6px;}
+  .doc-wrap p.lead{font-size:13px;color:var(--muted);margin:0 0 22px;line-height:1.6;}
+  .faq-item{background:var(--card);border:1px solid var(--line);border-radius:12px;margin-bottom:10px;overflow:hidden;}
+  .faq-q{
+    display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 16px;
+    cursor:pointer;font-size:13.5px;font-weight:700;
+  }
+  .faq-q .chev{flex-shrink:0;transition:transform .15s;color:var(--muted);}
+  .faq-item.open .faq-q .chev{transform:rotate(180deg);}
+  .faq-a{padding:0 16px;max-height:0;overflow:hidden;transition:max-height .2s ease, padding .2s ease;}
+  .faq-item.open .faq-a{padding:0 16px 16px;max-height:400px;}
+  .faq-a p, .faq-a li{font-size:13px;line-height:1.65;color:#3a352e;margin:0 0 8px;}
+  .faq-a ul{margin:0 0 8px;padding-left:18px;}
+  .faq-a a{color:var(--ring1);font-weight:700;}
+  .doc-wrap h2.section{font-size:12px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;margin:26px 0 10px;}
+  .doc-wrap h2.section:first-of-type{margin-top:0;}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <button class="hamburger-btn" onclick="document.getElementById('kdDrawer').classList.add('open');document.getElementById('kdOverlay').classList.add('open');" aria-label="Menü">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+  </button>
+  <a href="/index.html" class="avatar-ring">
+    <div class="avatar"><img src="/assets/logo-icon.jpg" alt="Köylü Dostu" style="width:92%;height:92%;object-fit:contain;"></div>
+  </a>
+  <a href="/index.html" class="brand-info" style="text-decoration:none;">
+    <h1>köylüdostu</h1>
+    <p>SSS / Yardım</p>
+  </a>
+  <div id="authSlot"></div>
+</div>
+<div class="drawer-overlay" id="kdOverlay" onclick="document.getElementById('kdDrawer').classList.remove('open');this.classList.remove('open');"></div>
+<div class="drawer" id="kdDrawer">
+  <div class="drawer-head">
+    <div class="avatar-ring" style="width:40px;height:40px;">
+      <div class="avatar"><img src="/assets/logo-icon.jpg" alt="Köylü Dostu" style="width:92%;height:92%;object-fit:contain;"></div>
+    </div>
+    <div class="brand-info"><h1>köylüdostu</h1></div>
+    <button class="drawer-close" onclick="document.getElementById('kdDrawer').classList.remove('open');document.getElementById('kdOverlay').classList.remove('open');" aria-label="Kapat">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+  </div>
+  <nav class="drawer-nav">
+    <a href="/index.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>Anasayfa</a>
+    <a href="/vitrin.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 3l14 9-14 9V3z"/></svg>Vitrin</a>
+    <div class="drawer-section-label">Hesabım</div>
+    <a href="/favorilerim.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>Favori İlanlarım</a>
+    <a href="/favori-saticilarim.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>Favori Satıcılarım</a>
+    <a href="/siparislerim.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h2l2.4 12.4a2 2 0 0 0 2 1.6h9.2a2 2 0 0 0 2-1.6L22 6H6"/><circle cx="9" cy="21" r="1"/><circle cx="18" cy="21" r="1"/></svg>Siparişlerim</a>
+    <a href="/mesajlarim.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Mesajlar</a>
+    <a href="/yorumlarim.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>Yorumlarım</a>
+    <a href="/hesap-ayarlarim.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/></svg>Hesap Ayarları</a>
+    <a href="/adreslerim.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>Adreslerim</a>
+    <div class="drawer-section-label">Diğer</div>
+    <a href="/hakkimizda.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>Hakkımızda</a>
+    <a href="/gizlilik.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z"/></svg>Gizlilik</a>
+    <a href="/kullanim-sartlari.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h6"/></svg>Kullanım Şartları</a>
+    <a href="/kvkk.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z"/><path d="M9 12l2 2 4-4"/></svg>KVKK Aydınlatma Metni</a>
+    <a href="/sss.html" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>SSS / Yardım</a>
+    <a href="/iade-politikasi.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>İade ve Cayma Hakkı</a>
+  </nav>
+</div>
+
+<div class="doc-wrap">
+  <h1>Sıkça Sorulan Sorular</h1>
+  <p class="lead">Köylü Dostu'nun nasıl çalıştığıyla ilgili en çok sorulan sorular. Aradığını bulamazsan bir satıcıyla ilgiliyse Mesaj Kutusu'ndan, genel bir konuysa Şikayet sisteminden bize ulaşabilirsin.</p>
+
+  <h2 class="section">Sipariş Nasıl Verilir?</h2>
+  <div class="faq-item">
+    <div class="faq-q">Bir ürünü nasıl sipariş ederim?<svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></div>
+    <div class="faq-a"><p>Beğendiğin ürünün sayfasında "Sipariş Talebi Gönder" butonuna basıp miktar, teslimat adresi ve varsa özel isteğini belirtirsin. Bu bir ödeme değil, satıcıya gönderilen bir taleptir — satıcı onaylarsa sipariş "Onaylandı" durumuna geçer.</p></div>
+  </div>
+  <div class="faq-item">
+    <div class="faq-q">Sipariş Talebi ile gerçek bir sipariş arasındaki fark ne?<svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></div>
+    <div class="faq-a"><p>Köylü Dostu bir sepet/anlık satın alma sistemi değildir — satıcıyla senin aranda bir bağlantı kurar (biraz sahibinden/letgo mantığına benzer). Talebi gönderdikten sonra satıcı uygun görürse onaylar, teslimat ve ödeme detaylarını Mesaj Kutusu üzerinden ya da talepte bıraktığın bilgilerle netleştirirsiniz.</p></div>
+  </div>
+
+  <h2 class="section">Ödeme</h2>
+  <div class="faq-item">
+    <div class="faq-q">Ödemeyi nasıl yapıyorum?<svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></div>
+    <div class="faq-a"><p>Ödeme doğrudan senden satıcıya, satıcının Siparişlerim sayfasında paylaştığı IBAN'a yapılır. Köylü Dostu ödemeye aracılık etmez, parayı hiçbir aşamada tutmaz — tıpkı sahibinden ya da letgo gibi, platform sadece ortamı sağlar.</p></div>
+  </div>
+  <div class="faq-item">
+    <div class="faq-q">Peki platform hiç mi sorumluluk almıyor?<svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></div>
+    <div class="faq-a"><p>Ödemeye taraf olmasak da bir şey ters giderse Şikayet sistemimiz üzerinden süreci takip ederiz — satıcının hesap geçmişine, mesajlaşma kayıtlarına bakarız ve gerektiğinde hukuki destek sürecine yönlendiririz. Aracı değiliz ama seni yalnız bırakmayız.</p></div>
+  </div>
+
+  <h2 class="section">Satıcı Olmak</h2>
+  <div class="faq-item">
+    <div class="faq-q">Nasıl satıcı olurum?<svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></div>
+    <div class="faq-a"><p>Hesap Ayarları sayfasından "Satıcı Ol" bölümünü doldurup başvurursun. Bireysel (T.C. Kimlik No) ya da şirket/vergi mükellefi (Vergi No + vergi levhası) olarak başvurabilirsin. Admin ekibimiz başvurunu inceleyip onaylar.</p></div>
+  </div>
+  <div class="faq-item">
+    <div class="faq-q">"Güvenilir Satıcı" rozeti nedir?<svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></div>
+    <div class="faq-a"><p>Admin ekibimizin elle verdiği bir güven işaretidir; ürün listelerinde ve satıcı profilinde ayrıca görünür, alıcılar bu rozete göre filtreleme de yapabilir.</p></div>
+  </div>
+
+  <h2 class="section">Güvenlik ve Yorum Sistemi</h2>
+  <div class="faq-item">
+    <div class="faq-q">Yorumlar gerçek mi?<svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></div>
+    <div class="faq-a"><p>Sadece o üründen gerçekten sipariş vermiş ve teslim aldığını onaylamış alıcılar yorum yapabilir. Bu, hiç almadığın bir ürüne yorum yazmanı engeller. Satıcılar haksız bulduğu bir yoruma itiraz edebilir, admin ekibimiz karar verir.</p></div>
+  </div>
+  <div class="faq-item">
+    <div class="faq-q">Bir sorun yaşarsam ne yapmalıyım?<svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></div>
+    <div class="faq-a"><p>Siparişlerim sayfasındaki "Şikayet Et" butonuyla ya da Şikayetlerim sayfasından yeni bir şikayet açabilirsin. Detaylı bilgi için <a href="/iade-politikasi.html">İade ve Cayma Hakkı</a> sayfasına da bakabilirsin.</p></div>
+  </div>
+
+  <h2 class="section">Hesabım</h2>
+  <div class="faq-item">
+    <div class="faq-q">Bilgilerimi nasıl güncellerim?<svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></div>
+    <div class="faq-a"><p>Hesap Ayarları sayfasından ad, adres, e-posta, parola gibi bilgilerini istediğin zaman güncelleyebilirsin. Sık kullandığın teslimat adreslerini de Adreslerim sayfasında kaydedebilirsin.</p></div>
+  </div>
+  <div class="faq-item">
+    <div class="faq-q">Hesabımı silebilir miyim?<svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></div>
+    <div class="faq-a"><p>Evet — Hesap Ayarları sayfasının en altında "Hesabımı Sil" seçeneğiyle parolanı doğrulayarak hesabını kalıcı olarak silebilirsin.</p></div>
+  </div>
+</div>
+
+<script src="assets/auth.js"></script>
+<script>
+document.querySelectorAll('.faq-q').forEach(function (q) {
+  q.addEventListener('click', function () { q.closest('.faq-item').classList.toggle('open'); });
+});
+</script>
+<script>if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("/sw.js").catch(function(){});});}</script>
+</body>
+</html>
