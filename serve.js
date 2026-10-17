@@ -777,7 +777,9 @@ function parseHalGovTable(html) {
     const cells = rows[i];
     if (cells.length < 6) continue;
     const ortalamaFiyat = parseTrNumber(cells[3]);
-    if (!cells[0] || Number.isNaN(ortalamaFiyat)) continue;
+    // Sayfalama kontrolünden sızan boş/noktalama satırlarını (ör. "...") ele — gerçek
+    // bir ürün adında en az bir harf bulunur.
+    if (!cells[0] || !/[A-ZÇĞİIÖŞÜa-zçğıiöşü]/.test(cells[0]) || Number.isNaN(ortalamaFiyat)) continue;
     out.push({ urunAdi: cells[0], urunCinsi: cells[1], urunTuru: cells[2], ortalamaFiyat, birim: cells[5] });
   }
   return out;
@@ -846,23 +848,90 @@ async function fetchTobbHububat() {
   }));
 }
 
-function fetchHalGovVeIzmir() {
-  return new Promise((resolve) => {
-    const result = { ulusal: [], izmir: [] };
-    let pending = 2;
-    const finish = () => { pending -= 1; if (pending === 0) resolve(result); };
+function httpsGetBody(urlStr, headers) {
+  return new Promise((resolve, reject) => {
+    const req = https.get(urlStr, { headers, timeout: 15000 }, (res) => {
+      let data = '';
+      res.on('data', (c) => { data += c; });
+      res.on('end', () => resolve({ body: data, headers: res.headers }));
+    });
+    req.on('error', reject);
+    req.on('timeout', function () { this.destroy(); reject(new Error('timeout')); });
+  });
+}
 
-    const req1 = https.get('https://www.hal.gov.tr/Sayfalar/FiyatDetaylari.aspx',
-      { headers: { 'User-Agent': 'Mozilla/5.0' }, timeout: 15000 }, (res) => {
-        let data = '';
-        res.on('data', (c) => { data += c; });
-        res.on('end', () => {
-          try { result.ulusal = parseHalGovTable(data); } catch { /* kaynak formatı değişmiş olabilir, sessizce atla */ }
-          finish();
-        });
-      });
-    req1.on('error', finish);
-    req1.on('timeout', function () { this.destroy(); });
+function httpsPostForm(urlStr, fields, headers) {
+  return new Promise((resolve, reject) => {
+    const body = new URLSearchParams(fields).toString();
+    const u = new URL(urlStr);
+    const req = https.request({
+      hostname: u.hostname, path: u.pathname + u.search, method: 'POST',
+      headers: Object.assign({
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Content-Length': Buffer.byteLength(body),
+      }, headers),
+      timeout: 15000,
+    }, (res) => {
+      let data = '';
+      res.on('data', (c) => { data += c; });
+      res.on('end', () => resolve({ body: data, headers: res.headers }));
+    });
+    req.on('error', reject);
+    req.on('timeout', function () { this.destroy(); reject(new Error('timeout')); });
+    req.write(body);
+    req.end();
+  });
+}
+
+function extractHiddenFields(html) {
+  const fields = {};
+  for (const m of String(html || '').matchAll(/<input[^>]*type="hidden"[^>]*>/g)) {
+    const name = /name="([^"]*)"/.exec(m[0]);
+    const value = /value="([^"]*)"/.exec(m[0]);
+    if (name) fields[name[1]] = value ? decodeHtmlEntities(value[1]) : '';
+  }
+  return fields;
+}
+
+function cookieHeaderFromSetCookie(setCookieArr) {
+  return Array.isArray(setCookieArr) ? setCookieArr.map((c) => c.split(';')[0]).join('; ') : '';
+}
+
+// hal.gov.tr'nin ülke geneli bülteni çok sayfalı bir ASP.NET GridView — ilk GET sadece
+// alfabetik olarak ilk ~26 ürünü (A harfiyle başlayanlar) getiriyordu. Burada sayfanın
+// kendi "Page$N" postback linklerini bulup, aynı oturum çerezi ve form state'iyle
+// (VIEWSTATE/EVENTVALIDATION) her sayfayı tek tek POST ederek TÜM ürün listesini
+// topluyoruz. Bir sayfa başarısız olursa diğerlerini etkilemesin diye atlanır.
+async function fetchHalGovUlusal() {
+  const HAL_URL = 'https://www.hal.gov.tr/Sayfalar/FiyatDetaylari.aspx';
+  const first = await httpsGetBody(HAL_URL, { 'User-Agent': 'Mozilla/5.0' });
+  const out = parseHalGovTable(first.body);
+
+  const pageLinks = [...first.body.matchAll(/__doPostBack\(&#39;([^&]*gvFiyatlar)&#39;,&#39;Page\$(\d+)&#39;\)/g)];
+  if (!pageLinks.length) return out; // tek sayfalık sonuç, başka sayfa yok
+
+  const target = pageLinks[0][1];
+  const pageNums = [...new Set(pageLinks.map((m) => Number(m[2])))].sort((a, b) => a - b);
+  const hiddenFields = extractHiddenFields(first.body);
+  const cookie = cookieHeaderFromSetCookie(first.headers['set-cookie']);
+
+  for (const n of pageNums) {
+    const fields = Object.assign({}, hiddenFields, { __EVENTTARGET: target, __EVENTARGUMENT: `Page$${n}` });
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const res = await httpsPostForm(HAL_URL, fields, { 'User-Agent': 'Mozilla/5.0', Cookie: cookie, Referer: HAL_URL });
+        out.push(...parseHalGovTable(res.body));
+        break;
+      } catch { /* bu sayfa başarısız oldu, bir kez daha dene, olmazsa atla */ }
+    }
+  }
+  return out;
+}
+
+function fetchIzmir() {
+  return new Promise((resolve) => {
+    const result = { izmir: [] };
+    const finish = () => resolve(result);
 
     function tryIzmir(dateStr, attemptsLeft) {
       const req2 = https.get(`https://openapi.izmir.bel.tr/api/ibb/halfiyatlari/sebzemeyve/${dateStr}`,
@@ -898,13 +967,14 @@ function fetchHalGovVeIzmir() {
 }
 
 async function fetchHalFiyatlari() {
-  const [halIzmir, tobb] = await Promise.all([
-    fetchHalGovVeIzmir(),
-    // TOBB tek bir hatalı alt sayfadan değil, ancak kendi genel hatasından (ör. ana ürün
-    // listesi hiç açılamazsa) etkilenebilir — diğer iki kaynağı etkilememesi için ayrı try.
+  // Üç kaynak da birbirinden bağımsız — biri (ör. hal.gov.tr'nin çok sayfalı taraması)
+  // başarısız olursa diğer ikisini etkilememesi için ayrı ayrı try/catch'leniyor.
+  const [ulusal, izmir, tobb] = await Promise.all([
+    fetchHalGovUlusal().catch(() => []),
+    fetchIzmir().then((r) => r.izmir).catch(() => []),
     fetchTobbHububat().catch(() => []),
   ]);
-  return { updatedAt: new Date().toISOString(), ulusal: halIzmir.ulusal, izmir: halIzmir.izmir, tobb };
+  return { updatedAt: new Date().toISOString(), ulusal, izmir, tobb };
 }
 
 function refreshHalFiyatlari() {
