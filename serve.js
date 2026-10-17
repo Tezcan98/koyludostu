@@ -1,4 +1,5 @@
 const http = require('http');
+const https = require('https');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
@@ -28,6 +29,11 @@ const PRODUCT_ORDERS_PATH = path.join(DATA_DIR, 'product_orders.json');
 // Şirket satıcıların sipariş başına kestiği fatura taslaklarının sıra numarası — satıcı
 // başına, hiç geriye sarmadan artar; aynı sipariş için tekrar istenirse aynı numara döner.
 const INVOICE_COUNTERS_PATH = path.join(DATA_DIR, 'invoice_counters.json');
+// Günlük hal/borsa fiyat referansı — Ticaret Bakanlığı Hal Kayıt Sistemi (ülke geneli
+// ortalama) ve İzmir Büyükşehir Belediyesi açık API'si (şehir bazlı) üzerinden çekilip
+// burada ayrı bir dosyada önbelleklenir; ürün sayfasında sadece bilgilendirme amaçlı
+// gösterilir, fiyat garantisi değildir (bkz. fetchHalFiyatlari / renderProductPage).
+const HAL_FIYAT_PATH = path.join(DATA_DIR, 'hal_fiyatlari.json');
 // Kimlik/vergi levhası/destekleyici belge gibi hassas dosyalar, ürün fotoğrafı ve
 // sertifika gibi kasıtlı olarak herkese açık dosyalardan farklı olarak, statik
 // sunucunun (koyludostu-tumsite/) DIŞINDA, imzalı URL olmadan hiç erişilemeyen ayrı
@@ -194,6 +200,14 @@ function renderProductPage(product, allProducts) {
     : '';
   const storageLine = product.storageConditions
     ? `<div class="storage-box"><b>Saklama Koşulları:</b> ${esc(product.storageConditions)}</div>` : '';
+  const halMatch = matchHalFiyat(product.title, readHalFiyat());
+  const halParts = [];
+  if (halMatch.ulusal) halParts.push(`Ülke geneli ort.: <b>${halMatch.ulusal.ortalamaFiyat.toLocaleString('tr-TR')}₺/${esc(halMatch.ulusal.birim)}</b>`);
+  if (halMatch.izmir) halParts.push(`İzmir hali: <b>${Number(halMatch.izmir.ortalamaUcret).toLocaleString('tr-TR')}₺/${esc(halMatch.izmir.birim)}</b>`);
+  if (halMatch.tobb) halParts.push(`Ticaret borsası (hububat): <b>${halMatch.tobb.ortalamaFiyat.toLocaleString('tr-TR')}₺/${esc(halMatch.tobb.birim)}</b>`);
+  const halFiyatLine = halParts.length
+    ? `<div class="hal-fiyat-box"><span class="hal-fiyat-title">📊 Güncel Hal/Borsa Fiyatı Referansı</span><div class="hal-fiyat-vals">${halParts.join(' · ')}</div><small>Kaynak: Ticaret Bakanlığı Hal Kayıt Sistemi / İzmir Büyükşehir Belediyesi / TOBB Ticaret Borsaları — fiyat garantisi değildir, sadece piyasa referansıdır.</small></div>`
+    : '';
   const stockLine = product.stock === null || product.stock === undefined
     ? ''
     : product.stock > 0
@@ -309,6 +323,7 @@ function renderProductPage(product, allProducts) {
       ${weightLine}
       ${qtyLine}
       ${storageLine}
+      ${halFiyatLine}
       ${certLine}
       <div class="product-footer">
         <div class="price-row">
@@ -717,6 +732,213 @@ function readJson(filePath, fallback) {
 function writeJson(filePath, data) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
   fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
+}
+
+// ---------- Hal/Borsa fiyat referansı ----------
+// Ürün sayfalarında gösterilen "güncel hal fiyatı" bilgisi — kullanıcının sattığı
+// ürünün fiyatının piyasaya göre nerede durduğunu görmesi için, sadece bilgilendirme
+// amaçlı. Platform bu fiyatları garanti etmez, sadece resmi/açık kaynaklardan çeker.
+
+function readHalFiyat() {
+  return readJson(HAL_FIYAT_PATH, { updatedAt: null, ulusal: [], izmir: [], tobb: [] });
+}
+
+const HTML_ENTITY_MAP = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' };
+function decodeHtmlEntities(s) {
+  return String(s || '').replace(/&(#\d+|#x[0-9a-fA-F]+|[a-zA-Z]+);/g, (m, code) => {
+    if (code[0] === '#') {
+      const cp = code[1] === 'x' || code[1] === 'X' ? parseInt(code.slice(2), 16) : parseInt(code.slice(1), 10);
+      return Number.isNaN(cp) ? m : String.fromCodePoint(cp);
+    }
+    return HTML_ENTITY_MAP[code] !== undefined ? HTML_ENTITY_MAP[code] : m;
+  });
+}
+
+// Türkçe sayı biçimi (binlik nokta, ondalık virgül) -> JS float. Örn. "74.550,00" -> 74550.
+function parseTrNumber(s) {
+  return parseFloat(String(s || '').trim().replace(/\./g, '').replace(',', '.'));
+}
+
+function parseHtmlTableRows(html) {
+  const rows = String(html || '').match(/<tr[\s\S]*?<\/tr>/g) || [];
+  return rows.map((row) => (row.match(/<t[dh][^>]*>[\s\S]*?<\/t[dh]>/g) || [])
+    .map((c) => decodeHtmlEntities(c.replace(/<[^>]+>/g, '')).trim()));
+}
+
+// hal.gov.tr (Ticaret Bakanlığı Hal Kayıt Sistemi) ülke geneli günlük ortalama fiyat
+// tablosunu, düz GET isteğiyle dönen sunucu-taraflı render edilmiş HTML'den ayrıştırır
+// (sayfa bir API sunmuyor, ASP.NET GridView'ı varsayılan görünümde doğrudan HTML'de gelir).
+function parseHalGovTable(html) {
+  const tableMatch = String(html || '').match(/<table class="gridView"[\s\S]*?<\/table>/);
+  if (!tableMatch) return [];
+  const rows = parseHtmlTableRows(tableMatch[0]);
+  const out = [];
+  for (let i = 1; i < rows.length; i++) {
+    const cells = rows[i];
+    if (cells.length < 6) continue;
+    const ortalamaFiyat = parseTrNumber(cells[3]);
+    if (!cells[0] || Number.isNaN(ortalamaFiyat)) continue;
+    out.push({ urunAdi: cells[0], urunCinsi: cells[1], urunTuru: cells[2], ortalamaFiyat, birim: cells[5] });
+  }
+  return out;
+}
+
+// TOBB (Türkiye Odalar ve Borsalar Birliği) — ülkedeki yerel ticaret borsalarının
+// hububat fiyat bültenleri. Resmi bir API sunmuyor, eski tip PHP sayfaları GET
+// parametreleriyle gezilir: önce bir ana ürün grubundaki alt ürünlerin listesi
+// (fiyat_urun_2.php?ana_kod=1 — 1 = HUBUBAT), sonra her alt ürün için borsa bazlı
+// fiyat tablosu (fiyat_urun3.php?ana_kod=1&alt_kod=N). Siteyi her ürün grubu başına
+// bir kez (günde bir) geziyoruz, kullanıcı isteği başına değil.
+// NOT: Sitenin TLS sertifika zinciri eksik/bozuk (tarayıcıda da uyarı veriyor) — bu
+// yüzden SADECE bu host için sertifika doğrulamasını kapatıyoruz (rejectUnauthorized:
+// false). Bu, sadece herkese açık, kamuya ait fiyat verisini okumak için kabul edilen,
+// bilinçli ve bu kaynakla sınırlı bir istisna; başka hiçbir istekte kullanılmaz.
+const TOBB_HUBUBAT_ANA_KOD = 1;
+function tobbGet(urlPath) {
+  return new Promise((resolve, reject) => {
+    const req = https.get(`https://borsa.tobb.org.tr/${urlPath}`,
+      { headers: { 'User-Agent': 'Mozilla/5.0' }, timeout: 15000, rejectUnauthorized: false }, (res) => {
+        let data = '';
+        res.on('data', (c) => { data += c; });
+        res.on('end', () => resolve(data));
+      });
+    req.on('error', reject);
+    req.on('timeout', function () { this.destroy(); reject(new Error('timeout')); });
+  });
+}
+
+async function fetchTobbHububat() {
+  const listHtml = await tobbGet(`fiyat_urun_2.php?ana_kod=${TOBB_HUBUBAT_ANA_KOD}`);
+  const items = [...listHtml.matchAll(/fiyat_urun3\.php\?ana_kod=\d+&alt_kod=(\d+)'>([^<]+)</g)]
+    .map(([, altKod, name]) => ({ altKod, name: decodeHtmlEntities(name).trim() }));
+
+  const varietyAverages = [];
+  for (const item of items) {
+    try {
+      // Siteye saygılı bir hızda gezmek için art arda istekler arasında kısa bir ara veriyoruz.
+      await new Promise((r) => setTimeout(r, 150));
+      const html = await tobbGet(`fiyat_urun3.php?ana_kod=${TOBB_HUBUBAT_ANA_KOD}&alt_kod=${item.altKod}`);
+      const rows = parseHtmlTableRows(html).slice(1); // ilk satır başlık
+      // Bazı borsalar sayıyı farklı bir ondalık biçimiyle giriyor (ör. "15.206,000" gibi
+      // iki ayraçlı, belirsiz bir format) ve bu satırlar normal ayrıştırmayla gerçekçi
+      // olmayan (binler mertebesinde) bir hububat fiyatına dönüşebiliyor — kg başına
+      // makul bir aralık dışında kalan değerleri güvenlik için atıyoruz.
+      const prices = rows.map((cells) => parseTrNumber(cells[4]))
+        .filter((n) => !Number.isNaN(n) && n > 0 && n < 1000);
+      if (prices.length) {
+        varietyAverages.push({ name: item.name, avg: prices.reduce((a, b) => a + b, 0) / prices.length });
+      }
+    } catch { /* tek bir alt ürün başarısız olursa diğerlerini etkilemesin */ }
+  }
+
+  // Aynı tahılın birçok alt türü/derecesi var (ör. "BUĞDAY ..." 20'ye yakın çeşit) — ürün
+  // eşleştirmesi (bkz. matchHalFiyat) ilk kelimeye baktığı için, çeşitler arası ortalama
+  // alarak tahıl başına TEK bir referans fiyatına indiriyoruz.
+  const byGrain = new Map();
+  for (const v of varietyAverages) {
+    const grain = normalizeTrText(v.name).split(' ')[0];
+    if (!grain) continue;
+    if (!byGrain.has(grain)) byGrain.set(grain, []);
+    byGrain.get(grain).push(v.avg);
+  }
+  return [...byGrain.entries()].map(([grain, vals]) => ({
+    urunAdi: grain, ortalamaFiyat: vals.reduce((a, b) => a + b, 0) / vals.length, birim: 'Kg',
+  }));
+}
+
+function fetchHalGovVeIzmir() {
+  return new Promise((resolve) => {
+    const result = { ulusal: [], izmir: [] };
+    let pending = 2;
+    const finish = () => { pending -= 1; if (pending === 0) resolve(result); };
+
+    const req1 = https.get('https://www.hal.gov.tr/Sayfalar/FiyatDetaylari.aspx',
+      { headers: { 'User-Agent': 'Mozilla/5.0' }, timeout: 15000 }, (res) => {
+        let data = '';
+        res.on('data', (c) => { data += c; });
+        res.on('end', () => {
+          try { result.ulusal = parseHalGovTable(data); } catch { /* kaynak formatı değişmiş olabilir, sessizce atla */ }
+          finish();
+        });
+      });
+    req1.on('error', finish);
+    req1.on('timeout', function () { this.destroy(); });
+
+    function tryIzmir(dateStr, attemptsLeft) {
+      const req2 = https.get(`https://openapi.izmir.bel.tr/api/ibb/halfiyatlari/sebzemeyve/${dateStr}`,
+        { headers: { 'User-Agent': 'Mozilla/5.0' }, timeout: 15000 }, (res) => {
+          let data = '';
+          res.on('data', (c) => { data += c; });
+          res.on('end', () => {
+            // Bugünün bülteni henüz yayınlanmamışsa gövde tamamen boş (geçersiz JSON)
+            // dönüyor — bu durumu da "boş liste" gibi bir önceki günü deneyerek ele
+            // alıyoruz, sadece parse başarılı ama HalFiyatListesi boşsa değil.
+            let json = null;
+            try { json = JSON.parse(data); } catch { /* boş/bozuk yanıt — aşağıda yeniden denenir */ }
+            const list = json && Array.isArray(json.HalFiyatListesi) ? json.HalFiyatListesi : [];
+            if (list.length === 0 && attemptsLeft > 0) {
+              const d = new Date(dateStr + 'T00:00:00Z');
+              d.setUTCDate(d.getUTCDate() - 1);
+              tryIzmir(d.toISOString().slice(0, 10), attemptsLeft - 1);
+              return;
+            }
+            result.izmir = list.map((it) => ({
+              malAdi: String(it.MalAdi || '').trim(), ortalamaUcret: it.OrtalamaUcret,
+              asgariUcret: it.AsgariUcret, azamiUcret: it.AzamiUcret,
+              birim: it.Birim, malTipAdi: it.MalTipAdi,
+            }));
+            finish();
+          });
+        });
+      req2.on('error', finish);
+      req2.on('timeout', function () { this.destroy(); });
+    }
+    tryIzmir(new Date().toISOString().slice(0, 10), 2);
+  });
+}
+
+async function fetchHalFiyatlari() {
+  const [halIzmir, tobb] = await Promise.all([
+    fetchHalGovVeIzmir(),
+    // TOBB tek bir hatalı alt sayfadan değil, ancak kendi genel hatasından (ör. ana ürün
+    // listesi hiç açılamazsa) etkilenebilir — diğer iki kaynağı etkilememesi için ayrı try.
+    fetchTobbHububat().catch(() => []),
+  ]);
+  return { updatedAt: new Date().toISOString(), ulusal: halIzmir.ulusal, izmir: halIzmir.izmir, tobb };
+}
+
+function refreshHalFiyatlari() {
+  fetchHalFiyatlari().then((data) => {
+    // Kısmi/boş bir yanıtla eski (iyi durumdaki) veriyi ezmeyelim.
+    if (data.ulusal.length || data.izmir.length || data.tobb.length) writeJson(HAL_FIYAT_PATH, data);
+  }).catch(() => {});
+}
+
+function normalizeTrText(s) {
+  return String(s || '')
+    .toLocaleUpperCase('tr-TR')
+    .replace(/[^A-ZÇĞİIÖŞÜ0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+// Ürün başlığını hal/borsa listesindeki ürün adlarıyla eşleştirir — kesin, tam kelime
+// eşleşmesi arar (ör. "DOMATES"), yanlış/yanıltıcı fiyat göstermemek için gevşek bir
+// benzerlik eşleştirmesi (substring vb.) kullanmaz.
+function matchHalFiyat(productTitle, halData) {
+  const titleWords = normalizeTrText(productTitle).split(' ').filter((w) => w.length > 2);
+  function findBest(list, nameKey) {
+    for (const entry of list || []) {
+      const primaryWord = normalizeTrText(entry[nameKey]).split(' ')[0];
+      if (primaryWord.length > 2 && titleWords.includes(primaryWord)) return entry;
+    }
+    return null;
+  }
+  return {
+    ulusal: findBest(halData.ulusal, 'urunAdi'),
+    izmir: findBest(halData.izmir, 'malAdi'),
+    tobb: findBest(halData.tobb, 'urunAdi'),
+  };
 }
 
 function normalizePhone(raw) {
@@ -3222,6 +3444,14 @@ const server = http.createServer(async (req, res) => {
       return jsonResponse(res, 200, { products: list });
     }
 
+    // Statik demo ürün sayfaları (main/urun/*.html) gibi sunucu tarafında render
+    // edilmeyen sayfaların da aynı hal/borsa referansını istemci tarafında
+    // gösterebilmesi için — bkz. renderProductPage'deki sunucu-taraflı kullanım.
+    if (p === '/api/hal-fiyat' && req.method === 'GET') {
+      const match = matchHalFiyat(url.searchParams.get('title') || '', readHalFiyat());
+      return jsonResponse(res, 200, match);
+    }
+
     if (p === '/api/admin/products' && req.method === 'POST') {
       const session = requireApprovedSeller(req, res);
       if (!session) return;
@@ -3840,6 +4070,13 @@ const server = http.createServer(async (req, res) => {
 
   return serveStatic(res, MAIN, p);
 });
+
+// Testlerde (IS_TEST_ENV) gerçek dış ağa istek atmıyoruz — hem testleri ağa bağımlı/
+// yavaş/kararsız hale getirmemek hem de dışarıdan rastgele dosyaya veri yazmamak için.
+if (!IS_TEST_ENV) {
+  refreshHalFiyatlari();
+  setInterval(refreshHalFiyatlari, 24 * 60 * 60 * 1000);
+}
 
 server.listen(PORT, HOST, () => {
   console.log(`köylüdostu  http://localhost:${PORT}         (main)`);

@@ -2703,3 +2703,61 @@ describe('Sipariş talebinde bildirim tercihi (notifyOptIn)', () => {
     assert.equal(withOptIn.notifyOptIn, true);
   });
 });
+
+describe('Hal/Borsa fiyat referansı', () => {
+  function seedHalFiyat(data) {
+    fs.writeFileSync(path.join(server.dataDir, 'hal_fiyatlari.json'), JSON.stringify(data, null, 2));
+  }
+
+  test('ürün sayfasında eşleşen bir hal/borsa fiyatı varsa referans kutusu gösterilir', async () => {
+    seedHalFiyat({
+      updatedAt: new Date().toISOString(),
+      ulusal: [{ urunAdi: 'DOMATES', urunCinsi: 'DOMATES', urunTuru: 'Geleneksel(Konvansiyonel)', ortalamaFiyat: 37.51, birim: 'Kg' }],
+      izmir: [{ malAdi: 'DOMATES SALKIM', ortalamaUcret: 42, asgariUcret: 30, azamiUcret: 55, birim: 'KG', malTipAdi: 'SEBZE' }],
+      tobb: [{ urunAdi: 'BUĞDAY', ortalamaFiyat: 16.2, birim: 'Kg' }],
+    });
+
+    const seller = await newSeller('Hal Fiyatı Satıcı');
+    // Statik demo ürün sayfalarından (main/urun/taze-domates.html vb.) biriyle slug
+    // çakışmasın diye rastgele bir ek kullanıyoruz — aksi halde istek, bu testin
+    // hedeflediği renderProductPage yerine o eski statik dosyayı döner.
+    const product = await createProduct(seller.token, { title: 'Domates Çeşidi ' + Math.random().toString(36).slice(2, 7) });
+    const html = await fetch(url(`/urun/${product.slug}.html`)).then((r) => r.text());
+
+    assert.ok(html.includes('Güncel Hal/Borsa Fiyatı Referansı'));
+    assert.ok(html.includes('37,51'));
+    assert.ok(html.includes('İzmir hali'));
+    assert.ok(!html.includes('hububat')); // buğday eşleşmemeli, "Domates" ile alakasız
+  });
+
+  test('eşleşen hiçbir ürün yoksa referans kutusu hiç gösterilmez', async () => {
+    seedHalFiyat({
+      updatedAt: new Date().toISOString(),
+      ulusal: [{ urunAdi: 'DOMATES', urunCinsi: 'DOMATES', urunTuru: 'Geleneksel(Konvansiyonel)', ortalamaFiyat: 37.51, birim: 'Kg' }],
+      izmir: [], tobb: [],
+    });
+
+    const seller = await newSeller('Hal Fiyatı Eşleşmeyen Satıcı');
+    const product = await createProduct(seller.token, { title: 'El Yapımı Keçi Peyniri' });
+    const html = await fetch(url(`/urun/${product.slug}.html`)).then((r) => r.text());
+
+    assert.ok(!html.includes('Güncel Hal/Borsa Fiyatı Referansı'));
+  });
+
+  test('GET /api/hal-fiyat?title= doğrudan eşleşmeyi döner', async () => {
+    seedHalFiyat({
+      updatedAt: new Date().toISOString(),
+      ulusal: [{ urunAdi: 'ARPA', urunCinsi: 'ARPA', urunTuru: 'Geleneksel', ortalamaFiyat: 14.2, birim: 'Kg' }],
+      izmir: [], tobb: [{ urunAdi: 'ARPA', ortalamaFiyat: 13.9, birim: 'Kg' }],
+    });
+
+    const match = await fetch(url('/api/hal-fiyat?title=' + encodeURIComponent('Yemlik Arpa 25kg Çuval')))
+      .then((r) => r.json());
+    assert.equal(match.ulusal.ortalamaFiyat, 14.2);
+    assert.equal(match.tobb.ortalamaFiyat, 13.9);
+
+    const noMatch = await fetch(url('/api/hal-fiyat?title=' + encodeURIComponent('Organik Bal')))
+      .then((r) => r.json());
+    assert.equal(noMatch.ulusal, null);
+  });
+});
