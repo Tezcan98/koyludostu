@@ -45,6 +45,13 @@ const PRICE_PER_MESSAGE_CLICK = Number(process.env.PRICE_PER_MESSAGE_CLICK || 0)
 // burada ayrı bir dosyada önbelleklenir; ürün sayfasında sadece bilgilendirme amaçlı
 // gösterilir, fiyat garantisi değildir (bkz. fetchHalFiyatlari / renderProductPage).
 const HAL_FIYAT_PATH = path.join(DATA_DIR, 'hal_fiyatlari.json');
+// Her fiyatın yanında kullanıcıya hangi kurumdan geldiğini açıkça göstermek için —
+// bkz. renderProductPage, hal-fiyat.js, filter.js (aynı etiketler üçünde de kullanılır).
+const HAL_SOURCE_NAMES = {
+  ulusal: 'T.C. Ticaret Bakanlığı — Hal Kayıt Sistemi',
+  izmir: 'İzmir Büyükşehir Belediyesi',
+  tobb: 'TOBB — Ticaret Borsaları',
+};
 // Kimlik/vergi levhası/destekleyici belge gibi hassas dosyalar, ürün fotoğrafı ve
 // sertifika gibi kasıtlı olarak herkese açık dosyalardan farklı olarak, statik
 // sunucunun (koyludostu-tumsite/) DIŞINDA, imzalı URL olmadan hiç erişilemeyen ayrı
@@ -213,13 +220,13 @@ function renderProductPage(product, allProducts) {
     ? `<div class="storage-box"><b>Saklama Koşulları:</b> ${esc(product.storageConditions)}</div>` : '';
   const halMatch = matchHalFiyat(product.title, readHalFiyat());
   const halStats = [];
-  if (halMatch.ulusal) halStats.push(['Ülke Geneli', halMatch.ulusal.ortalamaFiyat, halMatch.ulusal.birim]);
-  if (halMatch.izmir) halStats.push(['İzmir Hali', Number(halMatch.izmir.ortalamaUcret), halMatch.izmir.birim]);
-  if (halMatch.tobb) halStats.push(['Ticaret Borsası', halMatch.tobb.ortalamaFiyat, halMatch.tobb.birim]);
+  if (halMatch.ulusal) halStats.push(['Ülke Geneli', halMatch.ulusal.ortalamaFiyat, halMatch.ulusal.birim, 'ulusal']);
+  if (halMatch.izmir) halStats.push(['İzmir Hali', Number(halMatch.izmir.ortalamaUcret), halMatch.izmir.birim, 'izmir']);
+  if (halMatch.tobb) halStats.push(['Ticaret Borsası', halMatch.tobb.ortalamaFiyat, halMatch.tobb.birim, 'tobb']);
   const halFiyatLine = halStats.length
     ? `<div class="hal-fiyat-box"><div class="hal-fiyat-eyebrow">Piyasa Fiyat Referansı</div><div class="hal-fiyat-row">${
-        halStats.map(([label, price, birim]) => `<div class="hal-fiyat-stat"><span class="hal-fiyat-stat-label">${esc(label)}</span><span class="hal-fiyat-stat-value">${price.toLocaleString('tr-TR')}₺<small>/${esc(birim)}</small></span></div>`).join('')
-      }</div><div class="hal-fiyat-source">Ticaret Bakanlığı Hal Kayıt Sistemi, İzmir Büyükşehir Belediyesi ve TOBB Ticaret Borsaları verilerine dayanır — bilgilendirme amaçlıdır, fiyat garantisi vermez.</div></div>`
+        halStats.map(([label, price, birim, kaynak]) => `<div class="hal-fiyat-stat"><span class="hal-fiyat-stat-label">${esc(label)}</span><span class="hal-fiyat-stat-value">${price.toLocaleString('tr-TR')}₺<small>/${esc(birim)}</small></span><span class="hal-fiyat-stat-source">${esc(HAL_SOURCE_NAMES[kaynak])}</span></div>`).join('')
+      }</div><div class="hal-fiyat-source">Bilgilendirme amaçlıdır, fiyat garantisi vermez — kesin fiyat için satıcıyla görüş.</div></div>`
     : '';
   const stockLine = product.stock === null || product.stock === undefined
     ? ''
@@ -1009,22 +1016,57 @@ function normalizeTrText(s) {
 // Ürün başlığını hal/borsa listesindeki ürün adlarıyla eşleştirir — kesin, tam kelime
 // eşleşmesi arar (ör. "DOMATES"), yanlış/yanıltıcı fiyat göstermemek için gevşek bir
 // benzerlik eşleştirmesi (substring vb.) kullanmaz.
+// hal.gov.tr ve İzmir kaynakları sadece TAZE (çiğ) hal ticaretini kapsıyor — kurutma/
+// pişirme/konserve gibi bir işlemden geçmiş ürünler (kuru meyve, pekmez, reçel, salça)
+// hem fiyat kategorisi hem birim ekonomisi bakımından tazeyle hiç kıyaslanamaz (ör.
+// "Kuru Kayısı" ile "KAYISI" hal fiyatını göstermek yanıltıcı olurdu — kurutma ağırlığı
+// ~%80 azaltıp fiyatı kat kat artırır). Böyle bir kelime geçen ürün adlarında bu iki
+// kaynağa hiç bakmıyoruz.
+const PROCESSED_FORM_WORDS = new Set(['KURU', 'PEKMEZ', 'REÇEL', 'SALÇA', 'SALAMURA', 'TARHANA']);
+// Hal/İzmir verisinde ürün adı bazen "[Renk] [Ürün]" sırasıyla geliyor (ör. "BEYAZ LAHANA"),
+// bazen "[Ürün] | [Renk]" şeklinde ayrı sütunlarda. İlk kelimeyi körlemesine "asıl ürün"
+// sayarsak renk/sıfat kelimeleri yanlışlıkla eşleşme anahtarı oluyor (ör. "Ezine Beyaz
+// Peynir" içindeki "BEYAZ", "BEYAZ LAHANA"yla eşleşmemeli). Bu kelimeleri atlayıp asıl
+// ürün ismine ulaşıyoruz.
+const DESCRIPTOR_WORDS = new Set([
+  'BEYAZ', 'KIRMIZI', 'YEŞİL', 'SARI', 'SİYAH', 'KARA', 'MOR', 'PEMBE',
+  'DİĞER', 'BÜYÜK', 'KÜÇÜK', 'YERLİ', 'İTHAL', 'TAZE', 'YAŞ', 'KURU',
+]);
+const COLOR_WORDS = new Set(['BEYAZ', 'KIRMIZI', 'YEŞİL', 'SARI', 'SİYAH', 'KARA', 'MOR', 'PEMBE']);
+// Aynı meyve/sebzenin açıkça farklı renkteki çeşidini göstermemek için (ör. "Kara Üzüm"
+// ürününe "ÜZÜM BEYAZ" fiyatını referans göstermek yanıltıcı) — siyah/kara aynı renk
+// ailesi sayılır, diğerleri birbirinden farklı kabul edilir.
+function colorFamily(word) { return word === 'KARA' ? 'SİYAH' : word; }
+
+// Ürün adları çoğunlukla "[Bölge] [Meyve/Sebze]+iyelik eki" kalıbında olduğundan
+// (ör. "Manisa Kirazı", "Amasya Elması", "Kayısı Reçeli") tam kelime eşleşmesi çoğu
+// gerçek ürünü kaçırıyordu — kelimenin kökünü aynen koruyan (vokal uyumlu) Türkçe
+// iyelik/hal eklerini (-ı/-i/-u/-ü, -sı/-si/-su/-sü vb., en fazla 3 harf) tolere
+// ediyoruz. Kök değişikliğine yol açan düzensiz çekimler (armut->armudu gibi)
+// kapsam dışı.
+function wordMatches(titleWord, baseWord) {
+  if (titleWord === baseWord) return true;
+  const extra = titleWord.length - baseWord.length;
+  return extra > 0 && extra <= 3 && titleWord.startsWith(baseWord);
+}
+
 function matchHalFiyat(productTitle, halData) {
   const titleWords = normalizeTrText(productTitle).split(' ').filter((w) => w.length > 2);
-  // Ürün adları çoğunlukla "[Bölge] [Meyve/Sebze]+iyelik eki" kalıbında olduğundan
-  // (ör. "Manisa Kirazı", "Amasya Elması") tam kelime eşleşmesi çoğu gerçek ürünü
-  // kaçırıyordu — kelimenin kökünü aynen koruyan (vokal uyumlu) Türkçe iyelik/hal
-  // eklerini (-ı/-i/-u/-ü, -sı/-si/-su/-sü vb., en fazla 3 harf) tolere ediyoruz.
-  // Kök değişikliğine yol açan düzensiz çekimler (armut->armudu gibi) kapsam dışı.
-  function wordMatches(titleWord, primaryWord) {
-    if (titleWord === primaryWord) return true;
-    const extra = titleWord.length - primaryWord.length;
-    return extra > 0 && extra <= 3 && titleWord.startsWith(primaryWord);
+  if (titleWords.some((w) => [...PROCESSED_FORM_WORDS].some((p) => wordMatches(w, p)))) {
+    return { ulusal: null, izmir: null, tobb: null };
   }
+  const titleColor = titleWords.map(colorFamily).find((w) => COLOR_WORDS.has(colorFamily(w)) && COLOR_WORDS.has(w));
+
   function findBest(list, nameKey) {
     for (const entry of list || []) {
-      const primaryWord = normalizeTrText(entry[nameKey]).split(' ')[0];
-      if (primaryWord.length > 2 && titleWords.some((w) => wordMatches(w, primaryWord))) return entry;
+      const entryWords = normalizeTrText(entry[nameKey]).split(' ');
+      const primaryWord = entryWords.find((w) => w.length > 2 && !DESCRIPTOR_WORDS.has(w)) || entryWords[0];
+      if (primaryWord.length <= 2 || !titleWords.some((w) => wordMatches(w, primaryWord))) continue;
+      if (titleColor) {
+        const entryColor = entryWords.map(colorFamily).find((w) => COLOR_WORDS.has(colorFamily(w)) && COLOR_WORDS.has(w));
+        if (entryColor && colorFamily(entryColor) !== colorFamily(titleColor)) continue;
+      }
+      return entry;
     }
     return null;
   }

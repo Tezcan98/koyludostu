@@ -2777,6 +2777,59 @@ describe('Hal/Borsa fiyat referansı', () => {
       .then((r) => r.json());
     assert.equal(noMatch.ulusal, null);
   });
+
+  test('işlenmiş/kurutulmuş ürünler (kuru, pekmez, reçel, salça) taze hal fiyatıyla eşleşmez', async () => {
+    seedHalFiyat({
+      updatedAt: new Date().toISOString(),
+      ulusal: [
+        { urunAdi: 'KAYISI', urunCinsi: 'DİĞER', urunTuru: 'Geleneksel', ortalamaFiyat: 26.98, birim: 'Kg' },
+        { urunAdi: 'DOMATES', urunCinsi: 'DOMATES', urunTuru: 'Geleneksel', ortalamaFiyat: 9.21, birim: 'Kg' },
+      ],
+      izmir: [], tobb: [],
+    });
+
+    for (const title of ['Kuru Kayısı', 'Kayısı Reçeli', 'Geleneksel Domates Salçası', 'Üzüm Pekmezi']) {
+      const match = await fetch(url('/api/hal-fiyat?title=' + encodeURIComponent(title))).then((r) => r.json());
+      assert.equal(match.ulusal, null, title + ' taze KAYISI/DOMATES fiyatıyla eşleşmemeli');
+    }
+
+    // Aynı kök (kayısı/domates) taze haliyle hâlâ doğru eşleşmeli — filtre sadece
+    // işlenmiş forma uygulanıyor, kelimenin kendisine değil.
+    const fresh = await fetch(url('/api/hal-fiyat?title=' + encodeURIComponent('Taze Kayısı'))).then((r) => r.json());
+    assert.equal(fresh.ulusal.ortalamaFiyat, 26.98);
+  });
+
+  test('farklı renkteki çeşit yanlışlıkla eşleşmez (ör. "Kara Üzüm" ~ "ÜZÜM BEYAZ" değil)', async () => {
+    seedHalFiyat({
+      updatedAt: new Date().toISOString(),
+      ulusal: [], tobb: [],
+      izmir: [
+        { malAdi: 'ÜZÜM BEYAZ', ortalamaUcret: 35, asgariUcret: 25, azamiUcret: 45, birim: 'KG', malTipAdi: 'MEYVE' },
+        { malAdi: 'ÜZÜM SİYAH', ortalamaUcret: 60, asgariUcret: 50, azamiUcret: 70, birim: 'KG', malTipAdi: 'MEYVE' },
+      ],
+    });
+
+    const kara = await fetch(url('/api/hal-fiyat?title=' + encodeURIComponent('Kara Üzüm'))).then((r) => r.json());
+    assert.equal(kara.izmir.ortalamaUcret, 60);
+
+    // Renk belirtmeyen bir ürün adı, bulduğu ilk (renkli) girdiyle eşleşmeye devam eder.
+    const plain = await fetch(url('/api/hal-fiyat?title=' + encodeURIComponent('Sofralık Üzüm'))).then((r) => r.json());
+    assert.ok(plain.izmir);
+  });
+
+  test('tanımlayıcı/renk kelimesiyle başlayan hal kaydı yanlış ürünle eşleşmez (ör. "BEYAZ LAHANA" ≠ "Beyaz Peynir")', async () => {
+    seedHalFiyat({
+      updatedAt: new Date().toISOString(),
+      ulusal: [{ urunAdi: 'BEYAZ LAHANA', urunCinsi: 'BEYAZ LAHANA', urunTuru: 'Geleneksel', ortalamaFiyat: 12.32, birim: 'Kg' }],
+      izmir: [], tobb: [],
+    });
+
+    const peynir = await fetch(url('/api/hal-fiyat?title=' + encodeURIComponent('Ezine Beyaz Peynir'))).then((r) => r.json());
+    assert.equal(peynir.ulusal, null);
+
+    const lahana = await fetch(url('/api/hal-fiyat?title=' + encodeURIComponent('Taze Beyaz Lahana'))).then((r) => r.json());
+    assert.equal(lahana.ulusal.ortalamaFiyat, 12.32);
+  });
 });
 
 describe('Ürün etkileşim takibi (görülme/mesaj tıklaması/favori) ve satıcıya görünmesi', () => {
