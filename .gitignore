@@ -6,3 +6,12 @@ node_modules/
 # değişiyor, artık git ile takip edilmiyor (bkz. commit mesajı). Dosyalar
 # diskte kalmaya devam eder, serve.js bunları KD_DATA_DIR üzerinden okur/yazar.
 data/*.json
+
+# Mobil (Capacitor/Android) — derleme çıktıları ve makineye özel dosyalar; kaynak
+# (capacitor.config.json, assets/, android/app/src) takip edilir.
+mobile/android/local.properties
+mobile/android/.gradle/
+mobile/android/build/
+mobile/android/app/build/
+mobile/android/captures/
+mobile/android/*.keystore

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Köylü Dostu</string>
+    <string name="title_activity_main">Köylü Dostu</string>
+    <string name="package_name">com.koyludostu.app</string>
+    <string name="custom_url_scheme">com.koyludostu.app</string>
+</resources>

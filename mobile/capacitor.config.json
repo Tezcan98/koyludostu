@@ -1,0 +1,13 @@
+{
+  "appId": "com.koyludostu.app",
+  "appName": "Köylü Dostu",
+  "webDir": "www",
+  "server": {
+    "url": "https://beta.koyludostu.com",
+    "androidScheme": "https",
+    "cleartext": false
+  },
+  "android": {
+    "allowMixedContent": false
+  }
+}
