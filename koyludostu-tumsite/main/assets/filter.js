@@ -67,7 +67,7 @@
       var priceNum = parseInt(String(p.price).replace(/\D/g, ''), 10) || 0;
       var imgSrc = /^\d+$/.test(String(p.img)) ?
         'https://images.pexels.com/photos/' + p.img + '/pexels-photo-' + p.img + '.jpeg?auto=compress&cs=tinysrgb&w=700' : p.img;
-      var sellerBadge = p.sellerVerified ? ' <span class="seller-badge" title="Güvenilir Satıcı">✅</span>' : '';
+      var sellerBadge = p.sellerVerified ? ' <span class="seller-badge" title="Güvenilir Satıcı"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/></svg></span>' : '';
       var titleAttr = esc(p.title);
       return '<a class="pin" href="urun/' + encodeURIComponent(p.slug) + '.html" data-cat="' + esc(p.cat) + '" data-price="' + priceNum +
         '" data-title="' + titleAttr + '" data-city="' + esc(p.city) + '" data-delivery="' + esc(p.delivery.join(',')) +
@@ -237,7 +237,7 @@
             .sort(function (a, b) { return defaultScore(b) - defaultScore(a); })
             .slice(0, 12);
           if (!fromCity.length) return;
-          container.innerHTML += renderDiscoverRow('📍 ' + city + "'dan", fromCity);
+          container.innerHTML += renderDiscoverRow(city + "'dan", fromCity);
           if (window.KDFavorites) window.KDFavorites.refresh();
         }).catch(function () {});
       }

@@ -322,7 +322,7 @@ function renderProductPage(product, allProducts) {
       <div class="seller-card">
         <div class="seller-card-avatar" style="background:${sellerAvatarColor(product.sellerName)}">${esc(sellerInitial(product.sellerName))}</div>
         <div class="seller-card-info">
-          <div class="producer-name"><a href="../satici/${esc(product.sellerId)}.html">${esc(product.sellerName)}</a>${sellerVerified ? ' <span class="seller-badge" title="Güvenilir Satıcı">✅</span>' : ''}</div>
+          <div class="producer-name"><a href="../satici/${esc(product.sellerId)}.html">${esc(product.sellerName)}</a>${sellerVerified ? ' <span class="seller-badge" title="Güvenilir Satıcı"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/></svg></span>' : ''}</div>
           <div class="producer-loc">${esc(product.city)}</div>
         </div>
         <button class="fav-seller-cta" data-id="${esc(product.sellerId)}">☆ Takip Et</button>
@@ -387,7 +387,7 @@ function renderSellerPage(seller, sellerId, products) {
     });
   });
   const avg = count ? (sum / count).toFixed(1) : null;
-  const badge = seller.verifiedSeller ? '<span class="seller-badge" title="Güvenilir Satıcı">✅</span>' : '';
+  const badge = seller.verifiedSeller ? '<span class="seller-badge" title="Güvenilir Satıcı"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/></svg></span>' : '';
   const ratingLine = avg
     ? `<div class="seller-rating">★ ${avg} / 5 <span>· ${count} değerlendirme</span></div>`
     : `<div class="seller-rating"><span>Henüz değerlendirme yok</span></div>`;

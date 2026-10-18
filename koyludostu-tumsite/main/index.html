@@ -15,15 +15,15 @@
 <body>
 <div class="security-modal" id="securityModal" hidden>
   <div class="security-box">
-    <div class="sec-icon">🔒</div>
+    <div class="sec-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div>
     <h2>Köylü Dostu'nda Güvenlik</h2>
     <p class="sec-sub">Aracısız alışveriş, güvenle. Kısaca nasıl çalışıyoruz:</p>
     <div class="security-list">
-      <div class="security-item"><span class="sec-emoji">📱</span><div><b>Doğrulanmış Hesaplar</b><span>Her kullanıcı telefon numarası ve parola ile kayıt olur, doğrulama SMS ile yapılır.</span></div></div>
-      <div class="security-item"><span class="sec-emoji">📝</span><div><b>Şartname Güvencesi</b><span>Her satıcı ve alıcı, kayıt olurken kullanım şartlarını ve sorumluluklarını kabul eder.</span></div></div>
-      <div class="security-item"><span class="sec-emoji">⭐</span><div><b>Gerçek Yorumlar</b><span>Değerlendirmeler sadece giriş yapmış gerçek hesaplardan gelir, sahte yorum kabul edilmez.</span></div></div>
-      <div class="security-item"><span class="sec-emoji">💬</span><div><b>Uygulama İçi Mesajlaşma</b><span>Satıcıyla doğrudan uygulama üzerinden konuşursun, telefon numaran karşı tarafla paylaşılmaz.</span></div></div>
-      <div class="security-item"><span class="sec-emoji">🚩</span><div><b>Şikayet Sistemi</b><span>Sipariş beklediğin gibi çıkmazsa, uygulama üzerinden şikayet açıp satıcıdan yanıt takip edebilirsin.</span></div></div>
+      <div class="security-item"><span class="sec-emoji"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z"/><path d="M9 12l2 2 4-4"/></svg></span><div><b>Doğrulanmış Hesaplar</b><span>Her kullanıcı telefon numarası ve parola ile kayıt olur, doğrulama SMS ile yapılır.</span></div></div>
+      <div class="security-item"><span class="sec-emoji"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h6"/></svg></span><div><b>Şartname Güvencesi</b><span>Her satıcı ve alıcı, kayıt olurken kullanım şartlarını ve sorumluluklarını kabul eder.</span></div></div>
+      <div class="security-item"><span class="sec-emoji"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg></span><div><b>Gerçek Yorumlar</b><span>Değerlendirmeler sadece giriş yapmış gerçek hesaplardan gelir, sahte yorum kabul edilmez.</span></div></div>
+      <div class="security-item"><span class="sec-emoji"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span><div><b>Uygulama İçi Mesajlaşma</b><span>Satıcıyla doğrudan uygulama üzerinden konuşursun, telefon numaran karşı tarafla paylaşılmaz.</span></div></div>
+      <div class="security-item"><span class="sec-emoji"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21V4"/><path d="M4 4h13l-2.5 4L17 12H4"/></svg></span><div><b>Şikayet Sistemi</b><span>Sipariş beklediğin gibi çıkmazsa, uygulama üzerinden şikayet açıp satıcıdan yanıt takip edebilirsin.</span></div></div>
     </div>
     <button type="button" id="securityModalOk">Anladım, Devam Et</button>
   </div>
@@ -126,16 +126,16 @@
   <div class="filter-group">
     <div class="filter-group-title">Diğer</div>
     <div class="filter-checks">
-      <label class="check-chip"><input type="checkbox" id="fOrganicOnly"> 🌱 Sadece Organik</label>
-      <label class="check-chip"><input type="checkbox" id="fVerifiedOnly"> ✅ Rozetli Satıcılar</label>
+      <label class="check-chip"><input type="checkbox" id="fOrganicOnly"> Sadece Organik</label>
+      <label class="check-chip"><input type="checkbox" id="fVerifiedOnly"> Rozetli Satıcılar</label>
     </div>
   </div>
   <div class="filter-group">
     <div class="filter-group-title">Satıcı Türü</div>
     <div class="filter-checks" id="sellerTypeChecks">
       <label class="check-chip"><input type="radio" name="sellerType" value="__all__" checked> Tümü</label>
-      <label class="check-chip"><input type="radio" name="sellerType" value="bireysel"> 🧑‍🌾 Köylü</label>
-      <label class="check-chip"><input type="radio" name="sellerType" value="sirket"> 🏢 İşletme</label>
+      <label class="check-chip"><input type="radio" name="sellerType" value="bireysel"> Köylü</label>
+      <label class="check-chip"><input type="radio" name="sellerType" value="sirket"> İşletme</label>
     </div>
   </div>
   <div class="filter-group">
