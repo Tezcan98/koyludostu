@@ -2761,3 +2761,138 @@ describe('Hal/Borsa fiyat referansı', () => {
     assert.equal(noMatch.ulusal, null);
   });
 });
+
+describe('Ürün etkileşim takibi (görülme/mesaj tıklaması/favori) ve satıcıya görünmesi', () => {
+  test('view ve message_click sayaçları artar, satıcı kendi istatistiklerini görebilir', async () => {
+    const seller = await newSeller('İstatistik Satıcı');
+    const buyer = await newBuyer('İstatistik Alıcı');
+    const product = await createProduct(seller.token, {});
+
+    await fetch(url('/api/products/track'), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slug: product.slug, event: 'view' }),
+    });
+    await fetch(url('/api/products/track'), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slug: product.slug, event: 'view' }),
+    });
+    await fetch(url('/api/products/track'), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slug: product.slug, event: 'message_click' }),
+    });
+    await fetch(url('/api/favorites/toggle'), {
+      method: 'POST', headers: authHeaders(buyer.token),
+      body: JSON.stringify({ type: 'product', id: product.slug }),
+    });
+
+    const data = await fetch(url('/api/admin/products/stats'), { headers: authHeaders(seller.token) }).then((r) => r.json());
+    assert.equal(data.stats[product.slug].views, 2);
+    assert.equal(data.stats[product.slug].messageClicks, 1);
+    assert.equal(data.stats[product.slug].favorites, 1);
+  });
+
+  test('aynı IP\'den aynı güne aynı ürüne tekrar mesaj tıklaması sayılmaz (tekrar engelleme)', async () => {
+    const seller = await newSeller('Tekrar Engelleme Satıcı');
+    const product = await createProduct(seller.token, {});
+
+    for (let i = 0; i < 5; i++) {
+      await fetch(url('/api/products/track'), {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slug: product.slug, event: 'message_click' }),
+      });
+    }
+
+    const data = await fetch(url('/api/admin/products/stats'), { headers: authHeaders(seller.token) }).then((r) => r.json());
+    assert.equal(data.stats[product.slug].messageClicks, 1);
+  });
+
+  test('başka satıcının ürün istatistiklerini göremez', async () => {
+    const sellerA = await newSeller('İzole Satıcı A');
+    const sellerB = await newSeller('İzole Satıcı B');
+    const productA = await createProduct(sellerA.token, {});
+
+    const data = await fetch(url('/api/admin/products/stats'), { headers: authHeaders(sellerB.token) }).then((r) => r.json());
+    assert.equal(data.stats[productA.slug], undefined);
+  });
+
+  test('geçersiz olay türü veya ürün reddedilir', async () => {
+    const seller = await newSeller('Geçersiz Olay Satıcı');
+    const product = await createProduct(seller.token, {});
+
+    const badEvent = await fetch(url('/api/products/track'), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slug: product.slug, event: 'fake_event' }),
+    });
+    assert.equal(badEvent.status, 400);
+
+    const badSlug = await fetch(url('/api/products/track'), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slug: 'olmayan-urun', event: 'view' }),
+    });
+    assert.equal(badSlug.status, 400);
+  });
+});
+
+describe('Tık başı ücretlendirme (Mesaj Yaz, admin paneli)', () => {
+  let billingServer;
+  function billingUrl(p) { return billingServer.baseUrl + p; }
+
+  before(async () => { billingServer = await startServer({ PRICE_PER_MESSAGE_CLICK: '5' }); });
+  after(async () => { await billingServer.stop(); });
+
+  test('mesaj tıklaması satıcı başına tahakkuk oluşturur, admin ödendi işaretleyebilir', async () => {
+    const phone = nextTestPhone();
+    const seller = await registerUser(billingServer.baseUrl, {
+      name: 'Tık Faturalı Satıcı', city: 'Test Şehir', password: 'test1234', role: 'satici', phone,
+      businessInfo: 'Test amaçlı otomatik oluşturulmuş satıcı başvurusu, en az on karakter.',
+    });
+    const preApproveOwnerToken = await ownerLogin(billingServer.baseUrl, billingServer.adminPassword);
+    await fetch(billingUrl('/api/owner/sellers/approve'), {
+      method: 'POST', headers: authHeaders(preApproveOwnerToken),
+      body: JSON.stringify({ phone, status: 'approved' }),
+    });
+
+    const imgRes = await fetch(billingUrl('/api/admin/upload-image'), {
+      method: 'POST', headers: authHeaders(seller.token), body: JSON.stringify({ dataUrl: TINY_PNG_DATA_URL }),
+    }).then((r) => r.json());
+    // Bu uç nokta KD_DATA_DIR'dan bağımsız olarak her zaman gerçek proje dizinine
+    // yazar (ayrı bir server örneği kullandığımız için üstteki paylaşılan
+    // uploadImage() yardımcısından geçmiyoruz) — dosyanın testler bitince
+    // silinmesi için aynı temizlik listesine elle ekliyoruz.
+    uploadedFiles.push(imgRes.url);
+    const product = await fetch(billingUrl('/api/admin/products'), {
+      method: 'POST', headers: authHeaders(seller.token),
+      body: JSON.stringify({
+        title: 'Tık Faturalı Ürün ' + Math.random().toString(36).slice(2, 7),
+        cat: 'Sebze', city: 'Test Şehir', price: '50', unit: '/ kg', delivery: ['pickup'], img: imgRes.url,
+      }),
+    }).then((r) => r.json());
+
+    await fetch(billingUrl('/api/products/track'), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slug: product.slug, event: 'message_click' }),
+    });
+
+    const ownerToken = await ownerLogin(billingServer.baseUrl, billingServer.adminPassword);
+    const billingList = await fetch(billingUrl('/api/owner/click-billing'), { headers: authHeaders(ownerToken) }).then((r) => r.json());
+    assert.equal(billingList.pricePerClick, 5);
+    const entry = billingList.sellers.find((s) => s.sellerId === seller.user.id);
+    assert.ok(entry);
+    assert.equal(entry.totalClicks, 1);
+    assert.equal(entry.accruedAmount, 5);
+    assert.equal(entry.unpaidAmount, 5);
+
+    await fetch(billingUrl('/api/owner/click-billing/mark-paid'), {
+      method: 'POST', headers: authHeaders(ownerToken),
+      body: JSON.stringify({ sellerId: seller.user.id }),
+    });
+    const after = await fetch(billingUrl('/api/owner/click-billing'), { headers: authHeaders(ownerToken) }).then((r) => r.json());
+    const entryAfter = after.sellers.find((s) => s.sellerId === seller.user.id);
+    assert.equal(entryAfter.unpaidAmount, 0);
+  });
+
+  test('yetkisiz erişime kapalı', async () => {
+    const r = await fetch(billingUrl('/api/owner/click-billing'));
+    assert.equal(r.status, 401);
+  });
+});

@@ -83,6 +83,7 @@
     <button type="button" class="own-tab" data-tab="posts">Postlar</button>
     <button type="button" class="own-tab" data-tab="ads">Reklamlar</button>
     <button type="button" class="own-tab" data-tab="vitrinApplications">Vitrin Başvuruları</button>
+    <button type="button" class="own-tab" data-tab="clickBilling">Tık Faturalama</button>
   </div>
 
   <div id="tabContent"></div>
@@ -240,6 +241,9 @@
       return;
     } else if (activeTab === 'vitrinApplications') {
       renderVitrinApplicationsTab(content);
+      return;
+    } else if (activeTab === 'clickBilling') {
+      renderClickBillingTab(content);
       return;
     } else if (activeTab === 'packaging') {
       renderPackagingTab(content);
@@ -603,6 +607,41 @@
       });
     }).catch(function () {
       content.innerHTML = '<div class="own-empty">Başvurular yüklenemedi.</div>';
+    });
+  }
+
+  // Tık başı ücretlendirme (Mesaj Yaz tıklamaları, Google Ads benzeri) — satıcı başına
+  // birikmiş tutar burada görülür, ödeme alındığında elle "Ödendi" işaretlenir (IBAN'a
+  // doğrudan havale, Vitrin başvurularıyla aynı model — platform otomatik tahsil etmez).
+  function renderClickBillingTab(content) {
+    content.innerHTML = '<div class="own-empty">Yükleniyor…</div>';
+    authedFetch('/api/owner/click-billing').then(function (r) { return r.json(); }).then(function (d) {
+      var sellers = d.sellers || [];
+      var priceNote = '<p style="font-size:12px;color:var(--muted);margin:0 0 10px;">Tık başı ücret: <b>' +
+        d.pricePerClick + '₺</b>' + (d.pricePerClick <= 0 ? ' (henüz 0 — PRICE_PER_MESSAGE_CLICK ortam değişkeni ayarlanmadıysa tahakkuk oluşmaz, sadece tıklama sayısı tutulur)' : '') + '</p>';
+      if (!sellers.length) { content.innerHTML = priceNote + '<div class="own-empty">Henüz tıklama kaydı yok.</div>'; return; }
+      var html = priceNote + sellers.map(function (s) {
+        var payBtn = s.unpaidAmount > 0
+          ? '<button class="own-approve-btn" data-pay="' + s.sellerId + '">Ödendi İşaretle</button>'
+          : '<span class="own-badge">Güncel</span>';
+        return '<div class="own-row" data-key="' + s.sellerId + '">' +
+          '<div class="own-body"><div class="own-title">' + esc(s.sellerName) + '</div>' +
+          '<div class="own-sub">' + s.totalClicks + ' tıklama · Tahakkuk: ' + s.accruedAmount + '₺ · Ödenen: ' + s.paidAmount + '₺ · <b>Bakiye: ' + s.unpaidAmount + '₺</b></div></div>' +
+          payBtn +
+        '</div>';
+      }).join('');
+      content.innerHTML = html;
+      content.querySelectorAll('[data-pay]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          if (!confirm('Bu satıcının bakiyesini ödendi olarak işaretlemek istediğine emin misin?')) return;
+          authedFetch('/api/owner/click-billing/mark-paid', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sellerId: btn.dataset.pay }),
+          }).then(function () { renderClickBillingTab(content); }).catch(function () {});
+        });
+      });
+    }).catch(function () {
+      content.innerHTML = '<div class="own-empty">Veriler yüklenemedi.</div>';
     });
   }
 

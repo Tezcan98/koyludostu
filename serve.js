@@ -29,6 +29,17 @@ const PRODUCT_ORDERS_PATH = path.join(DATA_DIR, 'product_orders.json');
 // Şirket satıcıların sipariş başına kestiği fatura taslaklarının sıra numarası — satıcı
 // başına, hiç geriye sarmadan artar; aynı sipariş için tekrar istenirse aynı numara döner.
 const INVOICE_COUNTERS_PATH = path.join(DATA_DIR, 'invoice_counters.json');
+// Ürün bazlı etkileşim sayaçları — satıcı kendi ilanının görülme/mesaj-tıklama
+// sayısını admin-urunlerim.html'de görebilsin diye (bkz. POST /api/products/track).
+// Favori sayısı burada ayrıca tutulmaz, favorites.json'dan anlık hesaplanır.
+const PRODUCT_STATS_PATH = path.join(DATA_DIR, 'product_stats.json');
+// Mesaj Yaz tıklaması başına ücretlendirme (Google Ads benzeri, tık başı) — satıcı
+// başına birikmiş tutar burada tutulur, ödeme/fatura admin tarafında elle
+// işaretlenir (IBAN'a doğrudan havale, Vitrin başvurularıyla aynı model — platform
+// ödemeye aracılık etmiyor, bkz. POST /api/owner/click-billing/mark-paid).
+const CLICK_BILLING_PATH = path.join(DATA_DIR, 'click_billing.json');
+// TL — satıcı başına "Satıcıya Mesaj Yaz" tıklaması başına tahakkuk eden ücret.
+const PRICE_PER_MESSAGE_CLICK = Number(process.env.PRICE_PER_MESSAGE_CLICK || 0);
 // Günlük hal/borsa fiyat referansı — Ticaret Bakanlığı Hal Kayıt Sistemi (ülke geneli
 // ortalama) ve İzmir Büyükşehir Belediyesi açık API'si (şehir bazlı) üzerinden çekilip
 // burada ayrı bir dosyada önbelleklenir; ürün sayfasında sadece bilgilendirme amaçlı
@@ -353,6 +364,7 @@ ${relatedHtml}</div><footer class="site-footer">
 <script src="../assets/reviews.js"></script>
 <script src="../assets/favorites.js"></script>
 <script src="../assets/protect.js"></script>
+<script src="../assets/product-view.js"></script>
 <script>if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("/sw.js").catch(function(){});});}</script>
 </body>
 </html>
@@ -1689,6 +1701,12 @@ setInterval(() => {
     if (now - entry.windowStart > LOGIN_ATTEMPT_WINDOW_MS) loginAttemptMap.delete(k);
   }
 }, 5 * 60 * 1000).unref();
+
+// ---------- Mesaj tıklaması tekrar engelleme (bkz. POST /api/products/track) ----------
+// Anahtar tarih içerdiğinden (ip:slug:gün) gün değiştiğinde eski kayıtlar zaten
+// anlamsızlaşır — günde bir kez tamamen temizlemek yeterli ve basit.
+const messageClickDedup = new Set();
+setInterval(() => messageClickDedup.clear(), 24 * 60 * 60 * 1000).unref();
 
 // ---------- şifremi unuttum: token -> { phone, at } ----------
 // Kayıt SMS kodları gibi belleğe tutulur (sunucu yeniden başlarsa bekleyen
@@ -3040,6 +3058,76 @@ const server = http.createServer(async (req, res) => {
       return jsonResponse(res, 200, { products: favProducts, sellers: favSellers });
     }
 
+    // ---------- Ürün etkileşim takibi: görülme, mesaj tıklaması, tık başı ücretlendirme ----------
+    // Kimlik doğrulaması gerektirmez (anonim ziyaretçiler de sayılır). "message_click"
+    // ayrıca satıcı başına tık-başı ücretlendirmeyi tetikler (Google Ads benzeri) —
+    // aynı IP'den aynı ürüne aynı gün içinde birden fazla tıklama sadece bir kez
+    // ücretlendirilir (bellek-içi, basit bir tekrar engelleme — sayfa yenileme/çift
+    // tıkla kazara şişmeyi önler; mükemmel bir dolandırıcılık koruması değildir,
+    // gerçek faturalama öncesi admin yine de kendi panelinden gözden geçirir).
+    if (p === '/api/products/track' && req.method === 'POST') {
+      const body = await readBody(req);
+      const slug = String(body.slug || '');
+      const eventType = String(body.event || '');
+      if (!['view', 'message_click'].includes(eventType)) return jsonResponse(res, 400, { error: 'Geçersiz olay türü.' });
+      const products = readJson(PRODUCTS_PATH, {});
+      const product = products[slug];
+      if (!product) return jsonResponse(res, 400, { error: 'Ürün bulunamadı.' });
+
+      const stats = readJson(PRODUCT_STATS_PATH, {});
+      if (!stats[slug]) stats[slug] = { views: 0, messageClicks: 0 };
+
+      if (eventType === 'view') {
+        stats[slug].views += 1;
+        writeJson(PRODUCT_STATS_PATH, stats);
+        return jsonResponse(res, 200, { ok: true });
+      }
+
+      const dedupKey = `${getClientIp(req)}:${slug}:${new Date().toISOString().slice(0, 10)}`;
+      if (!messageClickDedup.has(dedupKey)) {
+        messageClickDedup.add(dedupKey);
+        stats[slug].messageClicks += 1;
+        writeJson(PRODUCT_STATS_PATH, stats);
+
+        if (PRICE_PER_MESSAGE_CLICK > 0) {
+          const billing = readJson(CLICK_BILLING_PATH, {});
+          const sellerId = product.sellerId;
+          if (!billing[sellerId]) billing[sellerId] = { totalClicks: 0, accruedAmount: 0, paidAmount: 0, history: [] };
+          billing[sellerId].totalClicks += 1;
+          billing[sellerId].accruedAmount = Math.round((billing[sellerId].accruedAmount + PRICE_PER_MESSAGE_CLICK) * 100) / 100;
+          billing[sellerId].history.push({ slug, productTitle: product.title, at: new Date().toISOString() });
+          if (billing[sellerId].history.length > 500) billing[sellerId].history = billing[sellerId].history.slice(-500);
+          writeJson(CLICK_BILLING_PATH, billing);
+        }
+      }
+      return jsonResponse(res, 200, { ok: true });
+    }
+
+    // Satıcının kendi ürünlerinin görülme/mesaj-tıklama/favori sayısını görebilmesi
+    // için (admin-urunlerim.html). Favori sayısı favorites.json'dan anlık hesaplanır,
+    // ayrı bir sayaç olarak tutulmaz.
+    if (p === '/api/admin/products/stats' && req.method === 'GET') {
+      const session = requireApprovedSeller(req, res);
+      if (!session) return;
+      const products = readJson(PRODUCTS_PATH, {});
+      const stats = readJson(PRODUCT_STATS_PATH, {});
+      const favStore = readJson(FAVORITES_PATH, {});
+      const favCounts = {};
+      for (const entry of Object.values(favStore)) {
+        for (const slug of (entry.products || [])) favCounts[slug] = (favCounts[slug] || 0) + 1;
+      }
+      const mySlugs = Object.values(products).filter((p2) => p2.sellerId === session.user.id).map((p2) => p2.slug);
+      const result = {};
+      for (const slug of mySlugs) {
+        result[slug] = {
+          views: (stats[slug] && stats[slug].views) || 0,
+          messageClicks: (stats[slug] && stats[slug].messageClicks) || 0,
+          favorites: favCounts[slug] || 0,
+        };
+      }
+      return jsonResponse(res, 200, { stats: result });
+    }
+
     // ---------- Postlar: story baloncukları — son 24 saatte paylaşılan veya satıcının reklam olarak işaretlediği ----------
 
     if (p === '/api/admin/products/mine' && req.method === 'GET') {
@@ -3432,6 +3520,34 @@ const server = http.createServer(async (req, res) => {
         .filter((a) => a.sellerId === session.user.id)
         .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
       return jsonResponse(res, 200, { applications: mine });
+    }
+
+    // Tık başı ücretlendirme (Mesaj Yaz) — admin satıcı başına birikmiş tutarı görür,
+    // ödeme/fatura alındığında elle işaretler (IBAN'a doğrudan havale, Vitrin
+    // başvurularıyla aynı model — platform otomatik tahsilat yapmaz).
+    if (p === '/api/owner/click-billing' && req.method === 'GET') {
+      if (!requireAdmin(req, res)) return;
+      const billing = readJson(CLICK_BILLING_PATH, {});
+      const list = Object.entries(billing).map(([sellerId, b]) => {
+        const found = findUserById(sellerId);
+        return {
+          sellerId, sellerName: found ? found.user.name : '(silinmiş hesap)',
+          totalClicks: b.totalClicks, accruedAmount: b.accruedAmount, paidAmount: b.paidAmount,
+          unpaidAmount: Math.round((b.accruedAmount - b.paidAmount) * 100) / 100,
+        };
+      }).sort((a, b) => b.unpaidAmount - a.unpaidAmount);
+      return jsonResponse(res, 200, { pricePerClick: PRICE_PER_MESSAGE_CLICK, sellers: list });
+    }
+
+    if (p === '/api/owner/click-billing/mark-paid' && req.method === 'POST') {
+      if (!requireAdmin(req, res)) return;
+      const { sellerId } = await readBody(req);
+      const billing = readJson(CLICK_BILLING_PATH, {});
+      const b = billing[sellerId];
+      if (!b) return jsonResponse(res, 404, { error: 'Kayıt bulunamadı.' });
+      b.paidAmount = b.accruedAmount;
+      writeJson(CLICK_BILLING_PATH, billing);
+      return jsonResponse(res, 200, { ok: true });
     }
 
     if (p === '/api/owner/vitrin-applications' && req.method === 'GET') {

@@ -52,6 +52,7 @@
   .prod-item-body{flex:1;min-width:0;}
   .prod-item-title{font-size:13px;font-weight:700;}
   .prod-item-sub{font-size:11.5px;color:var(--muted);}
+  .prod-item-stats{font-size:11px;color:var(--muted);margin-top:2px;}
   .prod-del{background:none;border:none;color:var(--ring3);font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0;}
   .adm-empty{padding:30px;text-align:center;color:var(--muted);font-size:13px;}
   .prod-check-label{display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:600;cursor:pointer;}
@@ -410,7 +411,12 @@
   }
 
   function loadProducts() {
-    window.KDAuth.authedFetch('/api/admin/products/mine').then(function (r) { return r.json(); }).then(function (data) {
+    Promise.all([
+      window.KDAuth.authedFetch('/api/admin/products/mine').then(function (r) { return r.json(); }),
+      window.KDAuth.authedFetch('/api/admin/products/stats').then(function (r) { return r.json(); }).catch(function () { return { stats: {} }; }),
+    ]).then(function (results) {
+      var data = results[0];
+      var statsBySlug = results[1].stats || {};
       var list = document.getElementById('prodList');
       var items = data.products || [];
       myProducts = items;
@@ -419,9 +425,11 @@
         var imgSrc = /^\d+$/.test(String(p.img)) ?
           'https://images.pexels.com/photos/' + p.img + '/pexels-photo-' + p.img + '.jpeg?auto=compress&cs=tinysrgb&w=150' : p.img;
         var pauseBadge = p.active === false ? '<span class="prod-pause-badge">PASİF</span>' : '';
+        var s = statsBySlug[p.slug] || { views: 0, messageClicks: 0, favorites: 0 };
+        var statsLine = '<div class="prod-item-stats">👁 ' + s.views + ' görülme · 💬 ' + s.messageClicks + ' mesaj tıklaması · ♥ ' + s.favorites + ' favori</div>';
         return '<div class="prod-item' + (p.active === false ? ' is-paused' : '') + '" data-slug="' + p.slug + '">' +
           '<img src="' + imgSrc + '" alt="">' +
-          '<div class="prod-item-body"><div class="prod-item-title">' + p.title + pauseBadge + '</div><div class="prod-item-sub">' + p.cat + ' · ' + p.price + ' ' + p.unit + ' · ' + stockLabel(p) + '</div></div>' +
+          '<div class="prod-item-body"><div class="prod-item-title">' + p.title + pauseBadge + '</div><div class="prod-item-sub">' + p.cat + ' · ' + p.price + ' ' + p.unit + ' · ' + stockLabel(p) + '</div>' + statsLine + '</div>' +
           '<a href="urun/' + p.slug + '.html" class="prod-del" style="color:var(--ring1);">Görüntüle</a>' +
           '<button class="prod-del" style="color:var(--ink);" data-edit="' + p.slug + '">Düzenle</button>' +
           '<button class="prod-del" data-pause="' + p.slug + '" data-active="' + (p.active !== false) + '">' + (p.active === false ? 'Aktifleştir' : 'Pasife Al') + '</button>' +

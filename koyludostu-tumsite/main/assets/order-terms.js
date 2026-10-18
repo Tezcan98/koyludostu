@@ -11,7 +11,11 @@
     '<p>Satıcı, ürünü ilanda tarif edildiği şekilde, kararlaştırılan miktar ve sürede teslim etmekle yükümlüdür.</p>' +
     '<h3>4. Alıcının Yükümlülüğü</h3>' +
     '<p>Alıcı, doğru teslimat bilgisi vermekle ve kararlaştırılan ödemeyi zamanında göndermekle yükümlüdür.</p>' +
-    '<h3>5. Anlaşmazlık</h3>' +
+    '<h3>5. Teslimat</h3>' +
+    '<p>Teslimat yöntemi (kendin al, otobüs, kargo) ürünün saklama koşuluna göre değişir; kargoya uygun olmayan (soğuk zincir gerektiren/çabuk bozulan) ürünler kargoyla gönderilemez. Kesin teslimat şekli satıcıyla mesaj üzerinden netleştirilir.</p>' +
+    '<h3>6. Cayma hakkı</h3>' +
+    '<p>Mesafeli Sözleşmeler Yönetmeliği\'ndeki 14 günlük cayma hakkı, çabuk bozulabilen/kısa raf ömürlü gıda ürünlerinde genellikle uygulanmaz. Detaylar için <a href="/iade-politikasi.html" target="_blank">İade ve Cayma Hakkı</a> sayfasına bakabilirsin.</p>' +
+    '<h3>7. Anlaşmazlık</h3>' +
     '<p>Sorun yaşanması hâlinde taraflar önce mesajlaşarak çözüm aramalı; çözülmezse alıcı Şikayet ekranından platforma bildirebilir. Platform tarafları uzlaştırmaya çalışır, ancak taraflar arasındaki ticari uyuşmazlıklarda hukuki sorumluluk üstlenmez.</p>';
 
   function ensureModal() {

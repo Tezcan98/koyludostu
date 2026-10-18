@@ -76,7 +76,18 @@
   document.addEventListener('DOMContentLoaded', function () {
     document.body.addEventListener('click', function (e) {
       var btn = e.target.closest && e.target.closest('.msg-cta');
-      if (btn) openMsgPanel(btn.dataset.slug, btn.dataset.title);
+      if (btn) {
+        openMsgPanel(btn.dataset.slug, btn.dataset.title);
+        // İlan sahibinin görebileceği etkileşim sayacı + tık başı ücretlendirme
+        // (bkz. serve.js POST /api/products/track) — kullanıcı deneyimini
+        // bloklamaması için sonucunu beklemeden, sessizce gönderilir.
+        if (btn.dataset.slug) {
+          fetch('/api/products/track', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ slug: btn.dataset.slug, event: 'message_click' }),
+          }).catch(function () {});
+        }
+      }
     });
   });
 })();
