@@ -904,6 +904,67 @@ function httpsPostForm(urlStr, fields, headers) {
   });
 }
 
+function httpsPostJson(urlStr, bodyObj, headers, timeoutMs) {
+  return new Promise((resolve, reject) => {
+    const body = JSON.stringify(bodyObj);
+    const u = new URL(urlStr);
+    const req = https.request({
+      hostname: u.hostname, path: u.pathname + u.search, method: 'POST',
+      headers: Object.assign({
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(body),
+      }, headers),
+      timeout: timeoutMs || 15000,
+    }, (res) => {
+      let data = '';
+      res.on('data', (c) => { data += c; });
+      res.on('end', () => resolve({ status: res.statusCode, body: data }));
+    });
+    req.on('error', reject);
+    req.on('timeout', function () { this.destroy(); reject(new Error('timeout')); });
+    req.write(body);
+    req.end();
+  });
+}
+
+// ---------- Kötü niyetli yorum tespiti (Gemini) ----------
+// GEMINI_API_KEY ortam değişkeni sadece production sunucudaki ecosystem.config.js'de
+// tutulur (git'e ASLA girmez — bkz. .gitignore deseni, bu dosya repoda yok). Key
+// tanımlı değilse (yerel geliştirme, test ortamı) bu özellik sessizce devre dışı
+// kalır — hiçbir yorum engellenmez/geciktirilmez.
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
+const GEMINI_MODEL = 'gemini-3.8-flash';
+
+// Yorumu otomatik SİLMEZ/REDDETMEZ — sadece admin'in zaten var olan onay kuyruğuna
+// (bkz. /api/owner/reviews) bir sinyal ekler, admin yine de kendi karar verir. API
+// hata verirse ya da zaman aşımına uğrarsa (8sn) yorum normal akışına devam eder,
+// hiçbir zaman gönderimi engellemez.
+async function analyzeReviewForAbuse(text, rating, productTitle) {
+  if (!GEMINI_API_KEY) return null;
+  const prompt = 'Bir pazaryeri sitesindeki ürün yorumunu kötü niyet açısından değerlendir. ' +
+    'Kötü niyet: sahte/bot gibi görünen, ürünle alakasız, hakaret/küfür içeren, rakip karalaması ' +
+    'olduğu izlenimi veren ya da spam/reklam içeren yorumlar. Sadece sert ama ürünle ilgili, makul ' +
+    'bir şikayet kötü niyetli SAYILMAZ.\n\n' +
+    `Ürün: ${productTitle}\nPuan: ${rating}/5\nYorum: "${text}"\n\n` +
+    'SADECE şu JSON formatında cevap ver, başka hiçbir şey yazma: ' +
+    '{"suspicious": true veya false, "reason": "kısa gerekçe (en fazla 15 kelime) veya null"}';
+  try {
+    const res = await httpsPostJson(
+      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`,
+      { contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0, responseMimeType: 'application/json' } },
+      {}, 8000,
+    );
+    if (res.status !== 200) return null;
+    const data = JSON.parse(res.body);
+    const raw = data.candidates && data.candidates[0] && data.candidates[0].content.parts[0].text;
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return { suspicious: !!parsed.suspicious, reason: parsed.reason ? String(parsed.reason).slice(0, 200) : null };
+  } catch {
+    return null; // AI servis dışı kalsa bile yorum akışı hiç etkilenmez
+  }
+}
+
 function extractHiddenFields(html) {
   const fields = {};
   for (const m of String(html || '').matchAll(/<input[^>]*type="hidden"[^>]*>/g)) {
@@ -2653,19 +2714,24 @@ const server = http.createServer(async (req, res) => {
       if (!hasPurchase) {
         return jsonResponse(res, 403, { error: 'Bu ürünü satın almadan yorum yapamazsın. Sipariş tamamlandıktan sonra değerlendirebilirsin.' });
       }
+      // Kötü niyet tespiti (bkz. analyzeReviewForAbuse) — yorumu ASLA otomatik
+      // engellemez, sadece şüpheli bulunursa (puan ne olursa olsun) admin'in zaten
+      // var olan onay kuyruğuna düşmesini sağlar; admin kendi kararını verir.
+      const aiCheck = await analyzeReviewForAbuse(clean, r, product.title);
+      const status = (r >= 4 && !(aiCheck && aiCheck.suspicious)) ? 'approved' : 'pending';
       const store = readJson(REVIEWS_PATH, {});
       store[productSlug] = store[productSlug] || [];
-      const status = r >= 4 ? 'approved' : 'pending';
       const mine = store[productSlug].find((rv) => rv.userId === session.user.id);
       if (mine) {
         mine.rating = r; mine.text = clean; mine.createdAt = new Date().toISOString(); mine.status = status;
         mine.sellerReply = null;
         mine.dispute = null;
+        mine.aiFlag = aiCheck;
       } else {
         store[productSlug].push({
           id: 'r_' + randomToken().slice(0, 10), userId: session.user.id, name: session.user.name,
           role: session.user.role, rating: r, text: clean, createdAt: new Date().toISOString(),
-          status, sellerReply: null, dispute: null,
+          status, sellerReply: null, dispute: null, aiFlag: aiCheck,
         });
       }
       writeJson(REVIEWS_PATH, store);

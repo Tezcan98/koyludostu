@@ -511,14 +511,19 @@
         ? (r.dispute.status === 'upheld' ? '<span class="own-badge" style="background:rgba(78,107,58,.12);color:#4e6b3a;">İtiraz Haklı Bulundu</span>'
           : r.dispute.status === 'rejected' ? '<span class="own-badge" style="background:rgba(200,60,60,.12);color:#8e3b46;">İtiraz Haksız Bulundu</span>' : '')
         : '';
+      var aiBadge = (r.aiFlag && r.aiFlag.suspicious)
+        ? '<span class="own-badge" style="background:rgba(192,138,46,.15);color:#7b591e;" title="' + esc(r.aiFlag.reason || '') + '">Yapay Zeka: Şüpheli</span>'
+        : '';
       var actions = r.status === 'pending'
         ? '<button class="own-approve-btn" data-mod="approved" data-slug="' + r.productSlug + '" data-review="' + r.id + '">Onayla</button>' +
           '<button class="own-reject-btn" data-mod="rejected" data-slug="' + r.productSlug + '" data-review="' + r.id + '">Reddet</button>'
         : '';
       return '<div class="own-row">' +
         '<div class="own-body"><div class="own-title">' + esc(r.productTitle) + ' · ' + r.rating + '★</div>' +
-        '<div class="own-sub">' + esc(r.name) + ': ' + esc(r.text) + '</div></div>' +
-        statusBadge + disputeBadge + actions +
+        '<div class="own-sub">' + esc(r.name) + ': ' + esc(r.text) + '</div>' +
+        (r.aiFlag && r.aiFlag.suspicious ? '<div class="own-sub" style="color:#7b591e;">Yapay zeka gerekçesi: ' + esc(r.aiFlag.reason || '—') + '</div>' : '') +
+        '</div>' +
+        statusBadge + disputeBadge + aiBadge + actions +
       '</div>';
     }
   }
