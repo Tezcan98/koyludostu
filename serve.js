@@ -1011,10 +1011,20 @@ function normalizeTrText(s) {
 // benzerlik eşleştirmesi (substring vb.) kullanmaz.
 function matchHalFiyat(productTitle, halData) {
   const titleWords = normalizeTrText(productTitle).split(' ').filter((w) => w.length > 2);
+  // Ürün adları çoğunlukla "[Bölge] [Meyve/Sebze]+iyelik eki" kalıbında olduğundan
+  // (ör. "Manisa Kirazı", "Amasya Elması") tam kelime eşleşmesi çoğu gerçek ürünü
+  // kaçırıyordu — kelimenin kökünü aynen koruyan (vokal uyumlu) Türkçe iyelik/hal
+  // eklerini (-ı/-i/-u/-ü, -sı/-si/-su/-sü vb., en fazla 3 harf) tolere ediyoruz.
+  // Kök değişikliğine yol açan düzensiz çekimler (armut->armudu gibi) kapsam dışı.
+  function wordMatches(titleWord, primaryWord) {
+    if (titleWord === primaryWord) return true;
+    const extra = titleWord.length - primaryWord.length;
+    return extra > 0 && extra <= 3 && titleWord.startsWith(primaryWord);
+  }
   function findBest(list, nameKey) {
     for (const entry of list || []) {
       const primaryWord = normalizeTrText(entry[nameKey]).split(' ')[0];
-      if (primaryWord.length > 2 && titleWords.includes(primaryWord)) return entry;
+      if (primaryWord.length > 2 && titleWords.some((w) => wordMatches(w, primaryWord))) return entry;
     }
     return null;
   }
@@ -3638,6 +3648,33 @@ const server = http.createServer(async (req, res) => {
     if (p === '/api/hal-fiyat' && req.method === 'GET') {
       const match = matchHalFiyat(url.searchParams.get('title') || '', readHalFiyat());
       return jsonResponse(res, 200, match);
+    }
+
+    // Anasayfada gösterilecek, sitede GERÇEKTEN satılan ürünlerle eşleşen hal/borsa
+    // fiyatları — rastgele bir fiyat listesi dökmek yerine, katalogdaki ürünlerin
+    // adlarından (matchHalFiyat ile) türetilir, böylece "alakalı" kalır.
+    if (p === '/api/hal-fiyat/relevant' && req.method === 'GET') {
+      const halData = readHalFiyat();
+      const products = readJson(PRODUCTS_PATH, {});
+      const seen = new Set();
+      const result = [];
+      for (const product of Object.values(products)) {
+        if (product.active === false) continue;
+        const match = matchHalFiyat(product.title, halData);
+        for (const [kaynak, entry, nameKey, priceKey] of [
+          ['ulusal', match.ulusal, 'urunAdi', 'ortalamaFiyat'],
+          ['izmir', match.izmir, 'malAdi', 'ortalamaUcret'],
+          ['tobb', match.tobb, 'urunAdi', 'ortalamaFiyat'],
+        ]) {
+          if (!entry) continue;
+          const dedupKey = kaynak + ':' + entry[nameKey];
+          if (seen.has(dedupKey)) continue;
+          seen.add(dedupKey);
+          result.push({ kaynak, urunAdi: entry[nameKey], fiyat: Number(entry[priceKey]), birim: entry.birim });
+        }
+        if (result.length >= 12) break;
+      }
+      return jsonResponse(res, 200, { items: result });
     }
 
     if (p === '/api/admin/products' && req.method === 'POST') {

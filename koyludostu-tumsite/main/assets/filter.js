@@ -243,6 +243,29 @@
       }
     }
 
+    // Anasayfada, keşif şeritlerinin üstünde — sitede satılan ürünlerle eşleşen
+    // güncel hal/borsa fiyatlarından kısa bir özet. Ürün verisinden bağımsız, kendi
+    // uç noktasından (/api/hal-fiyat/relevant) çekilir.
+    var MARKET_SOURCE_LABEL = { ulusal: 'Ülke Geneli', izmir: 'İzmir Hali', tobb: 'Ticaret Borsası' };
+    function renderMarketPrices() {
+      var container = document.getElementById('marketPriceSection');
+      if (!container) return;
+      fetch('/api/hal-fiyat/relevant').then(function (r) { return r.json(); }).then(function (data) {
+        var items = data.items || [];
+        if (!items.length) return;
+        var chips = items.map(function (it) {
+          var name = it.urunAdi.charAt(0) + it.urunAdi.slice(1).toLocaleLowerCase('tr-TR');
+          return '<div class="market-chip">' +
+            '<div class="market-chip-name">' + esc(name) + '</div>' +
+            '<div class="market-chip-price">' + it.fiyat.toLocaleString('tr-TR') + '₺<small>/' + esc(it.birim) + '</small></div>' +
+            '<div class="market-chip-source">' + esc(MARKET_SOURCE_LABEL[it.kaynak] || it.kaynak) + '</div>' +
+          '</div>';
+        }).join('');
+        container.innerHTML = '<div class="discover-section"><div class="discover-title">Bugünün Piyasa Fiyatları</div>' +
+          '<div class="discover-scroll">' + chips + '</div></div>';
+      }).catch(function () {});
+    }
+
     Promise.all([
       fetch('/api/products').then(function (r) { return r.json(); }),
       fetch('/api/reviews/stats').then(function (r) { return r.json(); }).catch(function () { return {}; }),
@@ -268,6 +291,7 @@
 
       renderAttrFilters();
       renderDiscoverSections();
+      renderMarketPrices();
 
       apply();
     }).catch(function () {

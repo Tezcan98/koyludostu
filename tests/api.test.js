@@ -2760,6 +2760,23 @@ describe('Hal/Borsa fiyat referansı', () => {
       .then((r) => r.json());
     assert.equal(noMatch.ulusal, null);
   });
+
+  test('Türkçe iyelik eki olan ürün adları da eşleşir (ör. "Kirazı" ~ "KİRAZ")', async () => {
+    seedHalFiyat({
+      updatedAt: new Date().toISOString(),
+      ulusal: [{ urunAdi: 'KİRAZ', urunCinsi: 'KİRAZ', urunTuru: 'Geleneksel', ortalamaFiyat: 120, birim: 'Kg' }],
+      izmir: [], tobb: [],
+    });
+
+    const match = await fetch(url('/api/hal-fiyat?title=' + encodeURIComponent('Manisa Kirazı')))
+      .then((r) => r.json());
+    assert.equal(match.ulusal.ortalamaFiyat, 120);
+
+    // Çok uzun bir ek farkı (gerçek bir iyelik eki değil) yanlışlıkla eşleşmemeli.
+    const noMatch = await fetch(url('/api/hal-fiyat?title=' + encodeURIComponent('Kirazlıköy Mahallesi Ürünü')))
+      .then((r) => r.json());
+    assert.equal(noMatch.ulusal, null);
+  });
 });
 
 describe('Ürün etkileşim takibi (görülme/mesaj tıklaması/favori) ve satıcıya görünmesi', () => {
@@ -2894,5 +2911,30 @@ describe('Tık başı ücretlendirme (Mesaj Yaz, admin paneli)', () => {
   test('yetkisiz erişime kapalı', async () => {
     const r = await fetch(billingUrl('/api/owner/click-billing'));
     assert.equal(r.status, 401);
+  });
+});
+
+describe('GET /api/hal-fiyat/relevant — anasayfa için katalogla eşleşen fiyatlar', () => {
+  function seedHalFiyat(data) {
+    fs.writeFileSync(path.join(server.dataDir, 'hal_fiyatlari.json'), JSON.stringify(data, null, 2));
+  }
+
+  test('sadece sitede satılan ürünlerle eşleşenler döner, eşleşmeyenler dönmez', async () => {
+    seedHalFiyat({
+      updatedAt: new Date().toISOString(),
+      ulusal: [
+        { urunAdi: 'DOMATES', urunCinsi: 'DOMATES', urunTuru: 'Geleneksel', ortalamaFiyat: 37.5, birim: 'Kg' },
+        { urunAdi: 'KİVİ', urunCinsi: 'KİVİ', urunTuru: 'Geleneksel', ortalamaFiyat: 90, birim: 'Kg' }, // katalogda yok
+      ],
+      izmir: [], tobb: [],
+    });
+
+    const seller = await newSeller('Piyasa Fiyatı Satıcı');
+    await createProduct(seller.token, { title: 'Taze Domates ' + Math.random().toString(36).slice(2, 7) });
+
+    const data = await fetch(url('/api/hal-fiyat/relevant')).then((r) => r.json());
+    const names = data.items.map((it) => it.urunAdi);
+    assert.ok(names.includes('DOMATES'));
+    assert.ok(!names.includes('KİVİ'));
   });
 });
