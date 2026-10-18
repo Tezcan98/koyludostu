@@ -212,12 +212,14 @@ function renderProductPage(product, allProducts) {
   const storageLine = product.storageConditions
     ? `<div class="storage-box"><b>Saklama Koşulları:</b> ${esc(product.storageConditions)}</div>` : '';
   const halMatch = matchHalFiyat(product.title, readHalFiyat());
-  const halParts = [];
-  if (halMatch.ulusal) halParts.push(`Ülke geneli ort.: <b>${halMatch.ulusal.ortalamaFiyat.toLocaleString('tr-TR')}₺/${esc(halMatch.ulusal.birim)}</b>`);
-  if (halMatch.izmir) halParts.push(`İzmir hali: <b>${Number(halMatch.izmir.ortalamaUcret).toLocaleString('tr-TR')}₺/${esc(halMatch.izmir.birim)}</b>`);
-  if (halMatch.tobb) halParts.push(`Ticaret borsası (hububat): <b>${halMatch.tobb.ortalamaFiyat.toLocaleString('tr-TR')}₺/${esc(halMatch.tobb.birim)}</b>`);
-  const halFiyatLine = halParts.length
-    ? `<div class="hal-fiyat-box"><span class="hal-fiyat-title">📊 Güncel Hal/Borsa Fiyatı Referansı</span><div class="hal-fiyat-vals">${halParts.join(' · ')}</div><small>Kaynak: Ticaret Bakanlığı Hal Kayıt Sistemi / İzmir Büyükşehir Belediyesi / TOBB Ticaret Borsaları — fiyat garantisi değildir, sadece piyasa referansıdır.</small></div>`
+  const halStats = [];
+  if (halMatch.ulusal) halStats.push(['Ülke Geneli', halMatch.ulusal.ortalamaFiyat, halMatch.ulusal.birim]);
+  if (halMatch.izmir) halStats.push(['İzmir Hali', Number(halMatch.izmir.ortalamaUcret), halMatch.izmir.birim]);
+  if (halMatch.tobb) halStats.push(['Ticaret Borsası', halMatch.tobb.ortalamaFiyat, halMatch.tobb.birim]);
+  const halFiyatLine = halStats.length
+    ? `<div class="hal-fiyat-box"><div class="hal-fiyat-eyebrow">Piyasa Fiyat Referansı</div><div class="hal-fiyat-row">${
+        halStats.map(([label, price, birim]) => `<div class="hal-fiyat-stat"><span class="hal-fiyat-stat-label">${esc(label)}</span><span class="hal-fiyat-stat-value">${price.toLocaleString('tr-TR')}₺<small>/${esc(birim)}</small></span></div>`).join('')
+      }</div><div class="hal-fiyat-source">Ticaret Bakanlığı Hal Kayıt Sistemi, İzmir Büyükşehir Belediyesi ve TOBB Ticaret Borsaları verilerine dayanır — bilgilendirme amaçlıdır, fiyat garantisi vermez.</div></div>`
     : '';
   const stockLine = product.stock === null || product.stock === undefined
     ? ''

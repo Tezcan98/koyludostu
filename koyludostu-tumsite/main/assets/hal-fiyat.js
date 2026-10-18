@@ -19,18 +19,23 @@
     fetch('/api/hal-fiyat?title=' + encodeURIComponent(title))
       .then(function (r) { return r.json(); })
       .then(function (match) {
-        var parts = [];
-        if (match.ulusal) parts.push('Ülke geneli ort.: <b>' + Number(match.ulusal.ortalamaFiyat).toLocaleString('tr-TR') + '₺/' + esc(match.ulusal.birim) + '</b>');
-        if (match.izmir) parts.push('İzmir hali: <b>' + Number(match.izmir.ortalamaUcret).toLocaleString('tr-TR') + '₺/' + esc(match.izmir.birim) + '</b>');
-        if (match.tobb) parts.push('Ticaret borsası (hububat): <b>' + Number(match.tobb.ortalamaFiyat).toLocaleString('tr-TR') + '₺/' + esc(match.tobb.birim) + '</b>');
-        if (!parts.length) return;
+        var stats = [];
+        if (match.ulusal) stats.push(['Ülke Geneli', Number(match.ulusal.ortalamaFiyat), match.ulusal.birim]);
+        if (match.izmir) stats.push(['İzmir Hali', Number(match.izmir.ortalamaUcret), match.izmir.birim]);
+        if (match.tobb) stats.push(['Ticaret Borsası', Number(match.tobb.ortalamaFiyat), match.tobb.birim]);
+        if (!stats.length) return;
+
+        var statsHtml = stats.map(function (s) {
+          return '<div class="hal-fiyat-stat"><span class="hal-fiyat-stat-label">' + esc(s[0]) + '</span>' +
+            '<span class="hal-fiyat-stat-value">' + s[1].toLocaleString('tr-TR') + '₺<small>/' + esc(s[2]) + '</small></span></div>';
+        }).join('');
 
         var box = document.createElement('div');
         box.className = 'hal-fiyat-box';
         box.innerHTML =
-          '<span class="hal-fiyat-title">📊 Güncel Hal/Borsa Fiyatı Referansı</span>' +
-          '<div class="hal-fiyat-vals">' + parts.join(' · ') + '</div>' +
-          '<small>Kaynak: Ticaret Bakanlığı Hal Kayıt Sistemi / İzmir Büyükşehir Belediyesi / TOBB Ticaret Borsaları — fiyat garantisi değildir, sadece piyasa referansıdır.</small>';
+          '<div class="hal-fiyat-eyebrow">Piyasa Fiyat Referansı</div>' +
+          '<div class="hal-fiyat-row">' + statsHtml + '</div>' +
+          '<div class="hal-fiyat-source">Ticaret Bakanlığı Hal Kayıt Sistemi, İzmir Büyükşehir Belediyesi ve TOBB Ticaret Borsaları verilerine dayanır — bilgilendirme amaçlıdır, fiyat garantisi vermez.</div>';
         footer.parentNode.insertBefore(box, footer);
       })
       .catch(function () {});

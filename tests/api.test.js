@@ -2724,10 +2724,10 @@ describe('Hal/Borsa fiyat referansı', () => {
     const product = await createProduct(seller.token, { title: 'Domates Çeşidi ' + Math.random().toString(36).slice(2, 7) });
     const html = await fetch(url(`/urun/${product.slug}.html`)).then((r) => r.text());
 
-    assert.ok(html.includes('Güncel Hal/Borsa Fiyatı Referansı'));
+    assert.ok(html.includes('Piyasa Fiyat Referansı'));
     assert.ok(html.includes('37,51'));
-    assert.ok(html.includes('İzmir hali'));
-    assert.ok(!html.includes('hububat')); // buğday eşleşmemeli, "Domates" ile alakasız
+    assert.ok(html.includes('İzmir Hali'));
+    assert.ok(!html.includes('16,2')); // buğday (tobb) eşleşmemeli, "Domates" ile alakasız
   });
 
   test('eşleşen hiçbir ürün yoksa referans kutusu hiç gösterilmez', async () => {
@@ -2741,7 +2741,7 @@ describe('Hal/Borsa fiyat referansı', () => {
     const product = await createProduct(seller.token, { title: 'El Yapımı Keçi Peyniri' });
     const html = await fetch(url(`/urun/${product.slug}.html`)).then((r) => r.text());
 
-    assert.ok(!html.includes('Güncel Hal/Borsa Fiyatı Referansı'));
+    assert.ok(!html.includes('Piyasa Fiyat Referansı'));
   });
 
   test('GET /api/hal-fiyat?title= doğrudan eşleşmeyi döner', async () => {
