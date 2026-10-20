@@ -729,13 +729,14 @@ function readBody(req) {
     let body = '';
     req.on('data', (c) => { body += c; if (body.length > 8e6) req.destroy(); });
     req.on('end', () => {
-      try { resolve(body ? JSON.parse(body) : {}); } catch (e) { reject(e); }
+      try { req._parsedBody = body ? JSON.parse(body) : {}; resolve(req._parsedBody); } catch (e) { reject(e); }
     });
     req.on('error', reject);
   });
 }
 
 function jsonResponse(res, status, obj) {
+  res._activityJson = obj;
   res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8' });
   res.end(JSON.stringify(obj));
 }
@@ -989,6 +990,13 @@ async function processReviewQueue() {
         else if (result.decision === 'reject') cur.status = 'rejected';
       }
       writeJson(REVIEWS_PATH, fresh);
+      if (result && result.decision !== 'uncertain') {
+        logActivity({
+          type: 'review_ai', category: 'yorum', ref: { kind: 'product', slug },
+          text: `Yapay zeka, **${cur.name}** adlı kullanıcının **${title}** ürünündeki ${cur.rating}★ yorumunu ${result.decision === 'approve' ? 'yayınladı' : 'reddetti'}${result.reason ? ' (' + result.reason + ')' : ''}.`,
+          actor: null,
+        });
+      }
       if (result && result.decision === 'approve' && products[slug]) {
         notifyUser(products[slug].sellerPhone, 'new_review', `"${products[slug].title}" ürünündeki ${cur.rating}/5 yorum yayınlandı.`);
       }
@@ -1967,6 +1975,138 @@ async function sendPasswordResetLink(user, phone, link) {
 
 // ---------- server ----------
 
+// ---------- Hareket günlüğü (admin: kim ne yaptı) ----------
+// Mutasyon yapan API çağrıları bittiğinde (res 'finish') tek bir yerden, insan tarafından
+// okunabilir bir cümleyle kaydedilir (bkz. describeActivity). Parola/token/belge içeriği asla
+// yazılmaz. Dosya JSON satırı (jsonl) olarak eklenir; çok büyürse en yeni kayıtlar tutulur.
+const ACTIVITY_PATH = path.join(DATA_DIR, 'activity.jsonl');
+const ACTIVITY_MAX = 20000;
+const ACTIVITY_KEEP = 15000;
+const ACTIVITY_CATEGORIES = {
+  hesap: 'Hesap', urun: 'Ürün', favori: 'Favori', yorum: 'Yorum', siparis: 'Sipariş', mesaj: 'Mesaj',
+  sikayet: 'Şikayet', satici: 'Satıcı', guvenlik: 'Güvenlik', kargo: 'Kargo / Ambalaj', icerik: 'Gönderi / Vitrin',
+};
+let activityAppends = 0;
+
+function logActivity(entry) {
+  try {
+    const rec = Object.assign({ id: 'a_' + Date.now().toString(36) + randomToken().slice(0, 5), ts: new Date().toISOString() }, entry);
+    fs.appendFileSync(ACTIVITY_PATH, JSON.stringify(rec) + '\n');
+    if (++activityAppends % 500 === 0) {
+      const lines = fs.readFileSync(ACTIVITY_PATH, 'utf8').split('\n').filter(Boolean);
+      if (lines.length > ACTIVITY_MAX) fs.writeFileSync(ACTIVITY_PATH, lines.slice(-ACTIVITY_KEEP).join('\n') + '\n');
+    }
+  } catch { /* günlük hatası asla isteği etkilemesin */ }
+}
+
+function readActivity() {
+  try {
+    return fs.readFileSync(ACTIVITY_PATH, 'utf8').split('\n').filter(Boolean).map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean);
+  } catch { return []; }
+}
+
+function maskIdentifier(v) {
+  const t = String(v || '').trim();
+  if (t.includes('@')) { const [a, b] = t.split('@'); return (a.slice(0, 2) || '?') + '***@' + b; }
+  const d = t.replace(/\D/g, '');
+  return d.length >= 7 ? d.slice(0, 3) + '***' + d.slice(-2) : '***';
+}
+
+const ORDER_STATUS_TR = { requested: 'talep alındı', confirmed: 'onaylandı', rejected: 'reddedildi', completed: 'tamamlandı' };
+
+function describeActivity(ctx) {
+  const { p, body, status, json, session, ip } = ctx;
+  const ok = status >= 200 && status < 300;
+  const b = body || {};
+  const j = json || {};
+  const a = session ? session.user : null;
+  const who = a ? `**${a.name}**` : 'Bir ziyaretçi';
+  const products = () => readJson(PRODUCTS_PATH, {});
+  const ptitle = (slug) => { const pr = products()[slug]; return pr ? pr.title : (slug || 'bir ürün'); };
+  const q = (t, n) => '“' + String(t || '').replace(/\s+/g, ' ').slice(0, n || 160) + '”';
+  const act = (category, type, text, ref) => ({ category, type, text, ref: ref || null });
+
+  if (p === '/api/auth/login') {
+    if (ok && j.user) return Object.assign(act('hesap', 'login', `**${j.user.name}** giriş yaptı.`), { actorUser: j.user });
+    return Object.assign(act('guvenlik', 'login_failed', `**${maskIdentifier(b.identifier || b.phone)}** için başarısız giriş denemesi${status === 429 ? ' (çok fazla deneme, geçici kilit)' : ''}.`), { withIp: true });
+  }
+  if (p === '/api/owner/login') {
+    return ok ? act('guvenlik', 'owner_login', 'Yönetici paneline giriş yapıldı.') : Object.assign(act('guvenlik', 'owner_login_failed', 'Yönetici paneline başarısız giriş denemesi.'), { withIp: true });
+  }
+  if (!ok) return null;
+
+  switch (p) {
+    case '/api/auth/verify': return j.user ? Object.assign(act('hesap', 'register', `**${j.user.name}** ${j.user.role === 'satici' ? 'satıcı' : 'alıcı'} olarak üye oldu.`), { actorUser: j.user }) : null;
+    case '/api/auth/google-login': return j.user ? Object.assign(act('hesap', 'login', `**${j.user.name}** Google ile giriş yaptı.`), { actorUser: j.user }) : null;
+    case '/api/auth/logout': return act('hesap', 'logout', `${who} çıkış yaptı.`);
+    case '/api/auth/delete-account': return act('hesap', 'account_deleted', `${who} hesabını sildi.`);
+    case '/api/auth/change-password': return act('guvenlik', 'password_changed', `${who} parolasını değiştirdi.`);
+    case '/api/auth/forgot-password': return act('guvenlik', 'password_forgot', `**${maskIdentifier(b.identifier)}** için şifre sıfırlama istendi.`);
+    case '/api/auth/reset-password': return act('guvenlik', 'password_reset', 'Bir kullanıcı şifre sıfırlama bağlantısıyla parolasını yeniledi.');
+    case '/api/auth/update-profile': return act('hesap', 'profile_update', `${who} profil bilgilerini güncelledi.`);
+    case '/api/auth/apply-seller': return act('satici', 'seller_apply', `${who} satıcı olmak için başvurdu.`);
+    case '/api/favorites/toggle': {
+      if (b.type === 'seller') {
+        const f = findUserById(b.id);
+        const nm = f ? f.user.name : 'bir satıcı';
+        return act('favori', j.active ? 'favorite_add' : 'favorite_remove', `${who}, **${nm}** satıcısını ${j.active ? 'favoriye aldı' : 'favorilerinden çıkardı'}.`, { kind: 'seller', id: b.id });
+      }
+      return act('favori', j.active ? 'favorite_add' : 'favorite_remove', `${who}, **${ptitle(b.id)}** ilanını ${j.active ? 'favoriye aldı' : 'favorilerinden çıkardı'}.`, { kind: 'product', slug: b.id });
+    }
+    case '/api/reviews': {
+      const mine = (j.reviews || []).find((x) => a && x.userId === a.id);
+      const st = mine ? (mine.status === 'approved' ? 'yayınlandı' : 'onay bekliyor') : '';
+      return act('yorum', 'review_create', `${who}, **${ptitle(b.productSlug)}** ürününe ${b.rating}★ yorum yaptı: ${q(b.text)}${st ? ' (' + st + ')' : ''}`, { kind: 'product', slug: b.productSlug });
+    }
+    case '/api/admin/reviews/reply': return act('yorum', 'review_reply', `${who} (satıcı), **${ptitle(b.productSlug)}** ürünündeki bir yoruma yanıt verdi: ${q(b.text)}`, { kind: 'product', slug: b.productSlug });
+    case '/api/admin/reviews/dispute': return act('yorum', 'review_dispute', `${who} (satıcı), **${ptitle(b.productSlug)}** ürünündeki bir yoruma itiraz etti: ${q(b.text)}`, { kind: 'product', slug: b.productSlug });
+    case '/api/owner/reviews/moderate': return act('yorum', 'review_moderate', `Admin, **${ptitle(b.productSlug)}** ürünündeki bir yorumu ${b.status === 'approved' ? 'onayladı' : 'reddetti'}.`, { kind: 'product', slug: b.productSlug });
+    case '/api/owner/reviews/dispute/resolve': return act('yorum', 'review_dispute_resolve', `Admin, **${ptitle(b.productSlug)}** ürünündeki yoruma itirazı ${b.status === 'upheld' ? 'haklı buldu (yorum kaldırıldı)' : 'haksız buldu (yorum kaldı)'}.`, { kind: 'product', slug: b.productSlug });
+    case '/api/product-orders': return act('siparis', 'order_create', `${who}, **${j.productTitle || ptitle(b.productSlug)}** ürününden ${b.quantity} adet sipariş talebi gönderdi.`, { kind: 'order', id: j.id, slug: b.productSlug });
+    case '/api/admin/product-orders/update': return act('siparis', 'order_status', `${who} (satıcı), **${j.productTitle || 'bir'}** siparişini “${ORDER_STATUS_TR[b.status] || b.status}” yaptı${j.buyerName ? ' (alıcı: ' + j.buyerName + ')' : ''}.`, { kind: 'order', id: b.id });
+    case '/api/product-orders/confirm-receipt': return act('siparis', 'order_received', `${who} siparişi teslim aldığını onayladı.`, { kind: 'order', id: b.id });
+    case '/api/product-orders/mark-payment-sent': return act('siparis', 'order_payment_sent', `${who} ödemeyi gönderdiğini bildirdi.`, { kind: 'order', id: b.id });
+    case '/api/messages/send': return act('mesaj', 'message_send', `${who}, **${ptitle(b.productSlug)}** ilanı için satıcıya mesaj gönderdi: ${q(b.text, 120)}`, { kind: 'product', slug: b.productSlug });
+    case '/api/admin/messages/reply': return act('mesaj', 'message_reply', `${who} (satıcı) bir mesaja yanıt verdi: ${q(b.text, 120)}`);
+    case '/api/complaints': return act('sikayet', 'complaint_create', `${who}, **${ptitle(b.productSlug)}** ürününü şikayet etti (${b.reason}): ${q(b.text, 120)}`, { kind: 'product', slug: b.productSlug });
+    case '/api/admin/complaints/resolve': return act('sikayet', 'complaint_resolve', `${who} (satıcı) bir şikayeti yanıtladı.`);
+    case '/api/admin/products': return act('urun', 'product_create', `${who} (satıcı) yeni ilan ekledi: **${j.title || b.title}**.`, { kind: 'product', slug: j.slug });
+    case '/api/admin/products/update': return act('urun', 'product_update', `${who} (satıcı) **${j.title || ptitle(b.slug)}** ilanını güncelledi${b.active === false ? ' (pasife aldı)' : b.active === true ? ' (yeniden aktifleştirdi)' : ''}.`, { kind: 'product', slug: b.slug });
+    case '/api/admin/products/delete': return act('urun', 'product_delete', `${who} (satıcı) bir ilanını sildi.`);
+    case '/api/owner/products/delete': return act('urun', 'product_delete', 'Admin bir ilanı sildi.');
+    case '/api/owner/products/feature': return act('urun', 'product_feature', `Admin **${ptitle(b.slug)}** ilanını ${b.featured ? 'öne çıkardı' : 'öne çıkarmaktan kaldırdı'}.`, { kind: 'product', slug: b.slug });
+    case '/api/owner/products/approve-organic': return act('urun', 'organic_approve', `Admin **${ptitle(b.slug)}** ilanının organik belgesini ${b.approved ? 'onayladı' : 'onayını kaldırdı'}.`, { kind: 'product', slug: b.slug });
+    case '/api/owner/sellers/approve': return act('satici', 'seller_decision', `Admin, ${b.phone ? '**' + maskIdentifier(b.phone) + '** numaralı' : 'bir'} satıcı başvurusunu ${b.status === 'approved' ? 'onayladı' : 'reddetti'}.`);
+    case '/api/owner/sellers/badge': return act('satici', 'seller_badge', `Admin bir satıcının güvenilir satıcı rozetini ${b.verified === false || b.verifiedSeller === false ? 'kaldırdı' : 'verdi'}.`);
+    case '/api/owner/users/delete': return act('hesap', 'user_deleted_by_admin', 'Admin bir kullanıcı hesabını sildi.');
+    case '/api/admin/shipments': return act('kargo', 'shipment_create', `${who} (satıcı) kargo takip kaydı oluşturdu.`);
+    case '/api/owner/shipments/update': return act('kargo', 'shipment_update', 'Admin bir kargo kaydını güncelledi.');
+    case '/api/admin/packaging/order': return act('kargo', 'packaging_order', `${who} (satıcı) ambalaj siparişi verdi.`);
+    case '/api/posts': return act('icerik', 'post_create', `${who} yeni bir gönderi paylaştı.`);
+    case '/api/admin/posts/delete': return act('icerik', 'post_delete', `${who} bir gönderisini sildi.`);
+    case '/api/vitrin-applications': return act('icerik', 'vitrin_apply', `${who} vitrin başvurusu yaptı.`);
+    case '/api/owner/vitrin-applications/decide': return act('icerik', 'vitrin_decision', `Admin bir vitrin başvurusunu ${b.status === 'approved' ? 'onayladı' : 'reddetti'}.`);
+    case '/api/addresses/add': return act('hesap', 'address_add', `${who} yeni bir adres ekledi.`);
+    default: return null;
+  }
+}
+
+function recordActivity(req, res, p, startSession, ip) {
+  try {
+    const entry = describeActivity({
+      p, body: req._parsedBody, status: res.statusCode, json: res._activityJson, session: startSession, ip,
+    });
+    if (!entry) return;
+    const actorUser = entry.actorUser || (startSession && startSession.user) || null;
+    const rec = {
+      type: entry.type, category: entry.category, text: entry.text, ref: entry.ref,
+      actor: actorUser ? { id: actorUser.id, name: actorUser.name, phone: actorUser.phone || (startSession && startSession.phone) || '', role: actorUser.role } : null,
+    };
+    if (entry.withIp) rec.ip = ip;
+    logActivity(rec);
+  } catch { /* günlük hatası asla isteği etkilemesin */ }
+}
+
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://localhost:${PORT}`);
   const p = url.pathname;
@@ -1979,6 +2119,11 @@ const server = http.createServer(async (req, res) => {
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
 
   const clientIp = getClientIp(req);
+
+  if (req.method === 'POST' && p.startsWith('/api/') && !/upload-(image|doc)|\/track$|ai-enhance|sign-/.test(p)) {
+    const startSession = getSession(req);
+    res.on('finish', () => recordActivity(req, res, p, startSession, clientIp));
+  }
   if (isRateLimited(clientIp)) {
     res.writeHead(429, { 'Content-Type': 'application/json; charset=utf-8', 'Retry-After': '60' });
     res.end(JSON.stringify({ error: 'Çok fazla istek gönderildi, lütfen biraz sonra tekrar dene.' }));
@@ -4290,6 +4435,45 @@ const server = http.createServer(async (req, res) => {
     }
 
     // Yorum onay kuyruğu: 1-3 yıldızlı yorumlar buraya düşer, admin onaylar/reddeder.
+    // Hareket günlüğü: filtrelenebilir, en yeni üstte. category/type virgülle çoklu, q serbest
+    // metin (cümle+kişi), actor ad/telefon/id parçası, from/to tarih, before=<kayıt id'si> sayfalama.
+    if (p === '/api/owner/activity' && req.method === 'GET') {
+      if (!requireAdmin(req, res)) return;
+      const sp = url.searchParams;
+      const list = (k) => (sp.get(k) || '').split(',').map((x) => x.trim()).filter(Boolean);
+      const cats = list('category'); const types = list('type');
+      const qs = (sp.get('q') || '').toLocaleLowerCase('tr');
+      const actorQ = (sp.get('actor') || '').toLocaleLowerCase('tr');
+      const from = sp.get('from') ? new Date(sp.get('from')).getTime() : null;
+      const to = sp.get('to') ? new Date(sp.get('to')).getTime() : null;
+      const limit = Math.min(Math.max(parseInt(sp.get('limit'), 10) || 100, 1), 500);
+      const all = readActivity().reverse();
+      const matches = (r, ignoreCat) => {
+        if (!ignoreCat && cats.length && !cats.includes(r.category)) return false;
+        if (types.length && !types.includes(r.type)) return false;
+        const t = new Date(r.ts).getTime();
+        if (from !== null && !Number.isNaN(from) && t < from) return false;
+        if (to !== null && !Number.isNaN(to) && t > to) return false;
+        if (actorQ) {
+          const hay = r.actor ? [r.actor.name, r.actor.phone, r.actor.id].join(' ').toLocaleLowerCase('tr') : '';
+          if (!hay.includes(actorQ)) return false;
+        }
+        if (qs) {
+          const hay = (r.text + ' ' + (r.actor ? r.actor.name : '')).toLocaleLowerCase('tr');
+          if (!hay.includes(qs)) return false;
+        }
+        return true;
+      };
+      const counts = {};
+      all.forEach((r) => { if (matches(r, true)) counts[r.category] = (counts[r.category] || 0) + 1; });
+      let filtered = all.filter((r) => matches(r, false));
+      const before = sp.get('before');
+      if (before) { const i = filtered.findIndex((r) => r.id === before); if (i !== -1) filtered = filtered.slice(i + 1); }
+      return jsonResponse(res, 200, {
+        items: filtered.slice(0, limit), hasMore: filtered.length > limit, counts, categories: ACTIVITY_CATEGORIES, total: filtered.length,
+      });
+    }
+
     if (p === '/api/owner/reviews' && req.method === 'GET') {
       if (!requireAdmin(req, res)) return;
       const products = readJson(PRODUCTS_PATH, {});

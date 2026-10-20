@@ -275,6 +275,42 @@ describe('Uzun senaryo 3: yeni satıcı başvurusu yönetici panelinden onaylan�
   });
 });
 
+
+describe('Uzun senaryo 4: yönetici Hareket Günlüğü sekmesi', () => {
+  test('yorum/sipariş/favori cümleleri görünür; kategori çipi, arama ve kişi filtresi sonucu daraltır', async () => {
+    const buyerLogin = await post('/api/auth/login', null, { identifier: buyerPhone, password: PASSWORD });
+    await post('/api/favorites/toggle', buyerLogin.token, { type: 'product', id: product.slug });
+
+    const op = await ownerPage();
+    await op.click('.own-tab[data-tab="activity"]');
+    await op.waitForSelector('.act-row');
+    const all = await op.$$eval('.act-text', (els) => els.map((e) => e.textContent));
+    assert.ok(all.some((t) => /ilanını favoriye aldı/.test(t) && t.includes('Yolculuk Soğuk Sıkım Zeytinyağı')), 'favori cümlesi');
+    assert.ok(all.some((t) => /5★ yorum yaptı/.test(t) && t.includes('Harika zeytinyağı')), 'yorum cümlesi');
+    assert.ok(all.some((t) => /sipariş talebi gönderdi/.test(t)), 'sipariş cümlesi');
+
+    // Kategori çipi: yalnızca Favori
+    await op.click('#actChips .act-chip[data-cat="favori"]');
+    await op.waitForFunction(() => Array.from(document.querySelectorAll('.act-cat')).length > 0 && Array.from(document.querySelectorAll('.act-cat')).every((e) => e.textContent.trim() === 'Favori'));
+
+    // Çipi kapat, metin ara
+    await op.click('#actChips .act-chip[data-cat="favori"]');
+    await op.fill('#actQ', 'Harika zeytinyağı');
+    await op.waitForFunction(() => { const r = document.querySelectorAll('.act-row'); return r.length >= 1 && Array.from(r).every((x) => /Harika zeytinyağı/.test(x.textContent)); });
+
+    // Kişi filtresi
+    await op.fill('#actQ', '');
+    await op.fill('#actActor', 'Yolculuk Alıcısı');
+    await op.waitForFunction(() => { const r = document.querySelectorAll('.act-row'); return r.length >= 3; });
+
+    // Filtreleri temizle
+    await op.click('#actReset');
+    await op.waitForSelector('.act-row');
+    assert.equal(await op.inputValue('#actQ'), '');
+    await op.context().close();
+  });
+});
+
 describe('Temizlik doğrulaması: test bitince her şey ilk haline döner', () => {
   test('test yüklemeleri depoya yazılmadı ve izole veri klasörü gerçek veriden ayrı', () => {
     assert.ok(dataDir.startsWith(require('os').tmpdir()), 'test verisi geçici klasörde olmalı');

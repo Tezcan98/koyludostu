@@ -84,6 +84,7 @@
     <button type="button" class="own-tab" data-tab="ads">Reklamlar</button>
     <button type="button" class="own-tab" data-tab="vitrinApplications">Vitrin Başvuruları</button>
     <button type="button" class="own-tab" data-tab="clickBilling">Tık Faturalama</button>
+    <button type="button" class="own-tab" data-tab="activity">Hareket Günlüğü</button>
   </div>
 
   <div id="tabContent"></div>
@@ -244,6 +245,9 @@
       return;
     } else if (activeTab === 'clickBilling') {
       renderClickBillingTab(content);
+      return;
+    } else if (activeTab === 'activity') {
+      renderActivityTab(content);
       return;
     } else if (activeTab === 'packaging') {
       renderPackagingTab(content);
@@ -628,6 +632,118 @@
   // Tık başı ücretlendirme (Mesaj Yaz tıklamaları, Google Ads benzeri) — satıcı başına
   // birikmiş tutar burada görülür, ödeme alındığında elle "Ödendi" işaretlenir (IBAN'a
   // doğrudan havale, Vitrin başvurularıyla aynı model — platform otomatik tahsil etmez).
+  // ---- Hareket Günlüğü: kim ne yaptı, filtrelenebilir ----
+  var activityTimer = null;
+  function renderActivityTab(content) {
+    if (!document.getElementById('actStyles')) {
+      var st = document.createElement('style');
+      st.id = 'actStyles';
+      st.textContent =
+        '.act-bar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;align-items:center}' +
+        '.act-bar input[type=text],.act-bar input[type=date]{padding:8px 10px;border:1.5px solid var(--line,#ece8e1);border-radius:9px;font:inherit;font-size:13px;background:var(--card,#fff)}' +
+        '.act-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}' +
+        '.act-chip{padding:6px 11px;border-radius:999px;border:1.5px solid var(--line,#ece8e1);background:var(--card,#fff);font:inherit;font-size:12.5px;font-weight:600;cursor:pointer}' +
+        '.act-chip.on{background:var(--ink,#1a1a1a);color:#fff;border-color:var(--ink,#1a1a1a)}' +
+        '.act-chip small{opacity:.7;margin-left:4px}' +
+        '.act-row{display:flex;gap:12px;padding:10px 4px;border-bottom:1px solid var(--line,#ece8e1);font-size:13.5px;line-height:1.45}' +
+        '.act-time{flex:0 0 96px;color:var(--muted,#767066);font-size:12px;font-variant-numeric:tabular-nums}' +
+        '.act-cat{flex:0 0 auto;align-self:flex-start;font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;background:rgba(78,107,58,.12);color:#4e6b3a}' +
+        '.act-cat.guvenlik{background:rgba(200,60,60,.12);color:#8e3b46}' +
+        '.act-cat.yorum{background:rgba(192,138,46,.15);color:#7b591e}' +
+        '.act-text{flex:1;min-width:0;word-break:break-word}' +
+        '.act-meta{color:var(--muted,#767066);font-size:11.5px}';
+      document.head.appendChild(st);
+    }
+    var state = { cats: [], q: '', actor: '', from: '', to: '', items: [], hasMore: false, counts: {}, categories: {}, total: 0 };
+    content.innerHTML =
+      '<div class="act-bar">' +
+        '<input type="text" id="actQ" placeholder="Ara: yorum metni, ürün, kişi…" style="min-width:220px;flex:1">' +
+        '<input type="text" id="actActor" placeholder="Kişi (ad / telefon)">' +
+        '<label class="act-meta">Başlangıç <input type="date" id="actFrom"></label>' +
+        '<label class="act-meta">Bitiş <input type="date" id="actTo"></label>' +
+        '<button type="button" class="own-approve-btn" id="actRefresh">Yenile</button>' +
+        '<label class="act-meta"><input type="checkbox" id="actAuto"> 15 sn’de bir yenile</label>' +
+        '<button type="button" class="act-chip" id="actReset">Filtreleri temizle</button>' +
+      '</div>' +
+      '<div class="act-chips" id="actChips"></div>' +
+      '<div class="act-meta" id="actSummary" style="margin-bottom:6px"></div>' +
+      '<div id="actList"></div>' +
+      '<div style="text-align:center;margin:14px 0"><button type="button" class="own-approve-btn" id="actMore" hidden>Daha fazla yükle</button></div>';
+
+    function params(before) {
+      var u = new URLSearchParams();
+      if (state.cats.length) u.set('category', state.cats.join(','));
+      if (state.q) u.set('q', state.q);
+      if (state.actor) u.set('actor', state.actor);
+      if (state.from) u.set('from', state.from + 'T00:00:00');
+      if (state.to) u.set('to', state.to + 'T23:59:59.999');
+      if (before) u.set('before', before);
+      u.set('limit', '100');
+      return u.toString();
+    }
+    function fmtTime(iso) {
+      var d = new Date(iso);
+      return d.toLocaleDateString('tr-TR', { day: '2-digit', month: 'short' }) + ' ' + d.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+    }
+    function sentence(t) { return esc(t).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>'); }
+    function renderChips() {
+      document.getElementById('actChips').innerHTML = Object.keys(state.categories).map(function (k) {
+        return '<button type="button" class="act-chip' + (state.cats.indexOf(k) !== -1 ? ' on' : '') + '" data-cat="' + k + '">' +
+          esc(state.categories[k]) + '<small>' + (state.counts[k] || 0) + '</small></button>';
+      }).join('');
+      document.querySelectorAll('#actChips .act-chip').forEach(function (b) {
+        b.addEventListener('click', function () {
+          var i = state.cats.indexOf(b.dataset.cat);
+          if (i === -1) state.cats.push(b.dataset.cat); else state.cats.splice(i, 1);
+          load(false);
+        });
+      });
+    }
+    function renderList() {
+      var list = document.getElementById('actList');
+      if (!state.items.length) { list.innerHTML = '<div class="own-empty">Bu filtrelerle kayıt yok.</div>'; }
+      else list.innerHTML = state.items.map(function (r) {
+        return '<div class="act-row">' +
+          '<div class="act-time">' + esc(fmtTime(r.ts)) + '</div>' +
+          '<span class="act-cat ' + esc(r.category) + '">' + esc(state.categories[r.category] || r.category) + '</span>' +
+          '<div class="act-text">' + sentence(r.text) +
+            (r.actor || r.ip ? '<div class="act-meta">' + (r.actor ? esc(r.actor.role || '') + ' · ' + esc(r.actor.phone || '') : '') + (r.ip ? ' IP: ' + esc(r.ip) : '') + '</div>' : '') +
+          '</div></div>';
+      }).join('');
+      document.getElementById('actMore').hidden = !state.hasMore;
+      document.getElementById('actSummary').textContent = state.total + ' kayıt' + (state.items.length < state.total ? ' (' + state.items.length + ' gösteriliyor)' : '');
+    }
+    function load(append) {
+      var before = append && state.items.length ? state.items[state.items.length - 1].id : '';
+      authedFetch('/api/owner/activity?' + params(before)).then(function (r) { return r.json(); }).then(function (d) {
+        state.items = append ? state.items.concat(d.items) : d.items;
+        state.hasMore = d.hasMore; state.counts = d.counts; state.categories = d.categories; state.total = d.total;
+        renderChips(); renderList();
+      }).catch(function () {});
+    }
+    var debounce;
+    function onInput() {
+      clearTimeout(debounce);
+      debounce = setTimeout(function () {
+        state.q = document.getElementById('actQ').value.trim();
+        state.actor = document.getElementById('actActor').value.trim();
+        state.from = document.getElementById('actFrom').value;
+        state.to = document.getElementById('actTo').value;
+        load(false);
+      }, 300);
+    }
+    ['actQ', 'actActor', 'actFrom', 'actTo'].forEach(function (id) { document.getElementById(id).addEventListener('input', onInput); });
+    document.getElementById('actRefresh').addEventListener('click', function () { load(false); });
+    document.getElementById('actMore').addEventListener('click', function () { load(true); });
+    document.getElementById('actReset').addEventListener('click', function () { renderActivityTab(content); });
+    clearInterval(activityTimer);
+    document.getElementById('actAuto').addEventListener('change', function (e) {
+      clearInterval(activityTimer);
+      if (e.target.checked) activityTimer = setInterval(function () { if (activeTab !== 'activity') { clearInterval(activityTimer); return; } load(false); }, 15000);
+    });
+    load(false);
+  }
+
   function renderClickBillingTab(content) {
     content.innerHTML = '<div class="own-empty">Yükleniyor…</div>';
     authedFetch('/api/owner/click-billing').then(function (r) { return r.json(); }).then(function (d) {

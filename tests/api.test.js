@@ -3298,3 +3298,88 @@ describe('Düşük puanlı yorumlar: Gemini ile sıralı otomatik karar kuyruğu
     assert.ok(r.id);
   });
 });
+
+describe('Admin hareket günlüğü (kim ne yaptı)', () => {
+  async function activity(query) {
+    const owner = await ownerLogin(server.baseUrl, server.adminPassword);
+    return fetch(url('/api/owner/activity' + (query ? '?' + query : '')), { headers: authHeaders(owner) }).then((r) => r.json());
+  }
+
+  test('yönetici girişi olmadan günlük okunamaz', async () => {
+    assert.equal((await fetch(url('/api/owner/activity'))).status, 401);
+    const seller = await newSeller('Günlük Yetki Satıcı');
+    assert.equal((await fetch(url('/api/owner/activity'), { headers: authHeaders(seller.token) })).status, 401);
+  });
+
+  test('favori, yorum, sipariş ve mesaj insan okuyabilir cümlelerle kaydedilir', async () => {
+    const seller = await newSeller('Günlük Satıcı Ayşe');
+    const buyer = await newBuyer('Günlük Alıcı Mehmet');
+    const p = await createProduct(seller.token, { title: 'Günlük Test Zeytini' });
+
+    await fetch(url('/api/favorites/toggle'), { method: 'POST', headers: authHeaders(buyer.token), body: JSON.stringify({ type: 'product', id: p.slug }) });
+    await fetch(url('/api/favorites/toggle'), { method: 'POST', headers: authHeaders(buyer.token), body: JSON.stringify({ type: 'product', id: p.slug }) });
+    await completePurchase(buyer.token, seller.token, p.slug);
+    await fetch(url('/api/reviews'), { method: 'POST', headers: authHeaders(buyer.token), body: JSON.stringify({ productSlug: p.slug, rating: 5, text: 'Çok lezzetli bir zeytinyağı olmuş.' }) });
+    await fetch(url('/api/messages/send'), { method: 'POST', headers: authHeaders(buyer.token), body: JSON.stringify({ productSlug: p.slug, productTitle: p.title, text: 'Kargo var mı acaba?' }) });
+
+    const all = await activity('limit=200');
+    const texts = all.items.map((i) => i.text);
+    assert.ok(texts.some((t) => t.includes('**Günlük Alıcı Mehmet**, **Günlük Test Zeytini** ilanını favoriye aldı')), 'favori cümlesi');
+    assert.ok(texts.some((t) => t.includes('favorilerinden çıkardı') && t.includes('Günlük Test Zeytini')), 'favoriden çıkarma');
+    assert.ok(texts.some((t) => t.includes('**Günlük Alıcı Mehmet**') && t.includes('5★ yorum yaptı') && t.includes('Çok lezzetli bir zeytinyağı olmuş.')), 'yorum cümlesi');
+    assert.ok(texts.some((t) => t.includes('sipariş talebi gönderdi') && t.includes('Günlük Test Zeytini')), 'sipariş');
+    assert.ok(texts.some((t) => t.includes('satıcıya mesaj gönderdi') && t.includes('Kargo var mı acaba?')), 'mesaj');
+    assert.ok(texts.some((t) => t.includes('yeni ilan ekledi') && t.includes('Günlük Test Zeytini')), 'ilan ekleme');
+  });
+
+  test('kategori, metin, kişi ve tarih filtreleri çalışır', async () => {
+    const seller = await newSeller('Filtre Satıcı');
+    const buyer = await newBuyer('Filtre Alıcı Zeynep');
+    const p = await createProduct(seller.token, { title: 'Filtre Test Balı' });
+    await fetch(url('/api/favorites/toggle'), { method: 'POST', headers: authHeaders(buyer.token), body: JSON.stringify({ type: 'product', id: p.slug }) });
+    await completePurchase(buyer.token, seller.token, p.slug);
+    await fetch(url('/api/reviews'), { method: 'POST', headers: authHeaders(buyer.token), body: JSON.stringify({ productSlug: p.slug, rating: 4, text: 'Gayet güzel bal, teşekkürler.' }) });
+
+    const onlyFav = await activity('category=favori&q=' + encodeURIComponent('Filtre Test Balı'));
+    assert.ok(onlyFav.items.length >= 1 && onlyFav.items.every((i) => i.category === 'favori'));
+    const onlyRev = await activity('category=yorum&actor=' + encodeURIComponent('Filtre Alıcı Zeynep'));
+    assert.ok(onlyRev.items.length >= 1 && onlyRev.items.every((i) => i.category === 'yorum' && i.actor.name === 'Filtre Alıcı Zeynep'));
+    const textSearch = await activity('q=' + encodeURIComponent('gayet güzel bal'));
+    assert.equal(textSearch.items.length, 1);
+    const future = await activity('from=' + encodeURIComponent(new Date(Date.now() + 86400000).toISOString()));
+    assert.equal(future.items.length, 0);
+    const past = await activity('to=' + encodeURIComponent('2000-01-01T00:00:00'));
+    assert.equal(past.items.length, 0);
+    assert.ok(onlyFav.counts.favori >= 1 && typeof onlyFav.categories.favori === 'string');
+  });
+
+  test('başarısız girişler güvenlik olarak kaydedilir, kimlik maskelenir, parola asla yazılmaz', async () => {
+    await fetch(url('/api/auth/login'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ identifier: '5559876543', password: 'GizliParola!123' }) });
+    const sec = await activity('category=guvenlik&limit=50');
+    const hit = sec.items.find((i) => i.type === 'login_failed');
+    assert.ok(hit, 'başarısız giriş kaydı');
+    assert.ok(!hit.text.includes('5559876543'), 'numara maskelenmeli');
+    assert.ok(hit.ip);
+    const raw = JSON.stringify(await activity('limit=500'));
+    assert.ok(!raw.includes('GizliParola!123'));
+    assert.ok(!raw.toLowerCase().includes('passwordhash'));
+  });
+
+  test('sayfalama: before ile sonraki kayıtlar gelir, tekrar yok', async () => {
+    const first = await activity('limit=3');
+    assert.equal(first.items.length, 3);
+    assert.equal(first.hasMore, true);
+    const next = await activity('limit=3&before=' + first.items[2].id);
+    assert.equal(next.items.length, 3);
+    const ids = new Set(first.items.concat(next.items).map((i) => i.id));
+    assert.equal(ids.size, 6);
+  });
+
+  test('başarısız istekler (ör. yetkisiz sipariş güncelleme) günlüğe yazılmaz', async () => {
+    const buyer = await newBuyer('Yetkisiz Deneme');
+    const before = (await activity('type=order_status&limit=1')).total;
+    await fetch(url('/api/admin/product-orders/update'), { method: 'POST', headers: authHeaders(buyer.token), body: JSON.stringify({ id: 'yok', status: 'completed' }) });
+    const after = (await activity('type=order_status&limit=1')).total;
+    assert.equal(after, before);
+  });
+});
