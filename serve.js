@@ -225,7 +225,7 @@ function renderProductPage(product, allProducts) {
   if (halMatch.tobb) halStats.push(['Ticaret Borsası', halMatch.tobb.ortalamaFiyat, halMatch.tobb.birim, 'tobb']);
   const halFiyatLine = halStats.length
     ? `<div class="hal-fiyat-box"><div class="hal-fiyat-eyebrow">Piyasa Fiyat Referansı</div><div class="hal-fiyat-row">${
-        halStats.map(([label, price, birim, kaynak]) => `<div class="hal-fiyat-stat"><span class="hal-fiyat-stat-label">${esc(label)}</span><span class="hal-fiyat-stat-value">${price.toLocaleString('tr-TR')}₺<small>/${esc(birim)}</small></span><span class="hal-fiyat-stat-source">${esc(HAL_SOURCE_NAMES[kaynak])}</span></div>`).join('')
+        halStats.map(([label, price, birim, kaynak]) => `<div class="hal-fiyat-stat"><span class="hal-fiyat-stat-label">${esc(label)}<span class="hal-source-icon" title="Kaynak: ${esc(HAL_SOURCE_NAMES[kaynak])}">i</span></span><span class="hal-fiyat-stat-value">${price.toLocaleString('tr-TR')}₺<small>/${esc(birim)}</small></span></div>`).join('')
       }</div><div class="hal-fiyat-source">Bilgilendirme amaçlıdır, fiyat garantisi vermez — kesin fiyat için satıcıyla görüş.</div></div>`
     : '';
   const stockLine = product.stock === null || product.stock === undefined
@@ -1159,11 +1159,33 @@ function isValidPassword(pw) {
 }
 
 const VALID_SELLER_TYPES = ['bireysel', 'sirket'];
-// Bireysel satıcı: T.C. Kimlik No (11 hane). Şirket: Vergi Numarası (10 hane).
+// T.C. Kimlik No'nun gerçekten MERNIS'e kayıtlı bir kişiye ait olup olmadığını
+// doğrulayacak resmi/genel kullanıma açık bir API yok (NVİ'nin kendi doğrulama
+// servisi sadece kurumlara, özel anlaşmayla açık) — bu yüzden elimizdeki en güçlü
+// kontrol, kimlik numarasının kendi matematiksel yapısına uyup uymadığını
+// (resmi, kamuya açık kontrol basamağı algoritması) denetlemek. Bu, numaranın
+// "biçimsel olarak geçerli" olduğunu kanıtlar (rastgele/uydurma 11 haneli bir
+// sayı bu testi neredeyse hiçbir zaman geçemez) — gerçek kişiye ait olduğunu
+// değil; o yüzden kimlik belgesi yüklemesi (idDocDataUrl) ayrıca isteniyor.
+function isValidTcKimlikChecksum(id) {
+  const d = String(id || '').split('').map(Number);
+  if (d.length !== 11 || d[0] === 0) return false;
+  const oddSum = d[0] + d[2] + d[4] + d[6] + d[8];
+  const evenSum = d[1] + d[3] + d[5] + d[7];
+  const digit10 = ((oddSum * 7) - evenSum) % 10;
+  if (((digit10 + 10) % 10) !== d[9]) return false;
+  const first10Sum = d.slice(0, 10).reduce((a, b) => a + b, 0);
+  return (first10Sum % 10) === d[10];
+}
+
+// Bireysel satıcı: T.C. Kimlik No (11 hane, kontrol basamağı algoritmasını geçmeli).
+// Şirket: Vergi Numarası (10 hane — VKN'nin de bir kontrol basamağı algoritması var
+// ama GİB dışında belgelenmiş/güvenilir bir açık kaynağı olmadığından sadece biçim
+// kontrolü yapılıyor, tıpkı öncesinde olduğu gibi).
 function isValidTaxIdForType(id, sellerType) {
   const digits = String(id || '').trim();
   if (sellerType === 'sirket') return /^\d{10}$/.test(digits);
-  return /^\d{11}$/.test(digits);
+  return /^\d{11}$/.test(digits) && isValidTcKimlikChecksum(digits);
 }
 
 // Satıcı başına artan, hiç geriye sarmayan fatura sıra numarası üretir — ör. "2026/000007".

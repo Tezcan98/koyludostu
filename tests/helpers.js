@@ -78,7 +78,7 @@ async function registerUser(baseUrl, { name, email, city, district, neighborhood
     body: JSON.stringify({
       name, email, city, district: district || 'Test İlçe', neighborhood: neighborhood || '',
       password, role, termsAccepted: true, businessInfo,
-      taxId: role === 'satici' ? (taxId || '12345678901') : undefined,
+      taxId: role === 'satici' ? (taxId || '10000000146') : undefined,
       iban: role === 'satici' ? (iban || 'TR330006100519786457841326') : undefined,
     }),
   }).then((r) => r.json());

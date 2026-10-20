@@ -246,7 +246,6 @@
     // Anasayfada, keşif şeritlerinin üstünde — sitede satılan ürünlerle eşleşen
     // güncel hal/borsa fiyatlarından kısa bir özet. Ürün verisinden bağımsız, kendi
     // uç noktasından (/api/hal-fiyat/relevant) çekilir.
-    var MARKET_SOURCE_LABEL = { ulusal: 'Ticaret Bakanlığı', izmir: 'İzmir B.Belediyesi', tobb: 'TOBB' };
     var MARKET_SOURCE_FULL = {
       ulusal: 'T.C. Ticaret Bakanlığı — Hal Kayıt Sistemi', izmir: 'İzmir Büyükşehir Belediyesi', tobb: 'TOBB — Ticaret Borsaları',
     };
@@ -258,10 +257,9 @@
         if (!items.length) return;
         var chips = items.map(function (it) {
           var name = it.urunAdi.charAt(0) + it.urunAdi.slice(1).toLocaleLowerCase('tr-TR');
-          return '<div class="market-chip" title="' + esc(MARKET_SOURCE_FULL[it.kaynak] || it.kaynak) + '">' +
-            '<div class="market-chip-name">' + esc(name) + '</div>' +
+          return '<div class="market-chip">' +
+            '<div class="market-chip-name">' + esc(name) + '<span class="hal-source-icon" title="Kaynak: ' + esc(MARKET_SOURCE_FULL[it.kaynak] || it.kaynak) + '">i</span></div>' +
             '<div class="market-chip-price">' + it.fiyat.toLocaleString('tr-TR') + '₺<small>/' + esc(it.birim) + '</small></div>' +
-            '<div class="market-chip-source">' + esc(MARKET_SOURCE_LABEL[it.kaynak] || it.kaynak) + '</div>' +
           '</div>';
         }).join('');
         container.innerHTML = '<div class="discover-section"><div class="discover-title">Bugünün Piyasa Fiyatları</div>' +

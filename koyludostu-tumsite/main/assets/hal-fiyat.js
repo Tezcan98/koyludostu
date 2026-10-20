@@ -31,9 +31,9 @@
         if (!stats.length) return;
 
         var statsHtml = stats.map(function (s) {
-          return '<div class="hal-fiyat-stat"><span class="hal-fiyat-stat-label">' + esc(s[0]) + '</span>' +
-            '<span class="hal-fiyat-stat-value">' + s[1].toLocaleString('tr-TR') + '₺<small>/' + esc(s[2]) + '</small></span>' +
-            '<span class="hal-fiyat-stat-source">' + esc(SOURCE_NAMES[s[3]]) + '</span></div>';
+          return '<div class="hal-fiyat-stat"><span class="hal-fiyat-stat-label">' + esc(s[0]) +
+            '<span class="hal-source-icon" title="Kaynak: ' + esc(SOURCE_NAMES[s[3]]) + '">i</span></span>' +
+            '<span class="hal-fiyat-stat-value">' + s[1].toLocaleString('tr-TR') + '₺<small>/' + esc(s[2]) + '</small></span></div>';
         }).join('');
 
         var box = document.createElement('div');

@@ -743,10 +743,10 @@ describe('Satıcı başvurusu ve onay süreci', () => {
 
     const reg = await registerUser(server.baseUrl, {
       name: base.name, city: base.city, district: base.district, password: base.password,
-      role: 'satici', phone, businessInfo: base.businessInfo, taxId: '12345678901',
+      role: 'satici', phone, businessInfo: base.businessInfo, taxId: '10000000146',
     });
     assert.equal(reg.user.sellerStatus, 'pending');
-    assert.equal(reg.user.taxId, '12345678901');
+    assert.equal(reg.user.taxId, '10000000146');
   });
 
   test('onaylanmamış satıcı ürün ekleyemez, onaylanınca ekleyebilir', async () => {
@@ -1415,7 +1415,7 @@ describe('Var olan alıcı hesabının kendi isteğiyle satıcıya geçmesi', ()
 
     const r = await fetch(url('/api/auth/apply-seller'), {
       method: 'POST', headers: authHeaders(buyer.token),
-      body: JSON.stringify({ businessInfo: 'Kendi bahçemde zeytin ve zeytinyağı üretiyorum.', taxId: '12345678901', iban: 'TR330006100519786457841326' }),
+      body: JSON.stringify({ businessInfo: 'Kendi bahçemde zeytin ve zeytinyağı üretiyorum.', taxId: '10000000146', iban: 'TR330006100519786457841326' }),
     });
     const data = await r.json();
     assert.equal(r.status, 200);
@@ -1614,7 +1614,7 @@ describe('Satıcı IBAN\'ı ve "ödemeyi gönderdim" öz-bildirimi', () => {
       name: 'IBAN Test', city: 'Test Şehir', district: 'Test İlçe', password: 'test1234',
       role: 'satici', termsAccepted: true,
       businessInfo: 'Bahçemden zeytin ve zeytinyağı üretip satıyorum, on yıldır bu işteyim.',
-      taxId: '12345678901',
+      taxId: '10000000146',
     };
     const missing = await fetch(url('/api/auth/register-start'), {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(base),
@@ -1741,7 +1741,7 @@ describe('Kimlik belgesi (opsiyonel, KVKK açık rıza gerekli)', () => {
       name: 'Kimlik Test', city: 'Test Şehir', district: 'Test İlçe', password: 'test1234',
       role: 'satici', termsAccepted: true,
       businessInfo: 'Bahçemden zeytin ve zeytinyağı üretip satıyorum, on yıldır bu işteyim.',
-      taxId: '12345678901', iban: 'TR330006100519786457841326',
+      taxId: '10000000146', iban: 'TR330006100519786457841326',
     };
 
     const noConsent = await fetch(url('/api/auth/register-start'), {
@@ -1812,13 +1812,13 @@ describe('Şirket/Bireysel satıcı türü', () => {
 
     const bireyselOk = await fetch(url('/api/auth/register-start'), {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...base, sellerType: 'bireysel', taxId: '12345678901' }),
+      body: JSON.stringify({ ...base, sellerType: 'bireysel', taxId: '10000000146' }),
     });
     assert.equal(bireyselOk.status, 200);
 
     const sirketElevenDigits = await fetch(url('/api/auth/register-start'), {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...base, sellerType: 'sirket', taxId: '12345678901', idDocDataUrl: TINY_PNG_DATA_URL, idDocConsent: true }),
+      body: JSON.stringify({ ...base, sellerType: 'sirket', taxId: '10000000146', idDocDataUrl: TINY_PNG_DATA_URL, idDocConsent: true }),
     });
     assert.equal(sirketElevenDigits.status, 400);
 
@@ -1827,6 +1827,35 @@ describe('Şirket/Bireysel satıcı türü', () => {
       body: JSON.stringify({ ...base, sellerType: 'sirket', taxId: '1234567890', idDocDataUrl: TINY_PNG_DATA_URL, idDocConsent: true }),
     });
     assert.equal(sirketOk.status, 200);
+  });
+
+  test('T.C. Kimlik No kontrol basamağı algoritmasını geçmeyen 11 haneli sayılar reddedilir', async () => {
+    const base = {
+      name: 'TC Kimlik Test', city: 'Test Şehir', district: 'Test İlçe', password: 'test1234',
+      role: 'satici', termsAccepted: true, sellerType: 'bireysel',
+      businessInfo: 'Bahçemden zeytin ve zeytinyağı üretip satıyorum, on yıldır bu işteyim.',
+      iban: 'TR330006100519786457841326',
+    };
+    // 11 hane, ilk hane 0 değil, ama kontrol basamağı algoritmasını geçmiyor (rastgele uydurma).
+    const fakeButRightLength = await fetch(url('/api/auth/register-start'), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...base, taxId: '12345678901' }),
+    });
+    assert.equal(fakeButRightLength.status, 400);
+
+    // 0 ile başlayamaz — algoritma bunu da reddetmeli.
+    const startsWithZero = await fetch(url('/api/auth/register-start'), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...base, taxId: '01000000146' }),
+    });
+    assert.equal(startsWithZero.status, 400);
+
+    // Bilinen, kontrol basamağı algoritmasını geçen geçerli bir test numarası kabul edilir.
+    const valid = await fetch(url('/api/auth/register-start'), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...base, taxId: '10000000146' }),
+    });
+    assert.equal(valid.status, 200);
   });
 
   test('şirket satıcı vergi levhası yüklemeden kayıt olamaz', async () => {
@@ -1854,7 +1883,7 @@ describe('Şirket/Bireysel satıcı türü', () => {
       name: 'OCR Test', city: 'Test Şehir', district: 'Test İlçe', password: 'test1234',
       role: 'satici', termsAccepted: true, sellerType: 'bireysel',
       businessInfo: 'Bahçemden zeytin ve zeytinyağı üretip satıyorum, on yıldır bu işteyim.',
-      taxId: '12345678901', iban: 'TR330006100519786457841326',
+      taxId: '10000000146', iban: 'TR330006100519786457841326',
       idDocDataUrl: TINY_PNG_DATA_URL, idDocConsent: true, idDocOcrTaxId: '99999999999',
     };
     const reg = await fetch(url('/api/auth/register-start'), {
