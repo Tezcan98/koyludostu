@@ -80,6 +80,7 @@ async function registerUser(baseUrl, { name, email, city, district, neighborhood
       password, role, termsAccepted: true, businessInfo,
       taxId: role === 'satici' ? (taxId || '10000000146') : undefined,
       iban: role === 'satici' ? (iban || 'TR330006100519786457841326') : undefined,
+      selfieDataUrls: role === 'satici' ? [TINY_PNG_DATA_URL, TINY_PNG_DATA_URL, TINY_PNG_DATA_URL] : undefined,
     }),
   }).then((r) => r.json());
 

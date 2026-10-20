@@ -385,6 +385,11 @@
         '">' + SELLER_STATUS_LABELS[status] + '</span>';
       var docLink = s.sellerDocUrl ? '<button type="button" class="own-badge secure-file-btn" data-secure-file="' + s.sellerDocUrl + '" style="border:none;cursor:pointer;font-family:inherit;">Belge</button>' : '';
       var idDocLink = s.idDocUrl ? '<button type="button" class="own-badge secure-file-btn" data-secure-file="' + s.idDocUrl + '" style="border:none;cursor:pointer;font-family:inherit;background:rgba(46,110,192,.12);color:#2e6ec0;">🪪 Kimlik</button>' : '';
+      var selfieLinks = (s.selfieDocUrls || []).map(function (f, i) {
+        return '<button type="button" class="own-badge secure-file-btn" data-secure-file="' + f + '" style="border:none;cursor:pointer;font-family:inherit;background:rgba(78,107,58,.12);color:#4e6b3a;">🤳 Selfie ' + (i + 1) + '</button>';
+      }).join('');
+      var missingSelfieWarning = (!s.selfieDocUrls || s.selfieDocUrls.length !== 3)
+        ? '<span class="own-badge" style="background:rgba(200,60,60,.12);color:#8e3b46;">⚠️ Selfie doğrulaması eksik</span>' : '';
       var decideBtns = status === 'pending'
         ? '<button class="own-approve-btn" data-seller-decide="approved" data-phone="' + s.phone + '">Onayla</button>' +
           '<button class="own-reject-btn" data-seller-decide="rejected" data-phone="' + s.phone + '">Reddet</button>'
@@ -421,7 +426,7 @@
         '<span class="own-badge">' + s.productCount + ' ürün</span>' +
         '<span class="own-badge">' + s.convoCount + ' sohbet</span>' +
         '<span class="own-badge" style="' + (s.openComplaints ? 'background:#f4e3c8;color:#8a5a10;' : '') + '">' + s.openComplaints + ' açık şikayet</span>' +
-        statusBadge + verifiedBadge + missingDocWarning + ocrMismatchWarning + docLink + idDocLink + badgeBtn + editBtn + decideBtns + editForm +
+        statusBadge + verifiedBadge + missingDocWarning + missingSelfieWarning + ocrMismatchWarning + docLink + idDocLink + selfieLinks + badgeBtn + editBtn + decideBtns + editForm +
       '</div>';
     }
   }

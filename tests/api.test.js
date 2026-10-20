@@ -71,6 +71,7 @@ async function newCompanySeller(name) {
     businessInfo: 'Şirket olarak sebze meyve üretip satıyoruz, otomatik test kaydı.',
     taxId: '1234567890', iban: 'TR330006100519786457841326',
     idDocDataUrl: TINY_PNG_DATA_URL, idDocConsent: true,
+    selfieDataUrls: [TINY_PNG_DATA_URL, TINY_PNG_DATA_URL, TINY_PNG_DATA_URL],
   };
   const reg = await fetch(url('/api/auth/register-start'), {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(base),
@@ -1742,6 +1743,7 @@ describe('Kimlik belgesi (opsiyonel, KVKK açık rıza gerekli)', () => {
       role: 'satici', termsAccepted: true,
       businessInfo: 'Bahçemden zeytin ve zeytinyağı üretip satıyorum, on yıldır bu işteyim.',
       taxId: '10000000146', iban: 'TR330006100519786457841326',
+      selfieDataUrls: [TINY_PNG_DATA_URL, TINY_PNG_DATA_URL, TINY_PNG_DATA_URL],
     };
 
     const noConsent = await fetch(url('/api/auth/register-start'), {
@@ -1802,6 +1804,7 @@ describe('Şirket/Bireysel satıcı türü', () => {
       role: 'satici', termsAccepted: true,
       businessInfo: 'Bahçemden zeytin ve zeytinyağı üretip satıyorum, on yıldır bu işteyim.',
       iban: 'TR330006100519786457841326',
+      selfieDataUrls: [TINY_PNG_DATA_URL, TINY_PNG_DATA_URL, TINY_PNG_DATA_URL],
     };
 
     const bireyselTooShort = await fetch(url('/api/auth/register-start'), {
@@ -1835,6 +1838,7 @@ describe('Şirket/Bireysel satıcı türü', () => {
       role: 'satici', termsAccepted: true, sellerType: 'bireysel',
       businessInfo: 'Bahçemden zeytin ve zeytinyağı üretip satıyorum, on yıldır bu işteyim.',
       iban: 'TR330006100519786457841326',
+      selfieDataUrls: [TINY_PNG_DATA_URL, TINY_PNG_DATA_URL, TINY_PNG_DATA_URL],
     };
     // 11 hane, ilk hane 0 değil, ama kontrol basamağı algoritmasını geçmiyor (rastgele uydurma).
     const fakeButRightLength = await fetch(url('/api/auth/register-start'), {
@@ -1885,6 +1889,7 @@ describe('Şirket/Bireysel satıcı türü', () => {
       businessInfo: 'Bahçemden zeytin ve zeytinyağı üretip satıyorum, on yıldır bu işteyim.',
       taxId: '10000000146', iban: 'TR330006100519786457841326',
       idDocDataUrl: TINY_PNG_DATA_URL, idDocConsent: true, idDocOcrTaxId: '99999999999',
+      selfieDataUrls: [TINY_PNG_DATA_URL, TINY_PNG_DATA_URL, TINY_PNG_DATA_URL],
     };
     const reg = await fetch(url('/api/auth/register-start'), {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(base),
@@ -3018,5 +3023,79 @@ describe('GET /api/hal-fiyat/relevant — anasayfa için katalogla eşleşen fiy
     const names = data.items.map((it) => it.urunAdi);
     assert.ok(names.includes('DOMATES'));
     assert.ok(!names.includes('KİVİ'));
+  });
+});
+
+describe('Satıcı selfie/canlılık doğrulaması', () => {
+  function baseSellerReg(extra) {
+    return Object.assign({
+      name: 'Selfie Test', city: 'Test Şehir', district: 'Test İlçe', password: 'test1234',
+      role: 'satici', termsAccepted: true,
+      businessInfo: 'Bahçemden zeytin ve zeytinyağı üretip satıyorum, on yıldır bu işteyim.',
+      taxId: '10000000146', iban: 'TR330006100519786457841326',
+    }, extra);
+  }
+
+  test('selfie olmadan satıcı kaydı reddedilir', async () => {
+    const r = await fetch(url('/api/auth/register-start'), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(baseSellerReg({})),
+    });
+    assert.equal(r.status, 400);
+  });
+
+  test('3\'ten az kare ile satıcı kaydı reddedilir', async () => {
+    const r = await fetch(url('/api/auth/register-start'), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(baseSellerReg({ selfieDataUrls: [TINY_PNG_DATA_URL, TINY_PNG_DATA_URL] })),
+    });
+    assert.equal(r.status, 400);
+  });
+
+  test('geçersiz veri (ör. PDF) selfie olarak kabul edilmez', async () => {
+    const r = await fetch(url('/api/auth/register-start'), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(baseSellerReg({ selfieDataUrls: [TINY_PNG_DATA_URL, TINY_PNG_DATA_URL, TINY_PDF_DATA_URL] })),
+    });
+    assert.equal(r.status, 400);
+  });
+
+  test('3 geçerli kareyle kayıt olur, admin panelinde görünür', async () => {
+    const seller = await newSeller('Selfie Tamamlanmış Satıcı');
+    const ownerToken = await ownerLogin(server.baseUrl, server.adminPassword);
+    const list = await fetch(url('/api/owner/sellers'), { headers: authHeaders(ownerToken) }).then((r) => r.json());
+    const found = list.sellers.find((s) => s.phone === seller.phone);
+    assert.ok(found);
+    assert.equal(found.selfieDocUrls.length, 3);
+  });
+
+  test('alıcı->satıcı geçişinde (apply-seller) ayrı uç nokta ile selfie yüklenir', async () => {
+    const buyer = await newBuyer('Sonradan Satıcı Olan');
+    await fetch(url('/api/auth/apply-seller'), {
+      method: 'POST', headers: authHeaders(buyer.token),
+      body: JSON.stringify({
+        businessInfo: 'Bahçemden zeytin ve zeytinyağı üretip satıyorum, on yıldır bu işteyim.',
+        taxId: '10000000146', iban: 'TR330006100519786457841326',
+      }),
+    });
+
+    const d1 = await uploadDoc(buyer.token);
+    const d2 = await uploadDoc(buyer.token);
+    const d3 = await uploadDoc(buyer.token);
+    uploadedFiles.push(d1, d2, d3);
+
+    const noAuth = await fetch(url('/api/auth/seller-application/selfie'), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ docUrls: [d1, d2, d3] }),
+    });
+    assert.equal(noAuth.status, 401);
+
+    const r = await fetch(url('/api/auth/seller-application/selfie'), {
+      method: 'POST', headers: authHeaders(buyer.token),
+      body: JSON.stringify({ docUrls: [d1, d2, d3] }),
+    });
+    const data = await r.json();
+    assert.equal(r.status, 200);
+    assert.equal(data.user.selfieDocUrls.length, 3);
   });
 });

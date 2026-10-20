@@ -2000,7 +2000,7 @@ const server = http.createServer(async (req, res) => {
     // ---------- Auth: önce üyelik bilgileri (ad+şehir+parola), sonra telefon SMS onayı ----------
 
     if (p === '/api/auth/register-start' && req.method === 'POST') {
-      const { name, email, city, district, neighborhood, password, role, termsAccepted, businessInfo, taxId, iban, idDocDataUrl, idDocConsent, sellerType, idDocOcrTaxId } = await readBody(req);
+      const { name, email, city, district, neighborhood, password, role, termsAccepted, businessInfo, taxId, iban, idDocDataUrl, idDocConsent, sellerType, idDocOcrTaxId, selfieDataUrls } = await readBody(req);
       const cleanName = String(name || '').trim().slice(0, 60);
       const cleanEmail = String(email || '').trim().slice(0, 120);
       const cleanCity = String(city || '').trim().slice(0, 60);
@@ -2063,6 +2063,18 @@ const server = http.createServer(async (req, res) => {
         }
       }
 
+      // Selfie/canlılık doğrulaması — satıcı için zorunlu (bkz. assets/selfie-verify.js):
+      // kamera canlıyken sırayla düz/sağ/sol 3 kare çekilir. Çalıntı/bulunmuş tek bir
+      // fotoğrafla ya da ekran görüntüsüyle kayıt olmayı zorlaştırır (bot/sahte hesap
+      // caydırıcısı) — kimliğin o kişiye ait olduğunu kanıtlamaz, admin onayda kimlik
+      // belgesiyle görsel olarak karşılaştırır.
+      const cleanSelfieDataUrls = Array.isArray(selfieDataUrls) ? selfieDataUrls.slice(0, 3) : [];
+      if (role === 'satici') {
+        if (cleanSelfieDataUrls.length !== 3 || cleanSelfieDataUrls.some((u) => !/^data:image\/(?:png|jpe?g|webp);base64,/.test(String(u || '')))) {
+          return jsonResponse(res, 400, { error: 'Selfie doğrulamasını (3 kare) tamamlamadan satıcı kaydı yapılamaz.' });
+        }
+      }
+
       // Tarayıcı-içi OCR ile belgeden okunan T.C. Kimlik/Vergi No (varsa) — kimliğin
       // gerçekten doğrulanması değil, admin'e "yazılan" ile "belgeden okunan" numarayı
       // yan yana gösterip başkasının belgesinin yüklenmesi ihtimaline karşı bir
@@ -2079,6 +2091,7 @@ const server = http.createServer(async (req, res) => {
         idDocDataUrl: role === 'satici' ? cleanIdDocDataUrl : '',
         idDocConsent: role === 'satici' ? !!idDocConsent : false,
         idDocOcrTaxId: role === 'satici' ? cleanOcrTaxId : '',
+        selfieDataUrls: role === 'satici' ? cleanSelfieDataUrls : [],
         termsAcceptedAt: new Date().toISOString(), at: Date.now(),
       });
       return jsonResponse(res, 200, { regToken });
@@ -2150,6 +2163,16 @@ const server = http.createServer(async (req, res) => {
           return jsonResponse(res, 400, { error: e.message });
         }
       }
+      // Selfie/canlılık kareleri de aynı şekilde sadece şimdi (hesap gerçekten
+      // oluşurken) diske yazılır — register-start'tan beri bellekte bekliyordu.
+      let selfieDocUrls = [];
+      if (pendingReg.role === 'satici' && Array.isArray(pendingReg.selfieDataUrls) && pendingReg.selfieDataUrls.length === 3) {
+        try {
+          selfieDocUrls = pendingReg.selfieDataUrls.map((u) => saveSecureDoc(u).filename);
+        } catch (e) {
+          return jsonResponse(res, 400, { error: e.message });
+        }
+      }
 
       users[norm] = {
         id: 'u_' + randomToken().slice(0, 10), phone: norm,
@@ -2169,6 +2192,7 @@ const server = http.createServer(async (req, res) => {
               // Admin'in yazılan T.C./Vergi No ile belgeden OCR ile okunan numarayı
               // karşılaştırabilmesi için (bkz. isValidTaxIdForType çağrısındaki not).
               idDocOcrTaxId: pendingReg.idDocOcrTaxId || '',
+              selfieDocUrls,
             }
           : {}),
       };
@@ -2992,6 +3016,26 @@ const server = http.createServer(async (req, res) => {
       writeJson(USERS_PATH, users);
       const safeUser = redactUser(user);
       return jsonResponse(res, 200, { user: safeUser });
+    }
+
+    // Kayıttan sonra satıcılığa geçen (apply-seller) hesaplar için selfie/canlılık
+    // doğrulaması — kayıt anında satıcı seçenlerle aynı 3-kare akışı, sadece zaten
+    // bir oturumu olduğu için dosyalar önce /api/admin/upload-image (secure:true)
+    // ile yüklenip buraya filename olarak gönderiliyor.
+    if (p === '/api/auth/seller-application/selfie' && req.method === 'POST') {
+      const session = requireRole(req, res, 'satici');
+      if (!session) return;
+      const { docUrls } = await readBody(req);
+      const clean = Array.isArray(docUrls) ? docUrls.slice(0, 3) : [];
+      if (clean.length !== 3 || clean.some((f) => !isValidSecureFilename(f))) {
+        return jsonResponse(res, 400, { error: 'Selfie doğrulaması için 3 geçerli kare gerekli.' });
+      }
+      const users = readJson(USERS_PATH, {});
+      const user = users[session.phone];
+      if (!user) return jsonResponse(res, 404, { error: 'Hesap bulunamadı' });
+      user.selfieDocUrls = clean;
+      writeJson(USERS_PATH, users);
+      return jsonResponse(res, 200, { user: redactUser(user) });
     }
 
     if (p === '/api/auth/change-password' && req.method === 'POST') {

@@ -83,13 +83,46 @@
     <p class="doc-status" id="idDocStatus"></p>
   </div>
 
+  <div class="info-card" id="selfieCard">
+    <h2>Selfie Doğrulaması (zorunlu)</h2>
+    <p style="margin-bottom:10px;">Canlı bir kişinin başvurduğunu doğrulamak için — kamerana düz bak, sonra sağa ve sola çevir, her adımda bir kare alınır.</p>
+    <button type="button" class="doc-btn" id="selfieStartBtn">Selfie Doğrulamayı Başlat</button>
+    <div id="selfieContainer" style="margin-top:10px;"></div>
+    <p class="doc-status" id="selfieStatus"></p>
+  </div>
+
   <a class="go-btn" id="goBtn" href="/admin-urunlerim.html" style="display:none;">Ürün Eklemeye Başla →</a>
 </div>
 
 <script src="assets/auth.js"></script>
+<script src="assets/selfie-verify.js"></script>
 <script>
 (function () {
   if (!window.KDAuth.requireSeller('/satici-basvurum.html')) return;
+
+  document.getElementById('selfieStartBtn').addEventListener('click', function () {
+    var startBtn = document.getElementById('selfieStartBtn');
+    var statusEl = document.getElementById('selfieStatus');
+    startBtn.disabled = true;
+    startBtn.textContent = 'Kamera açılıyor…';
+    window.KDSelfie.start(document.getElementById('selfieContainer'), function (dataUrls) {
+      startBtn.style.display = 'none';
+      statusEl.textContent = 'Yükleniyor…';
+      Promise.all(dataUrls.map(function (dataUrl) {
+        return window.KDAuth.authedFetch('/api/admin/upload-doc', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ dataUrl: dataUrl, secure: true }),
+        }).then(function (r) { return r.json(); }).then(function (d) { return d.filename; });
+      })).then(function (filenames) {
+        return window.KDAuth.authedFetch('/api/auth/seller-application/selfie', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ docUrls: filenames }),
+        }).then(function (r) { return r.json(); });
+      }).then(function (d) {
+        statusEl.textContent = d && d.error ? d.error : 'Selfie doğrulaması kaydedildi, admin inceleyecek.';
+      }).catch(function () { statusEl.textContent = 'Yüklenemedi, tekrar dene.'; });
+    });
+  });
 
   var docDataUrl = '';
   document.getElementById('docInput').addEventListener('change', function (e) {
@@ -217,6 +250,11 @@
       document.getElementById('idDocCard').querySelector('p').textContent = '✅ Kimlik belgeni zaten yükledin.';
       document.getElementById('idDocInput').closest('.doc-field').style.display = 'none';
       document.getElementById('idDocUploadBtn').style.display = 'none';
+    }
+
+    if (user.selfieDocUrls && user.selfieDocUrls.length === 3) {
+      document.getElementById('selfieCard').querySelector('p').textContent = '✅ Selfie doğrulamasını zaten tamamladın.';
+      document.getElementById('selfieStartBtn').style.display = 'none';
     }
 
     if (status === 'approved') {
