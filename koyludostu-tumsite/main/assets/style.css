@@ -706,7 +706,7 @@ body.vitrin-body{margin:0;background:#000;overflow:hidden;}
 
 /* ---------- Hikaye baloncukları (vitrin ürünlerine giden Instagram tarzı story bar) ---------- */
 .story-row{
-  display:flex;gap:14px;overflow-x:auto;padding:14px 16px;background:#fff;
+  display:flex;gap:14px;max-width:1400px;margin:0 auto;overflow-x:auto;padding:14px 16px;background:#fff;
   border-bottom:1px solid var(--line);scrollbar-width:none;
 }
 .story-row::-webkit-scrollbar{display:none;}
