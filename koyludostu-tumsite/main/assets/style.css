@@ -932,3 +932,4 @@ img{-webkit-user-drag:none;user-drag:none;-webkit-touch-callout:none;}
 .selfie-thumb{width:48px;height:48px;border-radius:8px;object-fit:cover;border:1.5px solid var(--ring1);}
 .selfie-msg{font-size:11.5px;color:var(--ring3);text-align:center;}
 .selfie-capture-btn{padding:9px 20px;border-radius:10px;background:var(--ink);color:#fff;border:none;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;}
+.google-fallback-btn[hidden]{display:none;}
