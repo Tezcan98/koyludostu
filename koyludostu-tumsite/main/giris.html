@@ -173,10 +173,6 @@
         </div>
       </div>
     </div>
-    <div class="auth-field" id="recaptchaWrap">
-      <label>Doğrulama</label>
-      <div id="recaptchaWidget"></div>
-    </div>
     <div class="auth-field" id="businessInfoWrap" hidden>
       <label>Satıcı Türü</label>
       <div class="role-row" id="sellerTypeRow">
@@ -590,30 +586,24 @@
 
   // ---- Üye Ol adım 1: ad + şehir + parola + rol ----
   var businessInfoWrap = document.getElementById('businessInfoWrap');
-  var recaptchaWrap = document.getElementById('recaptchaWrap');
   document.querySelectorAll('#roleRow .role-opt').forEach(function (el) {
     el.addEventListener('click', function () {
       document.querySelectorAll('#roleRow .role-opt').forEach(function (o) { o.classList.remove('selected'); });
       el.classList.add('selected');
       selectedRole = el.dataset.role;
       businessInfoWrap.hidden = selectedRole !== 'satici';
-      recaptchaWrap.hidden = selectedRole !== 'alici';
     });
   });
 
-  // ---- Alıcı kaydında "Ben robot değilim" (reCAPTCHA) — site key sunucudan
-  // çekilir, satıcıda bunun yerine selfie/canlılık doğrulaması zaten var.
+  // ---- Alıcı kaydında bot koruması: reCAPTCHA v3 (görünmez, puan tabanlı).
+  // Site key sunucudan çekilir; satıcıda bunun yerine selfie doğrulaması var.
   var recaptchaSiteKey = '';
-  var recaptchaWidgetId = null;
   fetch('/api/config/recaptcha-site-key').then(function (r) { return r.json(); }).then(function (data) {
     recaptchaSiteKey = (data && data.siteKey) || '';
     if (!recaptchaSiteKey) return;
-    window.__onRecaptchaLoad = function () {
-      recaptchaWidgetId = grecaptcha.render('recaptchaWidget', { sitekey: recaptchaSiteKey });
-    };
     var s = document.createElement('script');
-    s.src = 'https://www.google.com/recaptcha/api.js?onload=__onRecaptchaLoad&render=explicit';
-    s.async = true; s.defer = true;
+    s.src = 'https://www.google.com/recaptcha/api.js?render=' + encodeURIComponent(recaptchaSiteKey);
+    s.async = true;
     document.head.appendChild(s);
   }).catch(function () {});
 
@@ -726,11 +716,7 @@
       infoError.textContent = 'Belgeni yüklemek için ayrıca açık rıza vermelisin (ya da dosyayı kaldırıp boş bırak).'; return;
     }
     if (!document.getElementById('termsCheck').checked) { infoError.textContent = 'Devam etmek için şartnameyi kabul etmelisin.'; return; }
-    var recaptchaToken = '';
-    if (selectedRole === 'alici' && recaptchaSiteKey) {
-      recaptchaToken = (typeof grecaptcha !== 'undefined') ? grecaptcha.getResponse(recaptchaWidgetId) : '';
-      if (!recaptchaToken) { infoError.textContent = '"Ben robot değilim" kutusunu işaretlemelisin.'; return; }
-    }
+    function sendRegisterStart(recaptchaToken) {
     fetch('/api/auth/register-start', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -746,13 +732,23 @@
     }).then(function (r) { return r.json(); }).then(function (data) {
       if (data.error) {
         infoError.textContent = data.error;
-        if (recaptchaSiteKey && typeof grecaptcha !== 'undefined') grecaptcha.reset(recaptchaWidgetId);
         return;
       }
       regToken = data.regToken;
       savePendingReg();
       goRegStep('phone');
     }).catch(function () { infoError.textContent = 'Bağlantı hatası, tekrar deneyin.'; });
+    }
+    if (selectedRole === 'alici' && recaptchaSiteKey) {
+      if (typeof grecaptcha === 'undefined') { infoError.textContent = 'Doğrulama yüklenemedi, sayfayı yenileyip tekrar dene.'; return; }
+      grecaptcha.ready(function () {
+        grecaptcha.execute(recaptchaSiteKey, { action: 'register' }).then(sendRegisterStart, function () {
+          infoError.textContent = 'Robot doğrulaması başarısız, tekrar dene.';
+        });
+      });
+    } else {
+      sendRegisterStart('');
+    }
   });
 
   // ---- Üye Ol adım 2: telefon (kod gönder / tekrar gönder ortak) ----

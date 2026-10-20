@@ -942,7 +942,8 @@ async function verifyRecaptcha(token) {
     const res = await httpsPostForm('https://www.google.com/recaptcha/api/siteverify',
       { secret: RECAPTCHA_SECRET_KEY, response: token }, {});
     const data = JSON.parse(res.body);
-    return !!data.success;
+    // v3: başarı + puan (0.0 bot ... 1.0 insan); 0.3 altı reddedilir
+    return !!data.success && (data.score === undefined || data.score >= 0.3);
   } catch {
     return true; // Google'a ulaşılamazsa kaydı engellemeyelim, sessizce geç
   }
@@ -2048,7 +2049,7 @@ const server = http.createServer(async (req, res) => {
       // Alıcı kaydında bot koruması reCAPTCHA ile — satıcıda bunun yerine selfie/canlılık
       // doğrulaması var (bkz. aşağıdaki selfieDataUrls kontrolü), ikisine birden gerek yok.
       if (role === 'alici' && !(await verifyRecaptcha(recaptchaToken))) {
-        return jsonResponse(res, 400, { error: '"Ben robot değilim" doğrulamasını tamamlamalısın.' });
+        return jsonResponse(res, 400, { error: 'Robot doğrulaması başarısız oldu, tekrar dene.' });
       }
 
       const cleanBusinessInfo = String(businessInfo || '').trim().slice(0, 500);
