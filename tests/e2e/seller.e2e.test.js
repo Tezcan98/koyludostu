@@ -10,6 +10,8 @@ const { startServer, authHeaders, ownerLogin, nextTestPhone } = require('../help
 
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=', 'base64');
 
+const UPLOADS = path.join(__dirname, '..', '..', 'koyludostu-tumsite', 'main', 'assets', 'uploads');
+const uploadsBefore = new Set(fs.existsSync(UPLOADS) ? fs.readdirSync(UPLOADS) : []);
 let server, browser, imgPath;
 const sellerPhone = nextTestPhone();
 const PASSWORD = 'test1234';
@@ -39,6 +41,7 @@ before(async () => {
 });
 
 after(async () => {
+  if (fs.existsSync(UPLOADS)) fs.readdirSync(UPLOADS).filter((n) => !uploadsBefore.has(n)).forEach((n) => fs.rmSync(path.join(UPLOADS, n), { force: true }));
   await browser.close();
   await server.stop();
   fs.rmSync(imgPath, { force: true });

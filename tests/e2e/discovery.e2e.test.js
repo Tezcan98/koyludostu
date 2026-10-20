@@ -2,9 +2,13 @@
 // her ziyarette değişen "keşfet" sıralaması. Çalıştırma: npm run test:e2e
 const { describe, test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('fs');
+const path = require('path');
 const { chromium } = require('playwright');
 const { startServer, registerUser, authHeaders, ownerLogin, nextTestPhone, TINY_PNG_DATA_URL } = require('../helpers');
 
+const UPLOADS = path.join(__dirname, '..', '..', 'koyludostu-tumsite', 'main', 'assets', 'uploads');
+const uploadsBefore = new Set(fs.existsSync(UPLOADS) ? fs.readdirSync(UPLOADS) : []);
 let server, browser;
 const made = {}; // anahtar -> ürün başlığı
 
@@ -46,6 +50,7 @@ before(async () => {
 });
 
 after(async () => {
+  if (fs.existsSync(UPLOADS)) fs.readdirSync(UPLOADS).filter((n) => !uploadsBefore.has(n)).forEach((n) => fs.rmSync(path.join(UPLOADS, n), { force: true }));
   await browser.close();
   await server.stop();
 });
