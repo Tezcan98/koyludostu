@@ -499,7 +499,7 @@
     document.getElementById('submitBtn').textContent = 'Değişiklikleri Kaydet';
     document.getElementById('cancelEditBtn').style.display = 'inline-block';
     document.getElementById('formMsg').textContent = '';
-    updatePerishableWarning();
+    updateKargoAvailability();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
@@ -536,7 +536,7 @@
     document.querySelectorAll('.fDelivery').forEach(function (c) { c.checked = false; });
     document.getElementById('submitBtn').textContent = 'Ürünü Yayınla';
     document.getElementById('cancelEditBtn').style.display = 'none';
-    updatePerishableWarning();
+    updateKargoAvailability();
   }
 
   document.getElementById('cancelEditBtn').addEventListener('click', resetForm);
