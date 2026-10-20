@@ -225,7 +225,7 @@ function renderProductPage(product, allProducts) {
   if (halMatch.tobb) halStats.push(['Ticaret Borsası', halMatch.tobb.ortalamaFiyat, halMatch.tobb.birim, 'tobb']);
   const halFiyatLine = halStats.length
     ? `<div class="hal-fiyat-box"><div class="hal-fiyat-eyebrow">Piyasa Fiyat Referansı</div><div class="hal-fiyat-row">${
-        halStats.map(([label, price, birim, kaynak]) => `<div class="hal-fiyat-stat"><span class="hal-fiyat-stat-label">${esc(label)}<span class="hal-source-icon" title="Kaynak: ${esc(HAL_SOURCE_NAMES[kaynak])}">i</span></span><span class="hal-fiyat-stat-value">${price.toLocaleString('tr-TR')}₺<small>/${esc(birim)}</small></span></div>`).join('')
+        halStats.map(([label, price, birim, kaynak]) => `<div class="hal-fiyat-stat"><span class="hal-fiyat-stat-label">${esc(label)}<span class="hal-source-icon" tabindex="0" data-tip="Kaynak: ${esc(HAL_SOURCE_NAMES[kaynak])}">i</span></span><span class="hal-fiyat-stat-value">${price.toLocaleString('tr-TR')}₺<small>/${esc(birim)}</small></span></div>`).join('')
       }</div><div class="hal-fiyat-source">Bilgilendirme amaçlıdır, fiyat garantisi vermez — kesin fiyat için satıcıyla görüş.</div></div>`
     : '';
   const stockLine = product.stock === null || product.stock === undefined

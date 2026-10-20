@@ -116,4 +116,33 @@
     renderAuthSlot();
     injectSellerNavLink();
   });
+
+  // Anında açılan açıklama baloncuğu ([data-tip]) — tarayıcının gecikmeli title
+  // ipucu yerine; hover, klavye odağı ve dokunmada çalışır, kaydırılan alanlarda kesilmez.
+  (function () {
+    var tipEl = null;
+    function show(t) {
+      if (!tipEl) {
+        tipEl = document.createElement('div');
+        tipEl.style.cssText = 'position:fixed;z-index:200;max-width:240px;padding:7px 10px;border-radius:8px;background:#1A1A1A;color:#fff;font-size:12px;line-height:1.35;pointer-events:none;box-shadow:0 4px 14px rgba(0,0,0,.25);';
+        document.body.appendChild(tipEl);
+      }
+      tipEl.textContent = t.getAttribute('data-tip');
+      tipEl.style.display = 'block';
+      var r = t.getBoundingClientRect();
+      var w = tipEl.offsetWidth, h = tipEl.offsetHeight;
+      var left = Math.max(8, Math.min(window.innerWidth - w - 8, r.left + r.width / 2 - w / 2));
+      var top = r.top - h - 8;
+      if (top < 8) top = r.bottom + 8;
+      tipEl.style.left = left + 'px';
+      tipEl.style.top = top + 'px';
+    }
+    function hide() { if (tipEl) tipEl.style.display = 'none'; }
+    function target(e) { return e.target.closest ? e.target.closest('[data-tip]') : null; }
+    document.addEventListener('mouseover', function (e) { var t = target(e); if (t) show(t); });
+    document.addEventListener('mouseout', function (e) { if (target(e)) hide(); });
+    document.addEventListener('focusin', function (e) { var t = target(e); if (t) show(t); });
+    document.addEventListener('focusout', hide);
+    document.addEventListener('scroll', hide, true);
+  })();
 })();
