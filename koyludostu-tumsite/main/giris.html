@@ -314,7 +314,17 @@
   var regToken = '';
 
   var params = new URLSearchParams(location.search);
-  var explicitRedirect = params.get('sonra');
+  // Açık yönlendirme (open redirect) koruması: sadece aynı sitedeki yollara ("/x" ya da "x.html")
+  // izin verilir; "//evil.com", "https://evil.com", "\\evil.com", "javascript:" gibi her şey yok sayılır.
+  var explicitRedirect = (function (raw) {
+    if (!raw) return null;
+    try {
+      var u = new URL(raw, location.origin);
+      if (u.origin !== location.origin) return null;
+      if (/^\s*(javascript|data|vbscript):/i.test(raw) || /^[\\/]{2}/.test(raw) || raw.indexOf('\\') !== -1) return null;
+      return u.pathname + u.search + u.hash;
+    } catch (e) { return null; }
+  })(params.get('sonra'));
 
   // Kayıt sırasında sayfa kapanır/yenilenirse (ör. SMS kodu gelmeden önce) formu baştan
   // doldurmak zorunda kalmasın diye regToken + telefonu localStorage'a kaydediyoruz —

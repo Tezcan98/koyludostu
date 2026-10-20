@@ -508,11 +508,17 @@ function renderSellerPage(seller, sellerId, products) {
 }
 
 function serveStatic(res, root, urlPath) {
-  let rel = decodeURIComponent(urlPath);
+  // Bozuk yüzde-kodlama ("/%", "/%E0%A4%A") decodeURIComponent'i fırlatır, NUL baytı ("%00")
+  // fs çağrılarını fırlatır: ikisi de eskiden işlenmeyen hata olarak süreci çökertiyordu.
+  let rel;
+  try { rel = decodeURIComponent(urlPath); } catch { res.writeHead(400); res.end('Bad Request'); return; }
+  if (rel.includes('\0') || rel.includes('\\')) { res.writeHead(400); res.end('Bad Request'); return; }
   if (rel.endsWith('/')) rel += 'index.html';
   const filePath = path.join(root, rel);
 
-  if (!filePath.startsWith(root)) {
+  // root + ayraç ile karşılaştır: aksi halde "/main" kökü "/main-gizli/x" gibi kardeş
+  // klasörlerle önek eşleşmesiyle aşılabilirdi.
+  if (filePath !== root && !filePath.startsWith(root + path.sep)) {
     res.writeHead(403);
     res.end('Forbidden');
     return;
@@ -521,7 +527,7 @@ function serveStatic(res, root, urlPath) {
   fs.stat(filePath, (err, stats) => {
     if (err) {
       res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
-      res.end('404 Not Found: ' + rel);
+      res.end('404 Not Found');
       return;
     }
     sendFile(res, stats.isDirectory() ? path.join(filePath, 'index.html') : filePath);
@@ -615,9 +621,7 @@ function isPrivateIp(ip) {
 }
 
 function clientIp(req) {
-  const fwd = req.headers['x-forwarded-for'];
-  if (fwd) return fwd.split(',')[0].trim();
-  return req.socket.remoteAddress;
+  return getClientIp(req);
 }
 
 async function geoLocate(ip) {
@@ -729,7 +733,12 @@ function readBody(req) {
     let body = '';
     req.on('data', (c) => { body += c; if (body.length > 8e6) req.destroy(); });
     req.on('end', () => {
-      try { req._parsedBody = body ? JSON.parse(body) : {}; resolve(req._parsedBody); } catch (e) { reject(e); }
+      try {
+        const parsed = body ? JSON.parse(body) : {};
+        // null/dizi/sayı/metin gövdeler alan okuyan her uçta TypeError (500) üretirdi: nesne olmalı.
+        if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) throw new SyntaxError('Gövde bir JSON nesnesi olmalı');
+        req._parsedBody = parsed; resolve(parsed);
+      } catch (e) { reject(e); }
     });
     req.on('error', reject);
   });
@@ -1410,6 +1419,35 @@ const CODE_TTL = 5 * 60 * 1000;
 const REGISTER_TTL = 15 * 60 * 1000;
 const DEV_CODE = '0000';
 const MAX_CODE_ATTEMPTS = 5;
+// SMS kodu istekleri: aynı telefona 30 dk içinde en fazla 5, aynı IP'den en fazla 15 (loopback hariç);
+// kod deneme sınırı aşılınca telefon 15 dk kilitlenir — aksi halde saldırgan her seferinde yeni kod
+// isteyip deneme sayacını sıfırlayarak 4 haneli kodu kaba kuvvetle bulabilirdi.
+const SMS_WINDOW_MS = 30 * 60 * 1000;
+const SMS_MAX_PER_PHONE = 5;
+const SMS_MAX_PER_IP = 15;
+const CODE_LOCK_MS = 15 * 60 * 1000;
+const smsRequests = new Map(); // anahtar ("p:5551112233" / "ip:1.2.3.4") -> [zaman damgaları]
+const codeLocks = new Map();   // telefon -> kilit bitiş zamanı
+const MAX_PENDING_REGS = 2000;
+
+function smsThrottled(key, max) {
+  const now = Date.now();
+  const list = (smsRequests.get(key) || []).filter((t) => now - t < SMS_WINDOW_MS);
+  if (list.length >= max) { smsRequests.set(key, list); return true; }
+  list.push(now);
+  smsRequests.set(key, list);
+  return false;
+}
+
+// Süresi dolmuş bekleyen kayıt/kod/sıfırlama kayıtlarını temizler; pendingRegs'te selfie/belge
+// verisi (megabaytlarca) tutulduğundan temizlenmezse bellek şişirilerek sunucu düşürülebilirdi.
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, v] of pendingRegs) if (now - v.at > REGISTER_TTL) pendingRegs.delete(k);
+  for (const [k, v] of pendingCodes) if (now - v.at > CODE_TTL) pendingCodes.delete(k);
+  for (const [k, until] of codeLocks) if (now > until) codeLocks.delete(k);
+  for (const [k, list] of smsRequests) { const f = list.filter((t) => now - t < SMS_WINDOW_MS); if (f.length) smsRequests.set(k, f); else smsRequests.delete(k); }
+}, 60 * 1000).unref();
 // Gerçek bir SMS sağlayıcısı (Netgsm, Twilio vb.) henüz bağlı değil. Testler (KD_DATA_DIR
 // her zaman ayarlı) hâlâ sabit '0000' kodunu kullanır; ama üretimde/manuel çalıştırmada
 // gerçek rastgele bir kod üretilir ve SADECE sunucu konsoluna yazılır — ASLA API
@@ -1527,6 +1565,19 @@ function sellerInfoMap() {
     if (u.role === 'satici') map[u.id] = { verified: !!u.verifiedSeller, sellerType: u.sellerType || 'bireysel' };
   });
   return map;
+}
+
+// Herkese açık yanıtlarda satıcı/alıcı telefonu, IBAN, T.C./vergi no gibi alanlar dönmez
+// (spam/dolandırıcılık ve KVKK riski): iletişim zaten platform içi mesajlaşmayla yürür.
+const PRIVATE_KEYS = new Set(['sellerPhone', 'buyerPhone', 'phone', 'iban', 'taxId', 'passwordHash']);
+function stripPrivate(v) {
+  if (Array.isArray(v)) return v.map(stripPrivate);
+  if (v && typeof v === 'object') {
+    const out = {};
+    for (const k of Object.keys(v)) if (!PRIVATE_KEYS.has(k)) out[k] = stripPrivate(v[k]);
+    return out;
+  }
+  return v;
 }
 
 function withSellerBadge(product, infoMap) {
@@ -1796,6 +1847,7 @@ function saveUploadedDoc(dataUrl) {
   const ext = extMap[m[1]];
   const buf = Buffer.from(m[2], 'base64');
   if (buf.length > 8 * 1024 * 1024) throw new Error('Dosya çok büyük (max 8MB).');
+  if (!matchesFileSignature(m[1], buf)) throw new Error('Dosya içeriği türüyle uyuşmuyor.');
   const uploadsDir = path.join(MAIN, 'assets', 'uploads');
   fs.mkdirSync(uploadsDir, { recursive: true });
   const fname = 'd_' + randomToken().slice(0, 12) + '.' + ext;
@@ -1807,6 +1859,17 @@ function saveUploadedDoc(dataUrl) {
 // hiç dokunmadığı SECURE_UPLOADS_DIR'a yazar. Dönen değer bir URL değil, sadece
 // dosya adıdır — görüntülemek için mutlaka signFileToken ile imzalı bir bağlantı
 // üretilmesi gerekir (bkz. GET /secure-uploads/:filename).
+// Dosya içeriği, bildirilen türle uyuşmalı: "image/png" diyen ama aslında HTML/script olan
+// veri (depolanmış XSS / dosya türü karışıklığı) reddedilir.
+function matchesFileSignature(mime, buf) {
+  if (!buf || buf.length < 4) return false;
+  if (mime === 'png' || mime === 'image/png') return buf.slice(0, 4).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47]));
+  if (mime === 'jpeg' || mime === 'jpg' || mime === 'image/jpeg' || mime === 'image/jpg') return buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff;
+  if (mime === 'webp' || mime === 'image/webp') return buf.length > 12 && buf.slice(0, 4).toString('latin1') === 'RIFF' && buf.slice(8, 12).toString('latin1') === 'WEBP';
+  if (mime === 'application/pdf') return buf.slice(0, 5).toString('latin1') === '%PDF-';
+  return false;
+}
+
 function saveSecureDoc(dataUrl) {
   const m = /^data:(image\/(?:png|jpe?g|webp)|application\/pdf);base64,(.+)$/.exec(String(dataUrl || ''));
   if (!m) throw new Error('Geçersiz dosya. PNG, JPEG, WEBP ya da PDF yükle.');
@@ -1814,6 +1877,7 @@ function saveSecureDoc(dataUrl) {
   const ext = extMap[m[1]];
   const buf = Buffer.from(m[2], 'base64');
   if (buf.length > 8 * 1024 * 1024) throw new Error('Dosya çok büyük (max 8MB).');
+  if (!matchesFileSignature(m[1], buf)) throw new Error('Dosya içeriği türüyle uyuşmuyor.');
   fs.mkdirSync(SECURE_UPLOADS_DIR, { recursive: true });
   const fname = 's_' + randomToken().slice(0, 12) + '.' + ext;
   fs.writeFileSync(path.join(SECURE_UPLOADS_DIR, fname), buf);
@@ -1884,8 +1948,14 @@ function isLoopback(ip) {
 function getClientIp(req) {
   const remote = req.socket.remoteAddress || '';
   if (isLoopback(remote)) {
+    // nginx "X-Real-IP $remote_addr" ile bağlantı IP'sini kendisi yazar; istemci bunu sahteleyemez.
+    const real = req.headers['x-real-ip'];
+    if (real) return String(real).trim();
+    // "$proxy_add_x_forwarded_for" istemcinin gönderdiği değerin SONUNA gerçek IP'yi ekler:
+    // İLK değer saldırgan kontrollüdür (her istekte farklı sahte IP ile hız sınırı atlatılırdı),
+    // güvenilir olan proxy'nin eklediği SON değerdir.
     const xff = req.headers['x-forwarded-for'];
-    if (xff) return String(xff).split(',')[0].trim();
+    if (xff) return String(xff).split(',').pop().trim();
   }
   return remote;
 }
@@ -2107,7 +2177,7 @@ function recordActivity(req, res, p, startSession, ip) {
   } catch { /* günlük hatası asla isteği etkilemesin */ }
 }
 
-const server = http.createServer(async (req, res) => {
+async function handleRequest(req, res) {
   const url = new URL(req.url, `http://localhost:${PORT}`);
   const p = url.pathname;
 
@@ -2117,6 +2187,7 @@ const server = http.createServer(async (req, res) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  if (p.startsWith('/api/')) res.setHeader('Cache-Control', 'no-store');
 
   const clientIp = getClientIp(req);
 
@@ -2144,10 +2215,12 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (p === '/api/admin/config' && req.method === 'GET') {
+      if (!requireAdmin(req, res)) return;
       return jsonResponse(res, 200, readConfig());
     }
 
     if (p === '/api/admin/sources' && req.method === 'POST') {
+      if (!requireAdmin(req, res)) return;
       const { url: srcUrl, region } = await readBody(req);
       if (!srcUrl || !/^https?:\/\//i.test(srcUrl)) return jsonResponse(res, 400, { error: 'Geçerli bir URL girin' });
       const cfg = readConfig();
@@ -2159,6 +2232,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (p === '/api/admin/sources' && req.method === 'DELETE') {
+      if (!requireAdmin(req, res)) return;
       const srcUrl = url.searchParams.get('url');
       const cfg = readConfig();
       cfg.sources = cfg.sources.filter((s) => s.url !== srcUrl);
@@ -2167,6 +2241,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (p === '/api/admin/banned-words' && req.method === 'POST') {
+      if (!requireAdmin(req, res)) return;
       const { word } = await readBody(req);
       const w = (word || '').trim().toLocaleLowerCase('tr');
       if (!w) return jsonResponse(res, 400, { error: 'Kelime boş olamaz' });
@@ -2179,6 +2254,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (p === '/api/admin/banned-words' && req.method === 'DELETE') {
+      if (!requireAdmin(req, res)) return;
       const w = (url.searchParams.get('word') || '').trim().toLocaleLowerCase('tr');
       const cfg = readConfig();
       cfg.bannedWords = cfg.bannedWords.filter((x) => x !== w);
@@ -2187,6 +2263,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (p === '/api/admin/dedupe' && req.method === 'POST') {
+      if (!requireAdmin(req, res)) return;
       const { enabled } = await readBody(req);
       const cfg = readConfig();
       cfg.dedupeEnabled = !!enabled;
@@ -2195,6 +2272,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (p === '/api/admin/health-agent' && req.method === 'POST') {
+      if (!requireAdmin(req, res)) return;
       const { persona, enabled } = await readBody(req);
       const cfg = readConfig();
       cfg.healthAgent = cfg.healthAgent || {};
@@ -2205,6 +2283,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (p === '/api/admin/global-agent' && req.method === 'POST') {
+      if (!requireAdmin(req, res)) return;
       const { persona, enabled } = await readBody(req);
       const cfg = readConfig();
       cfg.globalAgent = cfg.globalAgent || {};
@@ -2215,6 +2294,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (p === '/api/admin/blog-agent' && req.method === 'POST') {
+      if (!requireAdmin(req, res)) return;
       const { persona, enabled, topics } = await readBody(req);
       const cfg = readConfig();
       cfg.blogAgent = cfg.blogAgent || { topics: {} };
@@ -2228,6 +2308,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (p === '/api/admin/news-topics' && req.method === 'POST') {
+      if (!requireAdmin(req, res)) return;
       const { topics } = await readBody(req);
       const cfg = readConfig();
       if (topics && typeof topics === 'object') {
@@ -2333,6 +2414,10 @@ const server = http.createServer(async (req, res) => {
       const cleanOcrTaxId = /^\d{10,11}$/.test(String(idDocOcrTaxId || '').trim()) ? String(idDocOcrTaxId).trim() : '';
 
       const regToken = randomToken();
+      if (pendingRegs.size >= MAX_PENDING_REGS) {
+        const oldest = pendingRegs.keys().next().value; // Map ekleme sırasını korur: en eskisini at
+        pendingRegs.delete(oldest);
+      }
       pendingRegs.set(regToken, {
         name: cleanName, email: cleanEmail, city: cleanCity, district: cleanDistrict, neighborhood: cleanNeighborhood,
         passwordHash: hashPassword(pass), role,
@@ -2360,6 +2445,12 @@ const server = http.createServer(async (req, res) => {
       if (existingUsers[norm]) {
         return jsonResponse(res, 400, { error: 'Bu telefon numarası zaten kayıtlı. Giriş Yap sekmesinden devam et.' });
       }
+      if (codeLocks.get(norm) > Date.now()) {
+        return jsonResponse(res, 429, { error: 'Çok fazla hatalı deneme. Lütfen birkaç dakika sonra tekrar dene.' });
+      }
+      if (smsThrottled('p:' + norm, SMS_MAX_PER_PHONE) || (!isLoopback(clientIp) && smsThrottled('ip:' + clientIp, SMS_MAX_PER_IP))) {
+        return jsonResponse(res, 429, { error: 'Çok fazla kod istedin. Lütfen biraz sonra tekrar dene.' });
+      }
       const code = generateSmsCode();
       pendingCodes.set(norm, { code, at: Date.now(), attempts: 0 });
       // Kod ASLA API yanıtında istemciye dönülmez — sadece konsola yazılır (gerçek bir
@@ -2379,7 +2470,8 @@ const server = http.createServer(async (req, res) => {
       // da var ama bu ayrıca ve daha sıkı bir koruma).
       if (pendingCode && now - pendingCode.at < CODE_TTL && pendingCode.attempts >= MAX_CODE_ATTEMPTS) {
         pendingCodes.delete(norm);
-        return jsonResponse(res, 400, { error: 'Çok fazla hatalı deneme. Lütfen yeni bir kod iste.' });
+        codeLocks.set(norm, Date.now() + CODE_LOCK_MS);
+        return jsonResponse(res, 429, { error: 'Çok fazla hatalı deneme. Lütfen birkaç dakika sonra yeni bir kod iste.' });
       }
       const codeOk = pendingCode && pendingCode.code === String(code).trim() && now - pendingCode.at < CODE_TTL;
       if (!codeOk) {
@@ -2645,7 +2737,14 @@ const server = http.createServer(async (req, res) => {
         return jsonResponse(res, 400, { error: 'Kendi ürününe sipariş talebi oluşturamazsın.' });
       }
 
-      const quantity = Math.max(1, Math.floor(Number(body.quantity)) || 1);
+      if (product.active === false) return jsonResponse(res, 400, { error: 'Bu ürün şu an satışta değil.' });
+      const quantity = body.quantity === undefined ? 1 : body.quantity;
+      if (typeof quantity !== 'number' || !Number.isInteger(quantity) || quantity < 1 || quantity > 100000) {
+        return jsonResponse(res, 400, { error: 'Geçerli bir adet gir (1 veya daha fazla tam sayı).' });
+      }
+      if (typeof product.stock === 'number' && quantity > product.stock) {
+        return jsonResponse(res, 400, { error: product.stock > 0 ? `Stokta en fazla ${product.stock} adet var.` : 'Bu ürün tükendi.' });
+      }
       const city = String(body.city || '').trim().slice(0, 60);
       const district = String(body.district || '').trim().slice(0, 60);
       const address = String(body.address || '').trim().slice(0, 300);
@@ -2998,9 +3097,9 @@ const server = http.createServer(async (req, res) => {
       const session = requireAuth(req, res);
       if (!session) return;
       const { productSlug, rating, text } = await readBody(req);
-      const r = Number(rating);
+      const r = (typeof rating === 'number' || typeof rating === 'string') && String(rating).trim() !== '' ? Number(rating) : NaN;
       const clean = String(text || '').trim().slice(0, 1000);
-      if (!productSlug || !r || r < 1 || r > 5 || !clean) {
+      if (!productSlug || !Number.isInteger(r) || r < 1 || r > 5 || !clean) {
         return jsonResponse(res, 400, { error: 'Ürün, puan (1-5) ve yorum metni gerekli' });
       }
       const product = readJson(PRODUCTS_PATH, {})[productSlug];
@@ -3499,7 +3598,7 @@ const server = http.createServer(async (req, res) => {
           return { id, name: found.user.name, city: found.user.city, verified: !!found.user.verifiedSeller };
         })
         .filter(Boolean);
-      return jsonResponse(res, 200, { products: favProducts, sellers: favSellers });
+      return jsonResponse(res, 200, stripPrivate({ products: favProducts, sellers: favSellers }));
     }
 
     // ---------- Ürün etkileşim takibi: görülme, mesaj tıklaması, tık başı ücretlendirme ----------
@@ -3897,7 +3996,7 @@ const server = http.createServer(async (req, res) => {
       const active = Object.values(posts)
         .filter((post) => post.isAd || new Date(post.expiresAt).getTime() > now)
         .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-      return jsonResponse(res, 200, { posts: active });
+      return jsonResponse(res, 200, stripPrivate({ posts: active }));
     }
 
     if (p === '/api/admin/posts/mine' && req.method === 'GET') {
@@ -4042,6 +4141,7 @@ const server = http.createServer(async (req, res) => {
       const ext = m[1] === 'jpg' ? 'jpeg' : m[1];
       const buf = Buffer.from(m[2], 'base64');
       if (buf.length > 6 * 1024 * 1024) return jsonResponse(res, 400, { error: 'Görsel çok büyük (max 6MB).' });
+      if (!matchesFileSignature(m[1], buf)) return jsonResponse(res, 400, { error: 'Görsel içeriği geçersiz.' });
       const uploadsDir = path.join(MAIN, 'assets', 'uploads');
       fs.mkdirSync(uploadsDir, { recursive: true });
       const fname = 'u_' + randomToken().slice(0, 12) + '.' + (ext === 'jpeg' ? 'jpg' : ext);
@@ -4071,7 +4171,7 @@ const server = http.createServer(async (req, res) => {
       const products = readJson(PRODUCTS_PATH, {});
       const infoMap = sellerInfoMap();
       const list = Object.values(products).filter((prod) => prod.active !== false).map((prod) => withSellerBadge(prod, infoMap));
-      return jsonResponse(res, 200, { products: list });
+      return jsonResponse(res, 200, stripPrivate({ products: list }));
     }
 
     // Statik demo ürün sayfaları (main/urun/*.html) gibi sunucu tarafında render
@@ -4682,7 +4782,12 @@ const server = http.createServer(async (req, res) => {
       return jsonResponse(res, 200, { url: `/secure-uploads/${filename}?exp=${exp}&sig=${sig}` });
     }
   } catch (e) {
-    return jsonResponse(res, 502, { error: 'Veri alınamadı', detail: String(e) });
+    // İç hata ayrıntısı (dosya yolu, yığın) istemciye asla dönmez; sadece sunucu günlüğüne yazılır.
+    console.error('[api hatası]', req.method, p, e && e.message);
+    if (res.headersSent) { try { res.end(); } catch { /* yok say */ } return; }
+    return e instanceof SyntaxError
+      ? jsonResponse(res, 400, { error: 'Geçersiz istek gövdesi' })
+      : jsonResponse(res, 500, { error: 'Sunucu hatası, lütfen tekrar dene.' });
   }
 
   for (const [prefix, root] of Object.entries(SITES)) {
@@ -4773,7 +4878,23 @@ const server = http.createServer(async (req, res) => {
   }
 
   return serveStatic(res, MAIN, p);
+}
+
+// Bir isteğin işlenmeyen hatası tüm süreci düşürmesin (uzaktan kolay hizmet engelleme):
+// 500 döner, ayrıntı sadece sunucu günlüğüne yazılır (istemciye yığın izi sızmaz).
+const server = http.createServer((req, res) => {
+  handleRequest(req, res).catch((err) => {
+    console.error('[istek hatası]', req.method, String(req.url).slice(0, 200), err && err.message);
+    if (!res.headersSent) {
+      try { res.writeHead(err instanceof SyntaxError ? 400 : 500, { 'Content-Type': 'application/json; charset=utf-8' }); } catch { return; }
+      res.end(JSON.stringify({ error: err instanceof SyntaxError ? 'Geçersiz istek gövdesi' : 'Sunucu hatası' }));
+    } else {
+      try { res.end(); } catch { /* yok say */ }
+    }
+  });
 });
+process.on('uncaughtException', (err) => { console.error('[yakalanmamış hata]', err && err.stack); });
+process.on('unhandledRejection', (err) => { console.error('[işlenmeyen söz reddi]', err && err.stack ? err.stack : err); });
 
 // Testlerde (IS_TEST_ENV) gerçek dış ağa istek atmıyoruz — hem testleri ağa bağımlı/
 // yavaş/kararsız hale getirmemek hem de dışarıdan rastgele dosyaya veri yazmamak için.

@@ -311,6 +311,33 @@ describe('Uzun senaryo 4: yönetici Hareket Günlüğü sekmesi', () => {
   });
 });
 
+
+describe('Güvenlik senaryosu: giriş sonrası açık yönlendirme (open redirect) engellenir', () => {
+  const bad = ['https://evil.example/phish', '//evil.example/phish', '/\\evil.example', 'javascript:alert(1)', 'data:text/html,<script>alert(1)</script>', '\\\\evil.example'];
+  for (const target of bad) {
+    test('sonra=' + target.slice(0, 40) + ' ile giriş yapınca siteden ayrılınmaz', async () => {
+      const page = await newPage();
+      await page.goto(server.baseUrl + '/giris.html?sonra=' + encodeURIComponent(target));
+      await page.fill('#loginPhone', buyerPhone);
+      await page.fill('#loginPassword', PASSWORD);
+      await page.click('#loginBtn');
+      await page.waitForURL((u) => !u.pathname.endsWith('giris.html'), { timeout: 10000 });
+      assert.equal(new URL(page.url()).origin, new URL(server.baseUrl).origin);
+      await page.context().close();
+    });
+  }
+
+  test('meşru göreli yönlendirme (sonra=/siparislerim.html) çalışmaya devam eder', async () => {
+    const page = await newPage();
+    await page.goto(server.baseUrl + '/giris.html?sonra=' + encodeURIComponent('/siparislerim.html'));
+    await page.fill('#loginPhone', buyerPhone);
+    await page.fill('#loginPassword', PASSWORD);
+    await page.click('#loginBtn');
+    await page.waitForURL(/siparislerim\.html/, { timeout: 10000 });
+    await page.context().close();
+  });
+});
+
 describe('Temizlik doğrulaması: test bitince her şey ilk haline döner', () => {
   test('test yüklemeleri depoya yazılmadı ve izole veri klasörü gerçek veriden ayrı', () => {
     assert.ok(dataDir.startsWith(require('os').tmpdir()), 'test verisi geçici klasörde olmalı');
