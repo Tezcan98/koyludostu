@@ -17,7 +17,7 @@ const PRODUCT = 'E2E Soğuk Sıkım Zeytinyağı';
 
 async function newPage() {
   const ctx = await browser.newContext({ permissions: ['camera'], viewport: { width: 1280, height: 900 } });
-  await ctx.addInitScript(() => { try { localStorage.setItem('kd_security_seen', '1'); } catch (e) {} });
+  await ctx.addInitScript(() => { try { localStorage.setItem('kd_seen_security_intro', '1'); } catch (e) {} });
   const page = await ctx.newPage();
   await page.route(/google\.com\/recaptcha|accounts\.google\.com|gstatic\.com/, (r) => r.abort());
   return page;
@@ -170,5 +170,54 @@ describe('Satıcı yolculuğu (tarayıcı)', () => {
     const after = await fetch(server.baseUrl + '/api/products').then((r) => r.json());
     assert.ok(!(Array.isArray(after) ? after : after.products).some((x) => x.title === PRODUCT), 'pasif ürün herkese açık listede olmamalı');
     await page.context().close();
+  });
+
+  test('7) Satıcı "Toptan satışa uygun" kutusunu işaretleyip kuru ürün ekler; anasayfada Toptan ve Kuru Gıdalar şeritlerinde çıkar', async () => {
+    const page = await newPage();
+    await login(page, sellerPhone);
+    await page.goto(server.baseUrl + '/admin-urunlerim.html');
+    await page.waitForSelector('#fTitle');
+    await page.fill('#fTitle', 'E2E Toptan Kuru İncir');
+    await page.selectOption('#fCat', { label: 'Kuru Meyve' });
+    await page.waitForFunction(() => document.getElementById('fCity').options.length > 1);
+    await page.selectOption('#fCity', { label: 'Manisa' });
+    await page.fill('#fPrice', '210');
+    await page.selectOption('#fUnit', '/ kg');
+    await page.fill('#fStock', '500');
+    await page.fill('#fWeight', '1');
+    await page.fill('#fDesc', 'Güneşte kurutulmuş, 20 kg koli, toptan fiyatı.');
+    await page.check('#fWholesale');
+    await page.check('#fDeliveryKargo');
+    await page.setInputFiles('#fPhoto', imgPath);
+    await page.click('#submitBtn');
+    await page.waitForFunction(() => document.getElementById('prodList').textContent.includes('E2E Toptan Kuru İncir'));
+
+    const home = await newPage();
+    await home.goto(server.baseUrl + '/index.html');
+    await home.waitForSelector('#productGrid .pin');
+    const inRow = (h) => home.evaluate((h) => {
+      const sec = Array.from(document.querySelectorAll('.discover-section')).find((s) => s.querySelector('.discover-title').textContent.trim() === h);
+      return !!sec && Array.from(sec.querySelectorAll('.pin')).some((e) => e.dataset.title === 'E2E Toptan Kuru İncir');
+    }, h);
+    assert.ok(await inRow('Toptan Satışlar'), 'Toptan Satışlar şeridinde olmalı');
+    assert.ok(await inRow('Kuru Gıdalar'), 'Kuru Gıdalar şeridinde olmalı');
+
+    // Düzenleyip toptan işaretini kaldırınca şeritten çıkar.
+    await page.evaluate(() => {
+      const btn = Array.from(document.querySelectorAll('#prodList button[data-edit]')).find((b) => {
+        let n = b; while (n && n.parentElement && n.parentElement.id !== 'prodList') n = n.parentElement;
+        return n && n.textContent.includes('E2E Toptan Kuru İncir');
+      });
+      btn.click();
+    });
+    await page.waitForFunction(() => document.getElementById('fTitle').value === 'E2E Toptan Kuru İncir');
+    await page.uncheck('#fWholesale');
+    await page.click('#submitBtn');
+    await page.waitForFunction(() => document.getElementById('submitBtn').textContent.includes('Yayınla'));
+    await home.reload();
+    await home.waitForSelector('#productGrid .pin');
+    assert.ok(!(await inRow('Toptan Satışlar')), 'toptan işareti kalkınca şeritten çıkmalı');
+    await page.context().close();
+    await home.context().close();
   });
 });

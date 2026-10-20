@@ -3971,7 +3971,7 @@ const server = http.createServer(async (req, res) => {
         slug, title, cat, price: priceNum + '₺', unit, img, images, city, delivery,
         sellerId: session.user.id, sellerName: session.user.name, sellerPhone: session.phone,
         createdAt: new Date().toISOString(), description, minQty, maxQty, storageConditions, stock,
-        active: true, attrs, weightKg, perishable, storageType,
+        active: true, attrs, weightKg, perishable, storageType, wholesale: body.wholesale === true,
         organic, organicDocUrl: organicDocUrl || null, organicApproved: false,
         certificateUrl: certificateUrl || null,
         // Yakında: yapay zeka ile otomatik fotoğraf düzenleme (bkz. /api/admin/products/ai-enhance-photos).
@@ -4028,6 +4028,7 @@ const server = http.createServer(async (req, res) => {
           prod.weightKg = weightKg;
         }
       }
+      if (typeof body.wholesale === 'boolean') prod.wholesale = body.wholesale;
       if (body.storageType === 'oda' || body.storageType === 'soguk') {
         prod.storageType = body.storageType;
         prod.perishable = body.storageType === 'soguk'; // geriye dönük uyumluluk (bkz. yukarıdaki not)

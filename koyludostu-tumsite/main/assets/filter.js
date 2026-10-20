@@ -22,6 +22,8 @@
     var sellerTypeRadios = Array.prototype.slice.call(document.querySelectorAll('input[name="sellerType"]'));
     var organicCheckbox = document.getElementById('fOrganicOnly');
     var verifiedCheckbox = document.getElementById('fVerifiedOnly');
+    var wholesaleCheckbox = document.getElementById('fWholesaleOnly');
+    var dryCheckbox = document.getElementById('fDryOnly');
     var minSellerRatingSelect = document.getElementById('fMinSellerRating');
     var minSellerSalesSelect = document.getElementById('fMinSellerSales');
     var searchInput = document.getElementById('fSearch');
@@ -43,8 +45,18 @@
     //   1) Ortalama değerlendirme puanı   -> gerçek alıcı memnuniyeti (en ağırlıklı sinyal)
     //   2) Yorum sayısı                   -> güven/popülerlik, 15'te tavanlanır
     //   3) Tazelik bonusu                 -> yeni eklenen ürünler ilk 14 gün görünürlük kazanır
-    //   4) Günlük adil rotasyon           -> ürün+gün bazlı deterministik küçük rastgelelik
+    //   4) Ziyaret başına keşif karışımı  -> her sayfa yüklemesinde yeni rastgele tohum; kaliteli ürünler
+    //                                        öne çıkmaya devam eder ama sıra her girişte değişir (keşfet akışı)
     //   5) Öne çıkarma bonusu             -> owner-admin panelinden manuel olarak işaretlenirse sabit bir puan eklenir
+    var visitSeed = String(Math.random());
+    var DRY_CATS = ['Kuru Meyve', 'Kuruyemiş', 'Tarhana'];
+    function isDryFood(p) {
+      return DRY_CATS.indexOf(p.cat) !== -1 || /(^|\s)kuru(\s|$)/i.test(p.title);
+    }
+    function shuffled(list) {
+      return list.slice().sort(function (a, b) { return hashToUnit(a.slug + visitSeed) - hashToUnit(b.slug + visitSeed); });
+    }
+
     function hashToUnit(str) {
       var h = 5381;
       for (var i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) | 0;
@@ -57,8 +69,7 @@
       var ratingScore = stat.avg * 20;
       var trustScore = Math.min(stat.count, 15) * 3;
       var freshnessScore = Math.max(0, 14 - listedDaysAgo) * 2;
-      var today = new Date().toISOString().slice(0, 10);
-      var rotationJitter = hashToUnit(p.slug + today) * 6;
+      var rotationJitter = hashToUnit(p.slug + visitSeed) * 45;
       var featuredBonus = p.featured ? 40 : 0;
       return ratingScore + trustScore + freshnessScore + rotationJitter + featuredBonus;
     }
@@ -74,7 +85,7 @@
         '" data-created="' + esc(p.createdAt) + '" data-slug="' + esc(p.slug) + '">' +
         '<img src="' + imgSrc + '" alt="' + titleAttr + '" loading="lazy">' +
         '<div class="pin-overlay">' +
-          '<div class="pin-cat">' + esc(p.cat) + ' · ' + esc(p.sellerName) + sellerBadge + '</div>' +
+          '<div class="pin-cat">' + esc(p.cat) + (p.wholesale ? ' · Toptan' : '') + ' · ' + esc(p.sellerName) + sellerBadge + '</div>' +
           '<div class="pin-title">' + titleAttr + '</div>' +
           '<div class="pin-foot"><div class="pin-price">' + esc(p.price) + '<br><small>' + esc(p.unit) + '</small></div>' +
         '<button type="button" class="fav-cta pin-fav" data-id="' + esc(p.slug) + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg></button></div>' +
@@ -92,6 +103,8 @@
       var attrVals = checkedValues(Array.prototype.slice.call(attrWrap.querySelectorAll('.attrCheck')));
       var onlyOrganic = organicCheckbox.checked;
       var onlyVerified = verifiedCheckbox.checked;
+      var onlyWholesale = wholesaleCheckbox.checked;
+      var onlyDry = dryCheckbox.checked;
       var deliveryEl = deliveryRadios.filter(function (r) { return r.checked; })[0];
       var delivery = deliveryEl ? deliveryEl.value : '__all__';
       var sellerTypeEl = sellerTypeRadios.filter(function (r) { return r.checked; })[0];
@@ -99,7 +112,7 @@
       var minSellerRating = parseFloat(minSellerRatingSelect.value) || 0;
       var minSellerSales = parseInt(minSellerSalesSelect.value, 10) || 0;
 
-      var activeCount = cats.length + cities.length + attrVals.length + (onlyOrganic ? 1 : 0) + (onlyVerified ? 1 : 0) +
+      var activeCount = cats.length + cities.length + attrVals.length + (onlyOrganic ? 1 : 0) + (onlyVerified ? 1 : 0) + (onlyWholesale ? 1 : 0) + (onlyDry ? 1 : 0) +
         (delivery !== '__all__' ? 1 : 0) + (sellerType !== '__all__' ? 1 : 0) + (minSellerRating > 0 ? 1 : 0) + (minSellerSales > 0 ? 1 : 0);
       badge.hidden = activeCount === 0;
       badge.textContent = activeCount;
@@ -114,13 +127,15 @@
         var okAttrs = attrVals.every(function (v) { return pAttrVals.indexOf(v) !== -1; });
         var okOrganic = !onlyOrganic || (p.organic && p.organicApproved);
         var okVerified = !onlyVerified || p.sellerVerified;
+        var okWholesale = !onlyWholesale || !!p.wholesale;
+        var okDry = !onlyDry || isDryFood(p);
         var okSellerType = sellerType === '__all__' || p.sellerType === sellerType;
         var sStat = sellerStats[p.sellerId] || { avgRating: null, salesCount: 0 };
         var okSellerRating = minSellerRating <= 0 || (sStat.avgRating !== null && sStat.avgRating >= minSellerRating);
         var okSellerSales = minSellerSales <= 0 || sStat.salesCount >= minSellerSales;
         var okSearch = !query || [p.title, p.cat, p.city, p.sellerName, p.description]
           .join(' ').toLocaleLowerCase('tr').indexOf(query) !== -1;
-        return okCat && okCity && okDelivery && okAttrs && okOrganic && okVerified && okSellerType && okSellerRating && okSellerSales && okSearch;
+        return okCat && okCity && okDelivery && okAttrs && okOrganic && okVerified && okWholesale && okDry && okSellerType && okSellerRating && okSellerSales && okSearch;
       });
 
       var sortVal = sort.value;
@@ -155,6 +170,8 @@
     attrWrap.addEventListener('change', apply);
     organicCheckbox.addEventListener('change', apply);
     verifiedCheckbox.addEventListener('change', apply);
+    wholesaleCheckbox.addEventListener('change', apply);
+    dryCheckbox.addEventListener('change', apply);
     minSellerRatingSelect.addEventListener('change', apply);
     minSellerSalesSelect.addEventListener('change', apply);
     deliveryRadios.forEach(function (r) { r.addEventListener('change', apply); });
@@ -167,6 +184,8 @@
       cityWrap.querySelectorAll('input').forEach(function (c) { c.checked = false; });
       organicCheckbox.checked = false;
       verifiedCheckbox.checked = false;
+      wholesaleCheckbox.checked = false;
+      dryCheckbox.checked = false;
       minSellerRatingSelect.value = '0';
       minSellerSalesSelect.value = '0';
       deliveryRadios.forEach(function (r) { r.checked = r.value === '__all__'; });
@@ -222,8 +241,13 @@
         .sort(function (a, b) { return defaultScore(b) - defaultScore(a); })
         .slice(0, 12);
 
+      var wholesale = shuffled(allProducts.filter(function (p) { return p.wholesale; })).slice(0, 12);
+      var dryFoods = shuffled(allProducts.filter(isDryFood)).slice(0, 12);
+
       container.innerHTML =
         renderDiscoverRow('Yeni Eklenenler', newArrivals) +
+        renderDiscoverRow('Toptan Satışlar', wholesale) +
+        renderDiscoverRow('Kuru Gıdalar', dryFoods) +
         renderDiscoverRow('Bu Hafta Trend', trending);
       if (window.KDFavorites) window.KDFavorites.refresh();
 

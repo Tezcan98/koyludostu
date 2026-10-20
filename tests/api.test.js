@@ -3155,3 +3155,34 @@ describe('Esnaf satıcı belgesi (bireysel + esnaf)', () => {
     assert.equal(found.isEsnaf, true);
   });
 });
+
+describe('Toptan satış işareti', () => {
+  test('ürün varsayılan olarak toptan değildir, true gönderilirse toptan olur ve listede görünür', async () => {
+    const seller = await newSeller('Toptan Satıcı 1');
+    const normal = await createProduct(seller.token, { title: 'Normal Ürün Toptan Testi' });
+    assert.equal(normal.wholesale, false);
+
+    const bulk = await createProduct(seller.token, { title: 'Toptan Zeytin Çuvalı', wholesale: true });
+    assert.equal(bulk.wholesale, true);
+
+    const data = await fetch(url('/api/products')).then((r) => r.json());
+    const list = Array.isArray(data) ? data : data.products;
+    assert.equal(list.find((p) => p.slug === bulk.slug).wholesale, true);
+    assert.equal(list.find((p) => p.slug === normal.slug).wholesale, false);
+  });
+
+  test('toptan işareti güncellenebilir; boolean olmayan değer yok sayılır', async () => {
+    const seller = await newSeller('Toptan Satıcı 2');
+    const p = await createProduct(seller.token, {});
+    const patch = (body) => fetch(url('/api/admin/products/update'), {
+      method: 'POST', headers: authHeaders(seller.token), body: JSON.stringify(Object.assign({ slug: p.slug }, body)),
+    }).then((r) => r.json());
+
+    const on = await patch({ wholesale: true });
+    assert.equal((on.product || on).wholesale, true);
+    const junk = await patch({ wholesale: 'evet' });
+    assert.equal((junk.product || junk).wholesale, true);
+    const off = await patch({ wholesale: false });
+    assert.equal((off.product || off).wholesale, false);
+  });
+});

@@ -4,6 +4,6 @@
   "scripts": {
     "start": "node serve.js",
     "test": "node --test tests/*.test.js",
-    "test:e2e": "node --test tests/e2e/seller.e2e.test.js"
+    "test:e2e": "node --test tests/e2e/seller.e2e.test.js tests/e2e/discovery.e2e.test.js"
   }
 }

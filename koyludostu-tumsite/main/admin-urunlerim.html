@@ -203,6 +203,9 @@
       <div class="doc-status" id="certStatus"></div>
     </div>
     <div class="prod-field">
+      <label class="check-chip" style="display:inline-flex;"><input type="checkbox" id="fWholesale"> Toptan satışa uygun (büyük miktarlarda satarım)</label>
+    </div>
+    <div class="prod-field">
       <label>Saklama Koşulu Türü</label>
       <select id="fStorageType">
         <option value="oda">Oda sıcaklığında dayanıklı (kargoya uygun) — ör. kuru üzüm, bal, kuruyemiş</option>
@@ -490,6 +493,7 @@
     organicDocDataUrl = '';
     certDataUrl = '';
     document.getElementById('fOrganic').checked = !!p.organic;
+    document.getElementById('fWholesale').checked = !!p.wholesale;
     document.getElementById('organicDocWrap').style.display = p.organic ? 'block' : 'none';
     document.getElementById('fOrganicDoc').value = '';
     document.getElementById('organicDocStatus').textContent = p.organicDocUrl
@@ -526,6 +530,7 @@
     extraPhotoItems = [];
     renderExtraThumbs();
     document.getElementById('fOrganic').checked = false;
+    document.getElementById('fWholesale').checked = false;
     document.getElementById('organicDocWrap').style.display = 'none';
     document.getElementById('fOrganicDoc').value = '';
     document.getElementById('organicDocStatus').textContent = '';
@@ -574,6 +579,7 @@
       stock: document.getElementById('fStock').value,
       weightKg: document.getElementById('fWeight').value,
       storageType: document.getElementById('fStorageType').value,
+      wholesale: document.getElementById('fWholesale').checked,
       storageConditions: document.getElementById('fStorage').value.trim(),
       description: document.getElementById('fDesc').value.trim(),
       delivery: delivery,
