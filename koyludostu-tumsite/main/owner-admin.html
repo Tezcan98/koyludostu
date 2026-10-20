@@ -520,6 +520,10 @@
       var aiBadge = (r.aiFlag && r.aiFlag.suspicious)
         ? '<span class="own-badge" style="background:rgba(192,138,46,.15);color:#7b591e;" title="' + esc(r.aiFlag.reason || '') + '">Yapay Zeka: Şüpheli</span>'
         : '';
+      var aiDecisionBadge = r.aiDecision
+        ? '<span class="own-badge" style="background:rgba(192,138,46,.15);color:#7b591e;" title="' + esc(r.aiDecision.reason || '') + '">Yapay Zeka: ' +
+          (r.aiDecision.decision === 'approve' ? 'Yayınladı' : r.aiDecision.decision === 'reject' ? 'Reddetti' : 'Emin değil') + '</span>'
+        : '';
       var actions = r.status === 'pending'
         ? '<button class="own-approve-btn" data-mod="approved" data-slug="' + r.productSlug + '" data-review="' + r.id + '">Onayla</button>' +
           '<button class="own-reject-btn" data-mod="rejected" data-slug="' + r.productSlug + '" data-review="' + r.id + '">Reddet</button>'
@@ -529,7 +533,7 @@
         '<div class="own-sub">' + esc(r.name) + ': ' + esc(r.text) + '</div>' +
         (r.aiFlag && r.aiFlag.suspicious ? '<div class="own-sub" style="color:#7b591e;">Yapay zeka gerekçesi: ' + esc(r.aiFlag.reason || '—') + '</div>' : '') +
         '</div>' +
-        statusBadge + disputeBadge + aiBadge + actions +
+        statusBadge + disputeBadge + aiBadge + aiDecisionBadge + actions +
       '</div>';
     }
   }

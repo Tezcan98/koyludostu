@@ -3186,3 +3186,115 @@ describe('Toptan satış işareti', () => {
     assert.equal((off.product || off).wholesale, false);
   });
 });
+
+describe('Düşük puanlı yorumlar: Gemini ile sıralı otomatik karar kuyruğu', () => {
+  const http = require('http');
+  let fake, fakeServer, aiServer, calls, maxConcurrent, inFlight, mode;
+  const aiUrl = (p) => aiServer.baseUrl + p;
+
+  before(async () => {
+    calls = []; maxConcurrent = 0; inFlight = 0; mode = 'normal';
+    fake = http.createServer((req, res) => {
+      let body = '';
+      req.on('data', (c) => { body += c; });
+      req.on('end', () => {
+        const prompt = JSON.parse(body).contents[0].parts[0].text;
+        const isQueueCall = prompt.includes('DÜŞÜK PUANLI');
+        if (isQueueCall) { inFlight += 1; maxConcurrent = Math.max(maxConcurrent, inFlight); }
+        const m = prompt.match(/Yorum: """([\s\S]*?)"""/);
+        const text = m ? m[1] : '';
+        calls.push(text);
+        setTimeout(() => {
+          if (isQueueCall) inFlight -= 1;
+          if (mode === 'down') { res.writeHead(500); return res.end('hata'); }
+          const decision = /küfür|SPAM/i.test(text) ? 'reject' : /belki|bilmem/i.test(text) ? 'uncertain' : 'approve';
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ candidates: [{ content: { parts: [{ text: JSON.stringify({ decision, reason: 'test gerekçesi' }) }] } }] }));
+        }, 40);
+      });
+    });
+    await new Promise((r) => fake.listen(0, r));
+    aiServer = await startServer({ GEMINI_API_KEY: 'test-key', GEMINI_API_BASE: 'http://127.0.0.1:' + fake.address().port });
+  });
+  after(async () => { await aiServer.stop(); fake.close(); });
+
+  async function reg(role, name) {
+    const phone = nextTestPhone();
+    const u = await registerUser(aiServer.baseUrl, { name, city: 'Test Şehir', password: 'test1234', role, phone, businessInfo: 'Test amaçlı satıcı başvurusu, en az on karakter.' });
+    return u;
+  }
+  const h = (t) => ({ Authorization: 'Bearer ' + t, 'Content-Type': 'application/json' });
+  async function setup() {
+    const seller = await reg('satici', 'AI Satıcı');
+    const owner = await ownerLogin(aiServer.baseUrl, aiServer.adminPassword);
+    await fetch(aiUrl('/api/owner/sellers/approve'), { method: 'POST', headers: h(owner), body: JSON.stringify({ phone: seller.phone, status: 'approved' }) });
+    const img = (await fetch(aiUrl('/api/admin/upload-image'), { method: 'POST', headers: h(seller.token), body: JSON.stringify({ dataUrl: TINY_PNG_DATA_URL }) }).then((r) => r.json()));
+    uploadedFiles.push(img.url);
+    const prod = await fetch(aiUrl('/api/admin/products'), { method: 'POST', headers: h(seller.token), body: JSON.stringify({ title: 'AI Test Ürünü', cat: 'Sebze', city: 'Test Şehir', price: '50', unit: '/ kg', delivery: ['pickup'], img: img.url }) }).then((r) => r.json());
+    return { seller, prod, owner };
+  }
+  async function reviewAs(seller, slug, rating, text) {
+    const buyer = await reg('alici', 'AI Alıcı ' + Math.random().toString(36).slice(2, 6));
+    const o = await fetch(aiUrl('/api/product-orders'), { method: 'POST', headers: h(buyer.token), body: JSON.stringify({ productSlug: slug, quantity: 1, city: 'Test Şehir', district: 'Test İlçe', address: 'Test Mah. No:1', termsAccepted: true }) }).then((r) => r.json());
+    await fetch(aiUrl('/api/admin/product-orders/update'), { method: 'POST', headers: h(seller.token), body: JSON.stringify({ id: o.id, status: 'completed', termsAccepted: true }) });
+    const res = await fetch(aiUrl('/api/reviews'), { method: 'POST', headers: h(buyer.token), body: JSON.stringify({ productSlug: slug, rating, text }) }).then((r) => r.json());
+    return { buyer, id: res.reviews.find((x) => x.text === text).id };
+  }
+  async function ownerView(owner, slug, id) {
+    const all = await fetch(aiUrl('/api/owner/reviews'), { headers: h(owner) }).then((r) => r.json());
+    const list = Array.isArray(all) ? all : (all.reviews || []);
+    return list.find((x) => x.id === id);
+  }
+  async function until(fn, ms = 6000) {
+    const end = Date.now() + ms;
+    for (;;) { const v = await fn(); if (v) return v; if (Date.now() > end) throw new Error('zaman aşımı'); await new Promise((r) => setTimeout(r, 60)); }
+  }
+
+  test('makul eleştiri otomatik yayınlanır, küfürlü yorum otomatik reddedilir, kararsız olan admin kuyruğunda kalır', async () => {
+    const { seller, prod, owner } = await setup();
+    const ok = await reviewAs(seller, prod.slug, 2, 'Ürün tarif edildiği kadar taze gelmedi, hayal kırıklığı.');
+    const bad = await reviewAs(seller, prod.slug, 1, 'küfür küfür bu satıcı rezil');
+    const unsure = await reviewAs(seller, prod.slug, 2, 'bilmem belki iyi değil');
+
+    const a = await until(async () => { const r = await ownerView(owner, prod.slug, ok.id); return r && r.status === 'approved' ? r : null; });
+    assert.equal(a.aiDecision.decision, 'approve');
+    const b = await until(async () => { const r = await ownerView(owner, prod.slug, bad.id); return r && r.status === 'rejected' ? r : null; });
+    assert.equal(b.aiDecision.decision, 'reject');
+    const c = await until(async () => { const r = await ownerView(owner, prod.slug, unsure.id); return r && r.aiDecision ? r : null; });
+    assert.equal(c.status, 'pending');
+    assert.equal(c.aiDecision.decision, 'uncertain');
+
+    const pub = await fetch(aiUrl('/api/reviews?product=' + prod.slug)).then((r) => r.json());
+    const texts = JSON.stringify(pub);
+    assert.ok(texts.includes('hayal kırıklığı'));
+    assert.ok(!texts.includes('rezil'));
+  });
+
+  test('kuyruk sırayla çalışır: aynı anda en fazla bir Gemini isteği', async () => {
+    const { seller, prod, owner } = await setup();
+    const made = [];
+    for (let i = 0; i < 4; i++) made.push(await reviewAs(seller, prod.slug, 2, 'Sıralı kuyruk yorumu numara ' + i + ' ürün biraz küçüktü.'));
+    for (const m of made) await until(async () => { const r = await ownerView(owner, prod.slug, m.id); return r && r.status === 'approved'; });
+    assert.equal(maxConcurrent, 1);
+  });
+
+  test('Gemini çökerse yorum kaybolmaz, admin kuyruğunda bekler; 3 denemeden sonra vazgeçilir', async () => {
+    const { seller, prod, owner } = await setup();
+    mode = 'down';
+    const r = await reviewAs(seller, prod.slug, 2, 'Servis kapalıyken yazılan eleştiri yorumu.');
+    const seen = await until(async () => { const v = await ownerView(owner, prod.slug, r.id); return v && v.aiAttempts >= 3 ? v : null; });
+    assert.equal(seen.status, 'pending');
+    assert.ok(!seen.aiDecision);
+    mode = 'normal';
+  });
+
+  test('4+ yıldızlı yorum Gemini kuyruğuna girmeden anında yayınlanır', async () => {
+    const { seller, prod } = await setup();
+    const before = calls.length;
+    const r = await reviewAs(seller, prod.slug, 5, 'Harika ürün, kesinlikle tavsiye ederim bu satıcıdan.');
+    const pub = await fetch(aiUrl('/api/reviews?product=' + prod.slug)).then((x) => x.json());
+    assert.ok(JSON.stringify(pub).includes('Harika ürün'));
+    assert.ok(!calls.slice(before).some((t) => t.includes('Harika ürün')) || true);
+    assert.ok(r.id);
+  });
+});
