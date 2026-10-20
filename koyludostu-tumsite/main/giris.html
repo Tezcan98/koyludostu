@@ -444,6 +444,18 @@
     document.head.appendChild(script);
   }).catch(function () {});
 
+  // ---- Giriş ve alıcı kaydında bot koruması: reCAPTCHA v3 (görünmez, puan tabanlı).
+  // Site key sunucudan çekilir; satıcıda bunun yerine selfie doğrulaması var.
+  var recaptchaSiteKey = '';
+  fetch('/api/config/recaptcha-site-key').then(function (r) { return r.json(); }).then(function (data) {
+    recaptchaSiteKey = (data && data.siteKey) || '';
+    if (!recaptchaSiteKey) return;
+    var s = document.createElement('script');
+    s.src = 'https://www.google.com/recaptcha/api.js?render=' + encodeURIComponent(recaptchaSiteKey);
+    s.async = true;
+    document.head.appendChild(s);
+  }).catch(function () {});
+
   // ---- Giriş Yap (telefon/e-posta + parola) ----
   document.getElementById('loginBtn').addEventListener('click', function () {
     loginError.textContent = '';
@@ -454,13 +466,25 @@
       loginError.textContent = 'Lütfen geçerli bir telefon numarası ya da e-posta gir.'; return;
     }
     if (!password) { loginError.textContent = 'Lütfen parolanı gir.'; return; }
-    fetch('/api/auth/login', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ identifier: identifier, password: password }),
-    }).then(function (r) { return r.json(); }).then(function (data) {
-      if (data.error) { loginError.textContent = data.error; return; }
-      finishLogin(data);
-    }).catch(function () { loginError.textContent = 'Bağlantı hatası, tekrar deneyin.'; });
+    function sendLogin(recaptchaToken) {
+      fetch('/api/auth/login', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ identifier: identifier, password: password, recaptchaToken: recaptchaToken }),
+      }).then(function (r) { return r.json(); }).then(function (data) {
+        if (data.error) { loginError.textContent = data.error; return; }
+        finishLogin(data);
+      }).catch(function () { loginError.textContent = 'Bağlantı hatası, tekrar deneyin.'; });
+    }
+    if (recaptchaSiteKey) {
+      if (typeof grecaptcha === 'undefined') { loginError.textContent = 'Doğrulama yüklenemedi, sayfayı yenileyip tekrar dene.'; return; }
+      grecaptcha.ready(function () {
+        grecaptcha.execute(recaptchaSiteKey, { action: 'login' }).then(sendLogin, function () {
+          loginError.textContent = 'Robot doğrulaması başarısız, tekrar dene.';
+        });
+      });
+    } else {
+      sendLogin('');
+    }
   });
 
   // ---- Şifremi Unuttum ----
@@ -594,18 +618,6 @@
       businessInfoWrap.hidden = selectedRole !== 'satici';
     });
   });
-
-  // ---- Alıcı kaydında bot koruması: reCAPTCHA v3 (görünmez, puan tabanlı).
-  // Site key sunucudan çekilir; satıcıda bunun yerine selfie doğrulaması var.
-  var recaptchaSiteKey = '';
-  fetch('/api/config/recaptcha-site-key').then(function (r) { return r.json(); }).then(function (data) {
-    recaptchaSiteKey = (data && data.siteKey) || '';
-    if (!recaptchaSiteKey) return;
-    var s = document.createElement('script');
-    s.src = 'https://www.google.com/recaptcha/api.js?render=' + encodeURIComponent(recaptchaSiteKey);
-    s.async = true;
-    document.head.appendChild(s);
-  }).catch(function () {});
 
   // ---- Satıcı türü: bireysel (T.C. Kimlik No) ya da şirket (Vergi No) ----
   var selectedSellerType = 'bireysel';

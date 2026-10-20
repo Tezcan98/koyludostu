@@ -2240,7 +2240,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (p === '/api/auth/login' && req.method === 'POST') {
-      const { identifier, phone, password } = await readBody(req);
+      const { identifier, phone, password, recaptchaToken } = await readBody(req);
       // "identifier" telefon ya da e-posta olabilir (bkz. findUserByIdentifier);
       // eski "phone" alanı geriye dönük uyumluluk için hâlâ kabul edilir.
       const rawIdentifier = String(identifier || phone || '').trim();
@@ -2250,6 +2250,9 @@ const server = http.createServer(async (req, res) => {
       const loginKey = 'user:' + clientIp + ':' + normalizedKey;
       if (isLoginRateLimited(loginKey)) {
         return jsonResponse(res, 429, { error: 'Çok fazla hatalı deneme. Lütfen biraz sonra tekrar dene.' });
+      }
+      if (!(await verifyRecaptcha(recaptchaToken))) {
+        return jsonResponse(res, 400, { error: 'Robot doğrulaması başarısız oldu, tekrar dene.' });
       }
       const found = findUserByIdentifier(rawIdentifier);
       if (!found) return jsonResponse(res, 404, { error: 'Bu telefon numarası ya da e-posta kayıtlı değil. Önce üye ol.' });
