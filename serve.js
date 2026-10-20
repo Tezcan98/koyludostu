@@ -927,6 +927,27 @@ function httpsPostJson(urlStr, bodyObj, headers, timeoutMs) {
   });
 }
 
+// ---------- Alıcı kaydında reCAPTCHA ("Ben robot değilim") ----------
+// RECAPTCHA_SITE_KEY/RECAPTCHA_SECRET_KEY tanımlı değilse (henüz google.com/
+// recaptcha/admin'den alınmadıysa) özellik tamamen devre dışı kalır: site key
+// uç noktası boş döner (istemci widget'ı hiç göstermez), sunucu da doğrulamayı
+// hiç çalıştırmaz — alıcı kaydı normal şekilde devam eder, hiçbir şey engellenmez.
+const RECAPTCHA_SITE_KEY = process.env.RECAPTCHA_SITE_KEY || '';
+const RECAPTCHA_SECRET_KEY = process.env.RECAPTCHA_SECRET_KEY || '';
+
+async function verifyRecaptcha(token) {
+  if (!RECAPTCHA_SECRET_KEY) return true; // yapılandırılmamışsa doğrulama atlanır
+  if (!token) return false;
+  try {
+    const res = await httpsPostForm('https://www.google.com/recaptcha/api/siteverify',
+      { secret: RECAPTCHA_SECRET_KEY, response: token }, {});
+    const data = JSON.parse(res.body);
+    return !!data.success;
+  } catch {
+    return true; // Google'a ulaşılamazsa kaydı engellemeyelim, sessizce geç
+  }
+}
+
 // ---------- Kötü niyetli yorum tespiti (Gemini) ----------
 // GEMINI_API_KEY ortam değişkeni sadece production sunucudaki ecosystem.config.js'de
 // tutulur (git'e ASLA girmez — bkz. .gitignore deseni, bu dosya repoda yok). Key
@@ -2000,7 +2021,7 @@ const server = http.createServer(async (req, res) => {
     // ---------- Auth: önce üyelik bilgileri (ad+şehir+parola), sonra telefon SMS onayı ----------
 
     if (p === '/api/auth/register-start' && req.method === 'POST') {
-      const { name, email, city, district, neighborhood, password, role, termsAccepted, businessInfo, taxId, iban, idDocDataUrl, idDocConsent, sellerType, idDocOcrTaxId, selfieDataUrls } = await readBody(req);
+      const { name, email, city, district, neighborhood, password, role, termsAccepted, businessInfo, taxId, iban, idDocDataUrl, idDocConsent, sellerType, idDocOcrTaxId, selfieDataUrls, recaptchaToken } = await readBody(req);
       const cleanName = String(name || '').trim().slice(0, 60);
       const cleanEmail = String(email || '').trim().slice(0, 120);
       const cleanCity = String(city || '').trim().slice(0, 60);
@@ -2024,6 +2045,11 @@ const server = http.createServer(async (req, res) => {
       if (!isValidPassword(pass)) return jsonResponse(res, 400, { error: 'Parola en az 8 karakter olmalı, en az bir harf ve bir rakam içermeli.' });
       if (!VALID_ROLES.includes(role)) return jsonResponse(res, 400, { error: 'Hesap türünü seç.' });
       if (!termsAccepted) return jsonResponse(res, 400, { error: 'Devam etmek için şartnameyi kabul etmelisin.' });
+      // Alıcı kaydında bot koruması reCAPTCHA ile — satıcıda bunun yerine selfie/canlılık
+      // doğrulaması var (bkz. aşağıdaki selfieDataUrls kontrolü), ikisine birden gerek yok.
+      if (role === 'alici' && !(await verifyRecaptcha(recaptchaToken))) {
+        return jsonResponse(res, 400, { error: '"Ben robot değilim" doğrulamasını tamamlamalısın.' });
+      }
 
       const cleanBusinessInfo = String(businessInfo || '').trim().slice(0, 500);
       const cleanTaxId = String(taxId || '').trim();
@@ -3819,6 +3845,13 @@ const server = http.createServer(async (req, res) => {
     // Statik demo ürün sayfaları (main/urun/*.html) gibi sunucu tarafında render
     // edilmeyen sayfaların da aynı hal/borsa referansını istemci tarafında
     // gösterebilmesi için — bkz. renderProductPage'deki sunucu-taraflı kullanım.
+    // reCAPTCHA site key gizli değildir (sayfaya gömülecek şekilde tasarlanmıştır),
+    // ama statik giris.html'e elle yazmak yerine buradan çekiyoruz ki key'i sadece
+    // sunucu ortam değişkeninden değiştirmek yeterli olsun, kod/deploy gerekmesin.
+    if (p === '/api/config/recaptcha-site-key' && req.method === 'GET') {
+      return jsonResponse(res, 200, { siteKey: RECAPTCHA_SITE_KEY });
+    }
+
     if (p === '/api/hal-fiyat' && req.method === 'GET') {
       const match = matchHalFiyat(url.searchParams.get('title') || '', readHalFiyat());
       return jsonResponse(res, 200, match);
