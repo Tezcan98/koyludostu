@@ -195,6 +195,10 @@
       <input type="text" id="taxIdInput" inputmode="numeric" maxlength="11" autocomplete="off">
       <p id="taxIdHint" style="font-size:11.5px;color:var(--muted);margin:6px 0 14px;">T.C. Kimlik No'nu gir (11 hane).</p>
       <p id="taxIdMismatchWarning" style="display:none;font-size:11.5px;color:var(--ring3);margin:-8px 0 14px;font-weight:600;">Girdiğin numara, belgeden okunan numarayla uyuşmuyor. Kontrol et.</p>
+      <label class="order-terms-row" id="esnafRow" style="margin:0 0 14px;">
+        <input type="checkbox" id="esnafCheck">
+        Esnaf olarak satıyorum (kayıtlı işletme/vergi mükellefiyim)
+      </label>
       <label for="businessInfoInput">Ne / Nasıl Üretim Yapıyorsun?</label>
       <textarea id="businessInfoInput" rows="3" style="width:100%;padding:13px 14px;border-radius:12px;border:1.5px solid var(--line);font-family:inherit;font-size:14px;background:var(--card);resize:vertical;"></textarea>
       <p style="font-size:11.5px;color:var(--muted);margin:6px 0 14px;">Satıcı başvurun admin onayından geçtikten sonra ürün ekleyebilirsin.</p>
@@ -621,11 +625,15 @@
   var idDocLabel = document.getElementById('idDocLabel');
   var idDocHint = document.getElementById('idDocHint');
   var idDocConsentText = document.getElementById('idDocConsentText');
+  var esnafRow = document.getElementById('esnafRow');
+  var esnafCheck = document.getElementById('esnafCheck');
   function applySellerTypeLabels() {
     if (selectedSellerType === 'sirket') {
       taxIdLabel.textContent = 'Vergi Numarası';
       taxIdHint.textContent = 'Vergi Numarası\'nı gir (10 hane).';
       taxIdInput.maxLength = 10;
+      esnafRow.hidden = true;
+      esnafCheck.checked = false;
       idDocLabel.textContent = 'Vergi Levhası (zorunlu)';
       idDocHint.textContent = 'Şirket/vergi mükellefi olarak başvurmak için vergi levhanı yükle — kişisel kimlik belgesi yerine geçer.';
       idDocConsentText.textContent = "Vergi levhamın, satıcı hesabımı doğrulamak amacıyla işlenmesine ve saklanmasına (bkz. KVKK Aydınlatma Metni) açık rıza veriyorum.";
@@ -633,11 +641,19 @@
       taxIdLabel.textContent = 'T.C. Kimlik No';
       taxIdHint.textContent = "T.C. Kimlik No'nu gir (11 hane).";
       taxIdInput.maxLength = 11;
-      idDocLabel.textContent = 'Kimlik Belgesi (opsiyonel)';
-      idDocHint.textContent = 'Ön yüzünü yüklersen başvurun daha hızlı onaylanır. Yüklemek zorunda değilsin.';
-      idDocConsentText.textContent = 'Kimlik belgemin, satıcı hesabımı doğrulamak amacıyla işlenmesine ve saklanmasına (bkz. KVKK Aydınlatma Metni) açık rıza veriyorum.';
+      esnafRow.hidden = false;
+      if (esnafCheck.checked) {
+        idDocLabel.textContent = 'Esnaf Belgesi / Vergi Levhası (zorunlu)';
+        idDocHint.textContent = 'Esnaf olarak başvurduğun için işletme/vergi levhası belgeni yüklemen gerekir.';
+        idDocConsentText.textContent = 'Esnaf belgemin, satıcı hesabımı doğrulamak amacıyla işlenmesine ve saklanmasına (bkz. KVKK Aydınlatma Metni) açık rıza veriyorum.';
+      } else {
+        idDocLabel.textContent = 'Kimlik Belgesi (opsiyonel)';
+        idDocHint.textContent = 'Ön yüzünü yüklersen başvurun daha hızlı onaylanır. Yüklemek zorunda değilsin.';
+        idDocConsentText.textContent = 'Kimlik belgemin, satıcı hesabımı doğrulamak amacıyla işlenmesine ve saklanmasına (bkz. KVKK Aydınlatma Metni) açık rıza veriyorum.';
+      }
     }
   }
+  esnafCheck.addEventListener('change', applySellerTypeLabels);
   document.querySelectorAll('#sellerTypeRow .role-opt').forEach(function (el) {
     el.addEventListener('click', function () {
       document.querySelectorAll('#sellerTypeRow .role-opt').forEach(function (o) { o.classList.remove('selected'); });
@@ -698,6 +714,10 @@
     if (selectedRole === 'satici' && selectedSellerType === 'sirket' && !idDocDataUrl) {
       infoError.textContent = 'Şirket/vergi mükellefi olarak başvurmak için vergi levhanı yükle.'; return;
     }
+    var isEsnafChecked = selectedSellerType === 'bireysel' && esnafCheck.checked;
+    if (selectedRole === 'satici' && isEsnafChecked && !idDocDataUrl) {
+      infoError.textContent = 'Esnaf olarak başvurmak için işletme/vergi levhası belgeni yükle.'; return;
+    }
     if (selectedRole === 'satici' && (!selfieDataUrls || selfieDataUrls.length !== 3)) {
       infoError.textContent = 'Devam etmeden önce selfie doğrulamasını tamamlamalısın.'; return;
     }
@@ -717,6 +737,7 @@
         name: name, email: email, city: city, district: district, neighborhood: neighborhood,
         password: pass, role: selectedRole, termsAccepted: true, businessInfo: businessInfo, taxId: taxId, iban: iban,
         sellerType: selectedRole === 'satici' ? selectedSellerType : '',
+        isEsnaf: selectedRole === 'satici' ? isEsnafChecked : false,
         idDocDataUrl: selectedRole === 'satici' ? idDocDataUrl : '', idDocConsent: idDocConsent,
         idDocOcrTaxId: selectedRole === 'satici' ? idDocOcrTaxId : '',
         selfieDataUrls: selectedRole === 'satici' ? selfieDataUrls : null,

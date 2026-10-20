@@ -2021,7 +2021,7 @@ const server = http.createServer(async (req, res) => {
     // ---------- Auth: önce üyelik bilgileri (ad+şehir+parola), sonra telefon SMS onayı ----------
 
     if (p === '/api/auth/register-start' && req.method === 'POST') {
-      const { name, email, city, district, neighborhood, password, role, termsAccepted, businessInfo, taxId, iban, idDocDataUrl, idDocConsent, sellerType, idDocOcrTaxId, selfieDataUrls, recaptchaToken } = await readBody(req);
+      const { name, email, city, district, neighborhood, password, role, termsAccepted, businessInfo, taxId, iban, idDocDataUrl, idDocConsent, sellerType, idDocOcrTaxId, selfieDataUrls, recaptchaToken, isEsnaf } = await readBody(req);
       const cleanName = String(name || '').trim().slice(0, 60);
       const cleanEmail = String(email || '').trim().slice(0, 120);
       const cleanCity = String(city || '').trim().slice(0, 60);
@@ -2076,9 +2076,15 @@ const server = http.createServer(async (req, res) => {
       // olmadan kişisel kimlik yeterli sayılmaz, bu yüzden zorunludur. Belge
       // verilmişse KVKK kapsamında ayrı ve açık bir rıza şart; genel "Kullanım
       // Şartları" onayı bunun yerine geçmez.
+      // Bireysel satıcı esnaf (kayıtlı işletme/vergi mükellefi) olarak satıyorsa, şirkette
+      // olduğu gibi işletme/vergi levhası belgesi zorunludur — kişisel kimlik yeterli sayılmaz.
+      const cleanIsEsnaf = role === 'satici' && cleanSellerType === 'bireysel' && !!isEsnaf;
       const cleanIdDocDataUrl = String(idDocDataUrl || '').trim();
       if (role === 'satici' && cleanSellerType === 'sirket' && !cleanIdDocDataUrl) {
         return jsonResponse(res, 400, { error: 'Şirket/vergi mükellefi olarak başvurmak için vergi levhanı yükle.' });
+      }
+      if (cleanIsEsnaf && !cleanIdDocDataUrl) {
+        return jsonResponse(res, 400, { error: 'Esnaf olarak başvurmak için işletme/vergi levhası belgeni yükle.' });
       }
       if (cleanIdDocDataUrl) {
         if (!idDocConsent) {
@@ -2113,6 +2119,7 @@ const server = http.createServer(async (req, res) => {
         passwordHash: hashPassword(pass), role,
         businessInfo: cleanBusinessInfo, taxId: role === 'satici' ? cleanTaxId : '',
         sellerType: role === 'satici' ? cleanSellerType : '',
+        isEsnaf: cleanIsEsnaf,
         iban: role === 'satici' ? cleanIban : '',
         idDocDataUrl: role === 'satici' ? cleanIdDocDataUrl : '',
         idDocConsent: role === 'satici' ? !!idDocConsent : false,
@@ -2211,6 +2218,7 @@ const server = http.createServer(async (req, res) => {
           ? {
               sellerStatus: 'pending', businessInfo: pendingReg.businessInfo || '', taxId: pendingReg.taxId || '', iban: pendingReg.iban || '',
               sellerType: pendingReg.sellerType || 'bireysel',
+              isEsnaf: !!pendingReg.isEsnaf,
               sellerDocUrl: null, verifiedSeller: false,
               // Kimlik belgesi: KVKK md.5 kapsamında açık rıza ile işlenir, sadece
               // satıcı doğrulama amaçlıdır, sadece admin görebilir (bkz. owner-admin.html).

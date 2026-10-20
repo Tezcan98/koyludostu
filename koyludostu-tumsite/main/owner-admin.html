@@ -398,9 +398,10 @@
       var badgeBtn = '<button class="own-approve-btn" data-seller-badge="' + (!s.verifiedSeller) + '" data-phone="' + s.phone + '">' +
         (s.verifiedSeller ? 'Rozeti Kaldır' : 'Rozet Ver') + '</button>';
       var isCompany = s.sellerType === 'sirket';
-      var typeBadge = '<span class="own-badge">' + (isCompany ? '🏢 Şirket' : '👤 Bireysel') + '</span>';
-      var missingDocWarning = (isCompany && !s.sellerDocUrl && !s.idDocUrl)
-        ? '<span class="own-badge" style="background:rgba(200,60,60,.12);color:#8e3b46;">⚠️ Vergi levhası eksik</span>' : '';
+      var typeBadge = '<span class="own-badge">' + (isCompany ? '🏢 Şirket' : '👤 Bireysel') + '</span>'
+        + (s.isEsnaf ? '<span class="own-badge">🧾 Esnaf</span>' : '');
+      var missingDocWarning = ((isCompany || s.isEsnaf) && !s.sellerDocUrl && !s.idDocUrl)
+        ? '<span class="own-badge" style="background:rgba(200,60,60,.12);color:#8e3b46;">⚠️ Vergi levhası/işletme belgesi eksik</span>' : '';
       // OCR ile belgeden okunan numara, satıcının beyan ettiği TC/VN ile uyuşmuyorsa
       // (yazım hatası ya da başkasının belgesinin yüklenmiş olabileceğine dair bir
       // işaret) — kimliği kesin doğrulamaz, sadece admin'e görsel karşılaştırma imkânı verir.

@@ -3099,3 +3099,59 @@ describe('Satıcı selfie/canlılık doğrulaması', () => {
     assert.equal(data.user.selfieDocUrls.length, 3);
   });
 });
+
+describe('Esnaf satıcı belgesi (bireysel + esnaf)', () => {
+  function baseEsnafReg(extra) {
+    return Object.assign({
+      name: 'Esnaf Test', city: 'Test Şehir', district: 'Test İlçe', password: 'test1234',
+      role: 'satici', termsAccepted: true,
+      businessInfo: 'Bahçemden sebze meyve üretip satıyorum, kayıtlı esnafım.',
+      taxId: '10000000146', iban: 'TR330006100519786457841326',
+      sellerType: 'bireysel', isEsnaf: true,
+      selfieDataUrls: [TINY_PNG_DATA_URL, TINY_PNG_DATA_URL, TINY_PNG_DATA_URL],
+    }, extra);
+  }
+
+  test('esnaf olarak işaretlenip belge yüklenmezse kayıt reddedilir', async () => {
+    const r = await fetch(url('/api/auth/register-start'), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(baseEsnafReg({})),
+    });
+    assert.equal(r.status, 400);
+  });
+
+  test('esnaf işaretlenmemiş bireysel satıcı belge olmadan da kayıt olabilir', async () => {
+    const r = await fetch(url('/api/auth/register-start'), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(baseEsnafReg({ isEsnaf: false })),
+    });
+    assert.equal(r.status, 200);
+  });
+
+  test('esnaf olarak işaretlenip belge yüklenirse kayıt kabul edilir, admin panelinde esnaf rozeti görünür', async () => {
+    const r = await fetch(url('/api/auth/register-start'), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(baseEsnafReg({ idDocDataUrl: TINY_PNG_DATA_URL, idDocConsent: true })),
+    });
+    const data = await r.json();
+    assert.equal(r.status, 200);
+    assert.ok(data.regToken);
+
+    const phone = nextTestPhone();
+    await fetch(url('/api/auth/request-code'), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone }),
+    });
+    const ver = await fetch(url('/api/auth/verify'), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone, code: '0000', regToken: data.regToken }),
+    }).then((r) => r.json());
+    assert.ok(ver.token);
+
+    const ownerToken = await ownerLogin(server.baseUrl, server.adminPassword);
+    const list = await fetch(url('/api/owner/sellers'), { headers: authHeaders(ownerToken) }).then((r) => r.json());
+    const found = list.sellers.find((s) => s.phone === phone);
+    assert.ok(found);
+    assert.equal(found.isEsnaf, true);
+  });
+});
