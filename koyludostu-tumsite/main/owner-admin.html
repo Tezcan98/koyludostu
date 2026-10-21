@@ -651,7 +651,13 @@
         '.act-cat.guvenlik{background:rgba(200,60,60,.12);color:#8e3b46}' +
         '.act-cat.yorum{background:rgba(192,138,46,.15);color:#7b591e}' +
         '.act-text{flex:1;min-width:0;word-break:break-word}' +
-        '.act-meta{color:var(--muted,#767066);font-size:11.5px}';
+        '.act-meta{color:var(--muted,#767066);font-size:11.5px}' +
+        '.act-link{color:var(--ring1,#4e6b3a);font-weight:700;text-decoration:underline;text-underline-offset:2px;cursor:pointer;background:none;border:0;padding:0;font:inherit}' +
+        '.act-people{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:5px;font-size:12px;color:var(--muted,#767066)}' +
+        '.act-people a{color:var(--ink,#1a1a1a);text-decoration:none;border-bottom:1px dotted var(--muted,#767066)}' +
+        '.act-card{margin-top:8px;padding:10px 12px;border:1.5px solid var(--line,#ece8e1);border-radius:10px;background:var(--card,#fff);font-size:12.5px;line-height:1.6}' +
+        '.act-card b{font-size:13px}' +
+        '.act-card .act-btn{display:inline-block;margin:6px 6px 0 0;padding:5px 10px;border-radius:8px;border:1.5px solid var(--line,#ece8e1);background:var(--bg,#fafaf9);color:var(--ink,#1a1a1a);font:inherit;font-size:12px;font-weight:600;text-decoration:none;cursor:pointer}';
       document.head.appendChild(st);
     }
     var state = { cats: [], q: '', actor: '', from: '', to: '', items: [], hasMore: false, counts: {}, categories: {}, total: 0 };
@@ -685,7 +691,61 @@
       var d = new Date(iso);
       return d.toLocaleDateString('tr-TR', { day: '2-digit', month: 'short' }) + ' ' + d.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
     }
-    function sentence(t) { return esc(t).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>'); }
+    function fmtPhone(p) {
+      var d = String(p || '').replace(/\D/g, '');
+      return d.length === 10 ? '0' + d.slice(0, 3) + ' ' + d.slice(3, 6) + ' ' + d.slice(6, 8) + ' ' + d.slice(8) : String(p || '');
+    }
+    function roleLabel(r) { return r === 'satici' ? 'satıcı' : r === 'alici' ? 'alıcı' : (r || ''); }
+    // Cümledeki [[u:id|Ad]] kişi, [[p:slug|Başlık]] ürün işaretleri bağlantıya, **x** kalın yazıya dönüşür.
+    function sentence(t, rowId) {
+      return esc(t)
+        .replace(/\[\[p:([^|\]]+)\|([^\]]*)\]\]/g, function (m, slug, title) {
+          return '<a class="act-link" href="/urun/' + encodeURIComponent(slug) + '.html" target="_blank" rel="noopener">' + title + '</a>';
+        })
+        .replace(/\[\[u:([^|\]]+)\|([^\]]*)\]\]/g, function (m, id, name) {
+          return '<button type="button" class="act-link" data-person="' + id + '" data-row="' + rowId + '">' + name + '</button>';
+        })
+        .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
+    }
+    function contactLinks(pe) {
+      var out = [];
+      if (pe.phone) {
+        var d = String(pe.phone).replace(/\D/g, '');
+        out.push('<a href="tel:+90' + d + '">' + esc(fmtPhone(pe.phone)) + '</a>');
+        out.push('<a href="https://wa.me/90' + d + '" target="_blank" rel="noopener">WhatsApp</a>');
+      }
+      if (pe.email) out.push('<a href="mailto:' + esc(pe.email) + '">' + esc(pe.email) + '</a>');
+      return out;
+    }
+    function personCard(pe) {
+      if (pe.deleted) return '<div class="act-card"><b>' + esc(pe.name) + '</b> <span class="act-meta">hesap silinmiş, iletişim bilgisi yok</span></div>';
+      var loc = [pe.district, pe.city].filter(Boolean).join(' / ');
+      return '<div class="act-card"><b>' + esc(pe.name) + '</b> <span class="act-meta">' + esc(pe.label) + ' · ' + esc(roleLabel(pe.role)) +
+        (pe.role === 'satici' && pe.sellerStatus ? ' · başvuru: ' + esc(pe.sellerStatus) : '') + (pe.verified ? ' · rozetli' : '') + '</span><br>' +
+        (loc ? esc(loc) + '<br>' : '') + contactLinks(pe).join(' · ') + '<br>' +
+        (pe.role === 'satici' ? '<a class="act-btn" href="/satici/' + encodeURIComponent(pe.id) + '.html" target="_blank" rel="noopener">Satıcı sayfası</a>' : '') +
+        '<button type="button" class="act-btn" data-filter-actor="' + esc(pe.phone || pe.name) + '">Bu kişinin tüm hareketleri</button></div>';
+    }
+    function wireRowActions() {
+      document.querySelectorAll('#actList [data-person]').forEach(function (b) {
+        b.addEventListener('click', function () {
+          var row = state.items.filter(function (x) { return x.id === b.dataset.row; })[0];
+          var pe = row && (row.people || []).filter(function (x) { return x.id === b.dataset.person; })[0];
+          var box = document.querySelector('#actList [data-detail="' + b.dataset.row + '"]');
+          if (!pe || !box) return;
+          box.innerHTML = box.dataset.open === b.dataset.person ? '' : personCard(pe);
+          box.dataset.open = box.dataset.open === b.dataset.person ? '' : b.dataset.person;
+          box.querySelectorAll('[data-filter-actor]').forEach(function (fb) {
+            fb.addEventListener('click', function () {
+              document.getElementById('actActor').value = fb.dataset.filterActor;
+              state.actor = fb.dataset.filterActor;
+              load(false);
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            });
+          });
+        });
+      });
+    }
     function renderChips() {
       document.getElementById('actChips').innerHTML = Object.keys(state.categories).map(function (k) {
         return '<button type="button" class="act-chip' + (state.cats.indexOf(k) !== -1 ? ' on' : '') + '" data-cat="' + k + '">' +
@@ -703,13 +763,20 @@
       var list = document.getElementById('actList');
       if (!state.items.length) { list.innerHTML = '<div class="own-empty">Bu filtrelerle kayıt yok.</div>'; }
       else list.innerHTML = state.items.map(function (r) {
-        return '<div class="act-row">' +
+        var people = (r.people || []).map(function (pe) {
+          var links = pe.deleted ? '<span>silinmiş hesap</span>' : contactLinks(pe).join(' · ');
+          return '<span><b>' + esc(pe.label) + ':</b> ' + esc(pe.name) + (pe.role ? ' (' + esc(roleLabel(pe.role)) + ')' : '') + (links ? ' — ' + links : '') + '</span>';
+        }).join('');
+        return '<div class="act-row" data-rowid="' + esc(r.id) + '">' +
           '<div class="act-time">' + esc(fmtTime(r.ts)) + '</div>' +
           '<span class="act-cat ' + esc(r.category) + '">' + esc(state.categories[r.category] || r.category) + '</span>' +
-          '<div class="act-text">' + sentence(r.text) +
-            (r.actor || r.ip ? '<div class="act-meta">' + (r.actor ? esc(r.actor.role || '') + ' · ' + esc(r.actor.phone || '') : '') + (r.ip ? ' IP: ' + esc(r.ip) : '') + '</div>' : '') +
+          '<div class="act-text">' + sentence(r.text, r.id) +
+            (people ? '<div class="act-people">' + people + '</div>' : '') +
+            (r.ip ? '<div class="act-meta">IP: ' + esc(r.ip) + '</div>' : '') +
+            '<div class="act-detail" data-detail="' + esc(r.id) + '"></div>' +
           '</div></div>';
       }).join('');
+      wireRowActions();
       document.getElementById('actMore').hidden = !state.hasMore;
       document.getElementById('actSummary').textContent = state.total + ' kayıt' + (state.items.length < state.total ? ' (' + state.items.length + ' gösteriliyor)' : '');
     }

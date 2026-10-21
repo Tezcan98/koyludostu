@@ -289,6 +289,23 @@ describe('Uzun senaryo 4: yönetici Hareket Günlüğü sekmesi', () => {
     assert.ok(all.some((t) => /5★ yorum yaptı/.test(t) && t.includes('Harika zeytinyağı')), 'yorum cümlesi');
     assert.ok(all.some((t) => /sipariş talebi gönderdi/.test(t)), 'sipariş cümlesi');
 
+    // Ürün adı yeni sekmede ürün sayfasına giden bir bağlantı; kişi adına tıklayınca iletişim kartı açılır.
+    const prodLink = op.locator('.act-text a.act-link', { hasText: 'Yolculuk Soğuk Sıkım Zeytinyağı' }).first();
+    assert.match(await prodLink.getAttribute('href'), new RegExp('/urun/' + product.slug + '\\.html$'));
+    const personBtn = op.locator('.act-text button.act-link', { hasText: 'Yolculuk Alıcısı' }).first();
+    await personBtn.click();
+    const card = op.locator('.act-card').first();
+    await card.waitFor();
+    assert.ok((await card.innerHTML()).includes('tel:+90'), 'telefon bağlantısı');
+    assert.ok((await card.innerHTML()).includes('wa.me/90'), 'WhatsApp bağlantısı');
+    // Satır altındaki kişi özeti de telefonu gösterir
+    assert.ok((await op.locator('.act-people').first().innerHTML()).includes('tel:+90'));
+    // "Bu kişinin tüm hareketleri" kişi filtresini doldurur
+    await card.locator('[data-filter-actor]').click();
+    await op.waitForFunction(() => document.getElementById('actActor').value.length > 0);
+    await op.click('#actReset');
+    await op.waitForSelector('.act-row');
+
     // Kategori çipi: yalnızca Favori
     await op.click('#actChips .act-chip[data-cat="favori"]');
     await op.waitForFunction(() => Array.from(document.querySelectorAll('.act-cat')).length > 0 && Array.from(document.querySelectorAll('.act-cat')).every((e) => e.textContent.trim() === 'Favori'));

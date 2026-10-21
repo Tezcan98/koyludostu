@@ -3300,6 +3300,7 @@ describe('Düşük puanlı yorumlar: Gemini ile sıralı otomatik karar kuyruğu
 });
 
 describe('Admin hareket günlüğü (kim ne yaptı)', () => {
+  const post_ = (p, token, body) => fetch(url(p), { method: 'POST', headers: authHeaders(token), body: JSON.stringify(body) });
   async function activity(query) {
     const owner = await ownerLogin(server.baseUrl, server.adminPassword);
     return fetch(url('/api/owner/activity' + (query ? '?' + query : '')), { headers: authHeaders(owner) }).then((r) => r.json());
@@ -3323,13 +3324,46 @@ describe('Admin hareket günlüğü (kim ne yaptı)', () => {
     await fetch(url('/api/messages/send'), { method: 'POST', headers: authHeaders(buyer.token), body: JSON.stringify({ productSlug: p.slug, productTitle: p.title, text: 'Kargo var mı acaba?' }) });
 
     const all = await activity('limit=200');
-    const texts = all.items.map((i) => i.text);
-    assert.ok(texts.some((t) => t.includes('**Günlük Alıcı Mehmet**, **Günlük Test Zeytini** ilanını favoriye aldı')), 'favori cümlesi');
+    const plain = (t) => t.replace(/\[\[[up]:[^|\]]*\|([^\]]*)\]\]/g, '$1').replace(/\*\*/g, '');
+    const texts = all.items.map((i) => plain(i.text));
+    assert.ok(texts.some((t) => t.includes('Günlük Alıcı Mehmet, Günlük Test Zeytini ilanını favoriye aldı')), 'favori cümlesi');
     assert.ok(texts.some((t) => t.includes('favorilerinden çıkardı') && t.includes('Günlük Test Zeytini')), 'favoriden çıkarma');
-    assert.ok(texts.some((t) => t.includes('**Günlük Alıcı Mehmet**') && t.includes('5★ yorum yaptı') && t.includes('Çok lezzetli bir zeytinyağı olmuş.')), 'yorum cümlesi');
+    assert.ok(texts.some((t) => t.includes('Günlük Alıcı Mehmet') && t.includes('5★ yorum yaptı') && t.includes('Çok lezzetli bir zeytinyağı olmuş.')), 'yorum cümlesi');
     assert.ok(texts.some((t) => t.includes('sipariş talebi gönderdi') && t.includes('Günlük Test Zeytini')), 'sipariş');
     assert.ok(texts.some((t) => t.includes('satıcıya mesaj gönderdi') && t.includes('Kargo var mı acaba?')), 'mesaj');
     assert.ok(texts.some((t) => t.includes('yeni ilan ekledi') && t.includes('Günlük Test Zeytini')), 'ilan ekleme');
+  });
+
+  test('kayıtlarda tıklanabilir ürün/kişi işaretleri ve güncel iletişim bilgileri (telefon, e-posta, satıcı) bulunur', async () => {
+    const seller = await newSeller('İletişim Satıcı');
+    const buyer = await newBuyer('İletişim Alıcı');
+    await post_('/api/auth/update-profile', buyer.token, { name: 'İletişim Alıcı', city: 'Test Şehir', district: 'Test İlçe', email: 'iletisim.alici@example.com' });
+    const p = await createProduct(seller.token, { title: 'İletişim Test Peyniri' });
+    await fetch(url('/api/favorites/toggle'), { method: 'POST', headers: authHeaders(buyer.token), body: JSON.stringify({ type: 'product', id: p.slug }) });
+
+    const res = await activity('q=' + encodeURIComponent('İletişim Test Peyniri') + '&category=favori');
+    const row = res.items[0];
+    assert.ok(row.text.includes('[[p:' + p.slug + '|İletişim Test Peyniri]]'), 'ürün bağlantı işareti');
+    assert.ok(row.text.includes('[[u:' + buyer.user.id + '|İletişim Alıcı]]'), 'kişi bağlantı işareti');
+    const actor = row.people.find((x) => x.label === 'Yapan');
+    assert.equal(actor.phone, buyer.phone);
+    assert.equal(actor.email, 'iletisim.alici@example.com');
+    assert.equal(actor.role, 'alici');
+    const sel = row.people.find((x) => x.label === 'Satıcı');
+    assert.equal(sel.phone, seller.phone);
+    assert.equal(sel.name, 'İletişim Satıcı');
+  });
+
+  test('silinen hesap kayıtta "deleted" olarak döner, geçmiş cümle bozulmaz', async () => {
+    const buyer = await newBuyer('Silinecek İletişim');
+    const seller = await newSeller('Silinen Satıcısı');
+    const p = await createProduct(seller.token, { title: 'Silinen Hesap Ürünü' });
+    await fetch(url('/api/favorites/toggle'), { method: 'POST', headers: authHeaders(buyer.token), body: JSON.stringify({ type: 'product', id: p.slug }) });
+    await fetch(url('/api/auth/delete-account'), { method: 'POST', headers: authHeaders(buyer.token), body: JSON.stringify({ password: 'test1234' }) });
+    const res = await activity('q=' + encodeURIComponent('Silinen Hesap Ürünü') + '&category=favori');
+    const actor = res.items[0].people.find((x) => x.label === 'Yapan');
+    assert.equal(actor.deleted, true);
+    assert.equal(actor.name, 'Silinecek İletişim');
   });
 
   test('kategori, metin, kişi ve tarih filtreleri çalışır', async () => {
